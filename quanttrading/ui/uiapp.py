@@ -13,8 +13,14 @@ import threading
 import qdarkstyle
 from PySide6 import QtGui, QtWidgets, QtCore
 
-from ..setting import SETTINGS
-from ..utility import get_icon_path
+
+from pathlib import Path  # if you haven't already done so
+file = Path(__file__).resolve()
+sys.path.append(str(file.parents[1]))
+
+# from ..setting import SETTINGS
+from setting import SETTINGS
+from utility import get_icon_path
 # from ..locale import _
 
 
@@ -126,4 +132,4 @@ class ExceptionWidget(QtWidgets.QWidget):
 
     def _open_community(self) -> None:
         """"""
-        webbrowser.open("https://www.vnpy.com/forum/forum/2-ti-wen-qiu-zhu")
+        webbrowser.open("https://eagloo.co.uk")
