@@ -11,6 +11,11 @@ from pathlib import Path
 from typing import Callable, Dict, Tuple, Union, Optional
 from decimal import Decimal
 from math import floor, ceil
+from builtins import bytes
+import base64
+from Crypto.Cipher import AES
+from Crypto.Hash import SHA256
+from Crypto import Random
 
 import numpy as np
 import talib
@@ -28,6 +33,110 @@ else:
 
 log_formatter: logging.Formatter = logging.Formatter("[%(asctime)s] %(message)s")
 
+
+def encrypt(key, source, encode=True):
+    key = SHA256.new(key).digest()  # use SHA-256 over our key to get a proper-sized AES key
+    IV = Random.new().read(AES.block_size)  # generate IV
+    encryptor = AES.new(key, AES.MODE_CBC, IV)
+    padding = AES.block_size - len(source) % AES.block_size  # calculate needed padding
+    source += bytes([padding]) * padding  # Python 2.x: source += chr(padding) * padding
+    data = IV + encryptor.encrypt(source)  # store the IV at the beginning and encrypt
+    return base64.b64encode(data).decode("latin-1") if encode else data
+
+
+def decrypt(key, source, decode=True):
+    if decode:
+        source = base64.b64decode(source.encode("latin-1"))
+    key = SHA256.new(key).digest()  # use SHA-256 over our key to get a proper-sized AES key
+    IV = source[:AES.block_size]  # extract the IV from the beginning
+    decryptor = AES.new(key, AES.MODE_CBC, IV)
+    data = decryptor.decrypt(source[AES.block_size:])  # decrypt
+    padding = data[-1]  # pick the padding value from the end; Python 2.x: ord(data[-1])
+    if data[-padding:] != bytes([padding]) * padding:  # Python 2.x: chr(padding) * padding
+        raise ValueError("Invalid padding...")
+    return data[:-padding]  # remove the padding
+
+''' 
+def encrypt(string, password):
+    """
+    It returns an encrypted string which can be decrypted just by the 
+    password.
+    """
+    
+    key = password_to_key(password)
+    IV = make_initialization_vector()
+    encryptor = AES.new(key, AES.MODE_CBC, IV)
+
+    # store the IV at the beginning and encrypt
+    return IV + encryptor.encrypt(pad_string(string))
+
+
+def decrypt(string, password):
+    key = password_to_key(password)   
+    print(f"key is {key}")
+    # extract the IV from the beginning
+    IV = string[:AES.block_size]
+    print(f"IV is {IV}")  
+    decryptor = AES.new(key, AES.MODE_CBC, IV)
+    
+    string = decryptor.decrypt(string[AES.block_size:])
+    print(f"string is {string}")
+    return unpad_string(string)
+'''
+
+def password_to_key(password):
+    """
+    Use SHA-256 over our password to get a proper-sized AES key.
+    This hashes our password into a 256 bit string. 
+    """
+    password = str(password).encode()
+    return SHA256.new(password).digest()
+
+
+def make_initialization_vector():
+    """
+    An initialization vector (IV) is a fixed-size input to a cryptographic
+    primitive that is typically required to be random or pseudorandom.
+    Randomization is crucial for encryption schemes to achieve semantic 
+    security, a property whereby repeated usage of the scheme under the 
+    same key does not allow an attacker to infer relationships 
+    between segments of the encrypted message.
+    """
+    return Random.new().read(AES.block_size)
+
+
+def pad_string(string, chunk_size=AES.block_size):
+    """
+    Pad string the peculirarity that uses the first byte
+    is used to store how much padding is applied
+    """
+    assert chunk_size <= 256, 'We are using one byte to represent padding'
+    to_pad = (chunk_size - (len(string) + 1)) % chunk_size
+    print(f"to_pad is {to_pad} \n")
+    return bytes([to_pad]) + str(string).encode() + bytes([0] * to_pad)
+    # return str(string).encode()
+
+
+def unpad_string(string):
+    to_pad = string[0]
+    print(f"unpad_string. string is {string}")
+    return string[1:-to_pad]
+    # return string
+
+
+def encode(string):
+    """
+    Base64 encoding schemes are commonly used when there is a need to encode 
+    binary data that needs be stored and transferred over media that are 
+    designed to deal with textual data.
+    This is to ensure that the data remains intact without 
+    modification during transport.
+    """
+    return base64.b64encode(string).decode("latin-1")
+
+
+def decode(string):
+    return base64.b64decode(string.encode("latin-1"))
 
 
 ''' 

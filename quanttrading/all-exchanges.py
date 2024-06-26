@@ -8,8 +8,9 @@ from abc import ABC
 import os
 import sys
 from pprint import pprint
-from datetime import datetime
-import time
+# from datetime import datetime
+# import time
+from utility import encrypt, decrypt
 
 root = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
@@ -41,7 +42,7 @@ class ExchangeBase(ABC):
         self.exchange = exchange
         
     async def fetch_ohlcv(self, symbol="BTC/USDT", timeframe="1m",
-                        since=None, limit=None):
+                          since=None, limit=None):
 
         # since = exchange.milliseconds() - 1000000
         seconds = self.exchange.seconds() - 600
@@ -108,9 +109,19 @@ class ExchangeBase(ABC):
 
 
 async def main():
+
+    cipher_api = "VOTON+K0WmP4YrAGc7LJeS6HoXud88OY5N1/RUSvK6cvfazIdbHjhHyaElGFziY+PYIjuuQhxJydUf3N/hwmkJTHytsr7DRMOlFhFMWx76h5LY2XTjoJEPkAjcC1httZbslqhhsOqIuglBmlZOFBMg=="
+    apikey = decrypt(b"080802", cipher_api).decode()
+
+    cipher_secret = "GXFcQQ3U8vwUS6zqlomc7i2O6Aq5od3NpoDP2v42CccmnUiEKoKFlM7Yw45mI/zvM+puXXmylkPImL/51lxCxrVAnCwQpZGArX1fJllvDlSAQuotPxuDSL5OMQl14OFGlUcSJgprzaogei3AnXfns/uy+TqEW3bnlhyJQez5JJ6K9VGrXZUIX6dADwm2DL4w2vsnSkLafaX/i7dpLoxvKcGpEV75p1CJYElKJ4Ir1Iq/JumUMDLJ7Sgf9mP5Ece5qKymD81Xxewm7lqTW1KvnWnf6AA0FRIcYExRBKkFq9yPiFG+IY0S09i4KuBCErhee5xeqn3ooDY2x08w3AiyNg=="
+    secret = decrypt(b"080802", cipher_secret).decode()
+  
+    print(f"apikey is {apikey}")
+    print(f"secret is {secret}")
+
     coin = ccxt.coinbase(
-        {'apiKey': 'organizations/710b94f4-6e8e-46c2-a345-5481fdc4a45a/apiKeys/5d1868d2-dc03-4456-9f88-35ccad267acd',
-         'secret': '-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEICgEnZ5eud83hrxQRWBBmB9O9ChWiHOrXWJxrkHdhmG1oAoGCCqGSM49\nAwEHoUQDQgAEm67hHTooKFPMz38PkeIwoNpfVHNzw1Cu2ZQa3KCg5jT3dH/BXNS0\nAANb2A4J/7a5vHgIQpB9T/l+jez9W/RoQw==\n-----END EC PRIVATE KEY-----\n',
+        {'apiKey': apikey,
+         'secret': secret,
         # 'verbose': True,  # for debug output
         })
 
@@ -125,5 +136,6 @@ async def main():
     await gather(*loops)
 
     await coin.close()
+
 
 run(main())
