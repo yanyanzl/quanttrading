@@ -21,7 +21,7 @@ sys.path.append(str(file.parents[1]))
 # from ..setting import SETTINGS
 from setting import SETTINGS
 from utility import get_icon_path
-# from ..locale import _
+from constant import _
 
 
 Qt = QtCore.Qt

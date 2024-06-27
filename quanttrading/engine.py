@@ -10,9 +10,9 @@ from queue import Empty, Queue
 from threading import Thread
 from typing import Any, Type, Dict, List, Optional
 
-from vnpy.event import Event, EventEngine
-from .app import BaseApp
-from .event import (
+from event.engine import Event, EventEngine
+from object import BaseApp
+from constant import (
     EVENT_TICK,
     EVENT_ORDER,
     EVENT_TRADE,
@@ -22,8 +22,8 @@ from .event import (
     EVENT_LOG,
     EVENT_QUOTE
 )
-from .gateway import BaseGateway
-from .object import (
+from gateway import BaseGateway
+from object import (
     CancelRequest,
     LogData,
     OrderRequest,
@@ -40,10 +40,10 @@ from .object import (
     ContractData,
     Exchange
 )
-from .setting import SETTINGS
-from .utility import get_folder_path, TRADER_DIR
-from .converter import OffsetConverter
-from .constant import _
+from setting import SETTINGS
+from utility import get_folder_path, TRADER_DIR
+from converter import OffsetConverter
+from constant import _
 
 
 class MainEngine:
@@ -109,7 +109,7 @@ class MainEngine:
         """
         self.add_engine(LogEngine)
         self.add_engine(OmsEngine)
-        self.add_engine(EmailEngine)
+        # self.add_engine(EmailEngine)
 
     def write_log(self, msg: str, source: str = "") -> None:
         """
@@ -614,6 +614,7 @@ class OmsEngine(BaseEngine):
 class EmailEngine(BaseEngine):
     """
     Provides email sending function.
+    rewrite it to asyc instead of seperate thread.
     """
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:

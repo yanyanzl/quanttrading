@@ -8,12 +8,14 @@ import webbrowser
 from functools import partial
 from importlib import import_module
 from typing import Callable, Dict, List, Tuple
+import sys
 
-# import vnpy
-# from vnpy.event import EventEngine
+from pathlib import Path  # if you haven't already done so
+file = Path(__file__).resolve()
+sys.path.append(str(file.parents[1]))
 
-from uiapp import QtCore, QtGui, QtWidgets
-from widget import (
+from .uiapp import QtCore, QtGui, QtWidgets
+from .widget import (
     BaseMonitor,
     TickMonitor,
     OrderMonitor,
@@ -28,8 +30,9 @@ from widget import (
     AboutDialog,
     GlobalDialog
 )
-# from ..engine import MainEngine, BaseApp
-# from ..utility import get_icon_path, TRADER_DIR
+from engine import MainEngine, BaseApp
+from event.engine import EventEngine
+from utility import get_icon_path, TRADER_DIR
 from constant import _
 
 
@@ -42,8 +45,8 @@ class MainWindow(QtWidgets.QMainWindow):
         """"""
         super().__init__()
 
-        # self.main_engine: MainEngine = main_engine
-        # self.event_engine: EventEngine = event_engine
+        self.main_engine: MainEngine = main_engine
+        self.event_engine: EventEngine = event_engine
 
         self.window_title: str = _("Quant Trading")
 
@@ -233,7 +236,7 @@ class MainWindow(QtWidgets.QMainWindow):
         dock: QtWidgets.QDockWidget = QtWidgets.QDockWidget(name)
         dock.setWidget(widget)
         dock.setObjectName(name)
-        dock.setFeatures(dock.DockWidgetFloatable | dock.DockWidgetMovable)
+        dock.setFeatures(dock.DockWidgetFeature.DockWidgetFloatable | dock.DockWidgetFeature.DockWidgetMovable)
         self.addDockWidget(area, dock)
         return widget, dock
 

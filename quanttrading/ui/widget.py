@@ -12,11 +12,11 @@ from tzlocal import get_localzone_name
 
 import importlib_metadata
 
-from uiapp import QtCore, QtGui, QtWidgets
-from constant import Direction, Exchange, Offset, OrderType
+from .uiapp import QtCore, QtGui, QtWidgets
+from constant import Direction, Exchange, Offset, OrderType, _
 from engine import MainEngine, Event, EventEngine
 
-from ..event import (
+from constant import (
     EVENT_QUOTE,
     EVENT_TICK,
     EVENT_TRADE,
@@ -25,7 +25,7 @@ from ..event import (
     EVENT_ACCOUNT,
     EVENT_LOG
 )
-from ..object import (
+from object import (
     OrderRequest,
     SubscribeRequest,
     CancelRequest,
@@ -35,9 +35,8 @@ from ..object import (
     QuoteData,
     TickData
 )
-from ..utility import load_json, save_json, get_digits, ZoneInfo
-from ..setting import SETTING_FILENAME, SETTINGS
-from ..locale import _
+from utility import load_json, save_json, get_digits, ZoneInfo
+from setting import SETTINGS, load_settings, save_settings
 
 
 COLOR_LONG = QtGui.QColor("red")
@@ -253,7 +252,8 @@ class BaseMonitor(QtWidgets.QTableWidget):
         self.setHorizontalHeaderLabels(labels)
 
         self.verticalHeader().setVisible(False)
-        self.setEditTriggers(self.NoEditTriggers)
+        # QtWidgets.QTableWidget.EditTrigger.NoEditTriggers
+        self.setEditTriggers(self.EditTrigger.NoEditTriggers)
         self.setAlternatingRowColors(True)
         self.setSortingEnabled(self.sorting)
 
@@ -1102,7 +1102,7 @@ class ContractManager(QtWidgets.QWidget):
         self.contract_table.setColumnCount(len(self.headers))
         self.contract_table.setHorizontalHeaderLabels(labels)
         self.contract_table.verticalHeader().setVisible(False)
-        self.contract_table.setEditTriggers(self.contract_table.NoEditTriggers)
+        self.contract_table.setEditTriggers(self.contract_table.EditTrigger.NoEditTriggers)
         self.contract_table.setAlternatingRowColors(True)
 
         hbox: QtWidgets.QHBoxLayout = QtWidgets.QHBoxLayout()
@@ -1166,22 +1166,21 @@ class AboutDialog(QtWidgets.QDialog):
 
     def init_ui(self) -> None:
         """"""
-        self.setWindowTitle(_("关于VeighNa Trader"))
+        self.setWindowTitle(_("About Quant Trading"))
 
-        from ... import __version__ as vnpy_version
+        quant_version = SETTINGS["__version__"] 
 
         text: str = f"""
-            By Traders, For Traders.
+            Quantitative Trading, AI Trading, Algorithm Trading
 
-            Created by VeighNa Technology
+            Created by Eagloo
 
 
             License：MIT
-            Website：www.vnpy.com
-            Github：www.github.com/vnpy/vnpy
+            Website：www.eagloo.co.uk
 
 
-            VeighNa - {vnpy_version}
+            VeighNa - {quant_version}
             Python - {platform.python_version()}
             PySide6 - {importlib_metadata.version("pyside6")}
             NumPy - {importlib_metadata.version("numpy")}
@@ -1216,7 +1215,7 @@ class GlobalDialog(QtWidgets.QDialog):
         self.setMinimumWidth(800)
 
         settings: dict = copy(SETTINGS)
-        settings.update(load_json(SETTING_FILENAME))
+        settings.update(load_settings())
 
         # Initialize line edits and form layout based on setting.
         form: QtWidgets.QFormLayout = QtWidgets.QFormLayout()
@@ -1269,5 +1268,5 @@ class GlobalDialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.Ok
         )
 
-        save_json(SETTING_FILENAME, settings)
+        save_settings(settings)
         self.accept()
