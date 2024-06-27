@@ -20,3 +20,4 @@ log.active: true
 log.console: true
 log.file: true
 log.level: 50
+palette: dark

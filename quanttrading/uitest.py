@@ -21,8 +21,8 @@ def main():
     # font_families = QtGui.QFontDatabase.families()
     # print(f"all font families supported are {'***' * 10} \n {font_families}")
 
-    cn_families = QtGui.QFontDatabase.families(QtGui.QFontDatabase.WritingSystem.SimplifiedChinese)
-    print(f"chinese supported font families supported are {'***' * 10} \n {cn_families}")
+    # cn_families = QtGui.QFontDatabase.families(QtGui.QFontDatabase.WritingSystem.SimplifiedChinese)
+    # print(f"chinese supported font families supported are {'***' * 10} \n {cn_families}")
 
     # main_engine.add_gateway(CtpGateway)
     main_window = MainWindow(main_engine, event_engine)

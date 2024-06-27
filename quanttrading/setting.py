@@ -166,7 +166,8 @@ def initialize_settings_data():
             "database.user": "",
             "database.password": "",
 
-            "__version__": "1.0"
+            "__version__": "1.0",
+            "palette": "dark"
         }
     
 

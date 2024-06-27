@@ -37,7 +37,9 @@ def create_qapp(app_name: str = "Quant Trading") -> QtWidgets.QApplication:
     """
     # Set up dark stylesheet
     qapp: QtWidgets.QApplication = QtWidgets.QApplication(sys.argv)
-    qapp.setStyleSheet(qdarkstyle.load_stylesheet(qt_api="pyside6"))
+    # qapp.setStyleSheet(qdarkstyle.load_stylesheet(qt_api="pyside6"))
+    
+    qapp.setStyleSheet(qdarkstyle.load_stylesheet(qt_api="pyside6", palette=get_style_palette()))
 
     # Set up font
     font: QtGui.QFont = QtGui.QFont(SETTINGS["font.family"], SETTINGS["font.size"])
@@ -79,6 +81,18 @@ def create_qapp(app_name: str = "Quant Trading") -> QtWidgets.QApplication:
         threading.excepthook = threading_excepthook
 
     return qapp
+
+
+def get_style_palette():
+    """
+    dark, light, none
+    """
+    if not SETTINGS["palette"]:
+        return qdarkstyle.DarkPalette
+    if SETTINGS["palette"] == "light":
+        return qdarkstyle.LightPalette
+    else:
+        return qdarkstyle.DarkPalette
 
 
 class ExceptionWidget(QtWidgets.QWidget):
