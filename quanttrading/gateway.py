@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Callable
 from copy import copy
 
 from event.engine import Event, EventEngine
+
 from constant import (
     EVENT_TICK,
     EVENT_ORDER,

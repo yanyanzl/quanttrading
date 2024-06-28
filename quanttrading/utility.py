@@ -35,6 +35,7 @@ else:
 log_formatter: logging.Formatter = logging.Formatter("[%(asctime)s] %(message)s")
 
 
+
 def encrypt(key, source, encode=True):
     key = SHA256.new(key).digest()  # use SHA-256 over our key to get a proper-sized AES key
     IV = Random.new().read(AES.block_size)  # generate IV

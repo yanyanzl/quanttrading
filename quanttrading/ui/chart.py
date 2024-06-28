@@ -6,6 +6,14 @@ support real time data and data from files
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
 
+from pathlib import Path  # if you haven't already done so
+from sys import path as pt
+file = Path(__file__).resolve()
+print(str(file.parents[1]))
+pt.append(str(file.parents[1]))
+
+from data.finlib import Asset
+
 ## Create a subclass of GraphicsObject.
 ## The only required methods are paint() and boundingRect() 
 ## (see QGraphicsItem documentation)
@@ -21,14 +29,18 @@ class CandlestickItem(pg.GraphicsObject):
         self.picture = QtGui.QPicture()
         p = QtGui.QPainter(self.picture)
         p.setPen(pg.mkPen('w'))
-        w = (self.data[1][0] - self.data[0][0]) / 3.
-        for (t, open, close, min, max) in self.data:
-            p.drawLine(QtCore.QPointF(t, min), QtCore.QPointF(t, max))
-            if open > close:
+        w = 1.0 / 3.
+        print(f"w is {w}")
+        data = self.data
+        for dt in data.index:
+            print(dt, " ", data['Open'][dt])
+            p.drawLine(QtCore.QPointF(dt, data['Low'][dt]), QtCore.QPointF(dt, data['High'][dt]))
+            if data['Open'][dt] > data['Close'][dt]:
                 p.setBrush(pg.mkBrush('r'))
             else:
                 p.setBrush(pg.mkBrush('g'))
-            p.drawRect(QtCore.QRectF(t-w, open, w*2, close-open))
+
+            p.drawRect(QtCore.QRectF(dt-w, data['Open'][dt], w * 2, data['Close'][dt] - data['Open'][dt]))
         p.end()
     
     def paint(self, p, *args):
@@ -41,36 +53,21 @@ class CandlestickItem(pg.GraphicsObject):
         return QtCore.QRectF(self.picture.boundingRect())
 
 
-data = [  ## fields are (time, open, close, min, max).
-    (1., 10, 13, 5, 15),
-    (2., 13, 17, 9, 20),
-    (3., 17, 14, 11, 23),
-    (4., 14, 15, 5, 19),
-    (5., 15, 9, 8, 22),
-    (6., 9, 15, 8, 16),
-    (7., 10, 13, 5, 15),
-    (8., 13, 17, 9, 20),
-    (9., 17, 14, 11, 23),
-    (10., 14, 15, 5, 19),
-    (11., 15, 9, 8, 22),
-    (12., 9, 15, 8, 16),
-    (13., 10, 13, 5, 15),
-    (14., 13, 17, 9, 20),
-    (15., 17, 14, 11, 23),
-    (16., 14, 15, 5, 19),
-    (17., 15, 9, 8, 22),
-    (18., 9, 15, 8, 16),
-]
-item = CandlestickItem(data)
-plt = pg.plot()
-plt.addItem(item)
-plt.setWindowTitle('pyqtgraph example: customGraphicsItem')
-# plt.show()
+# data1 = Asset("AAPL").fetch_his_price(period=5)
+# data1 = data1.reset_index()
+
+
+# item = CandlestickItem(data1)
+# plt = pg.plot()
+# plt.addItem(item)
+# plt.setWindowTitle('Customer chart for ')
+
 
 ## Start Qt event loop unless running in interactive mode or using pyside.
 if __name__ == '__main__':
     import sys
+    print("i am here..................")
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-        QtGui.QGuiApplication.instance().exec_()
+        QtGui.QGuiApplication.instance().exec()
     # QtGui.QGuiApplication.instance .QApplication.instance().exec_()
 

@@ -15,6 +15,7 @@ from pathlib import Path  # if you haven't already done so
 file = Path(__file__).resolve()
 sys.path.append(str(file.parents[1]))
 
+from .chart import Asset, CandlestickItem
 from .uiapp import QtCore, QtGui, QtWidgets
 from .widget import (
     BaseMonitor,
@@ -108,7 +109,18 @@ class MainWindow(QtWidgets.QMainWindow):
         hour = [1,2,3,4,5,6,7,8,9,10]
         temperature = [30,32,34,32,33,31,29,32,35,45]
         self.chartWidget.setBackground(None)
-        self.chartWidget.plotItem.plot(hour, temperature)
+        self.chartWidget.setWindowTitle("Real Time Chart")
+
+        # self.chartWidget.plotItem.plot(hour, temperature)
+        # self.chartWidget.addItem()
+
+        data1 = Asset("AAPL").fetch_his_price(period=5)
+        data1 = data1.reset_index()
+
+        self.chartWidget.plotItem.plot()
+        item = CandlestickItem(data1)
+        self.chartWidget.addItem(item)     
+
 
     def init_menu(self) -> None:
         """"""
