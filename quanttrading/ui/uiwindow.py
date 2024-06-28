@@ -9,6 +9,7 @@ from functools import partial
 from importlib import import_module
 from typing import Callable, Dict, List, Tuple
 import sys
+import pyqtgraph as pg
 
 from pathlib import Path  # if you haven't already done so
 file = Path(__file__).resolve()
@@ -52,6 +53,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.widgets: Dict[str, QtWidgets.QWidget] = {}
         self.monitors: Dict[str, BaseMonitor] = {}
+        self.chartWidget = pg.PlotWidget()
 
         self.init_ui()
 
@@ -62,14 +64,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.init_toolbar()
         self.init_menu()
         self.load_window_setting("custom")
+        self.init_chart()
 
     def init_dock(self) -> None:
         """"""
         self.trading_widget, trading_dock = self.create_dock(
-            TradingWidget, _("交易"), QtCore.Qt.LeftDockWidgetArea
+            TradingWidget, _("Trading"), QtCore.Qt.LeftDockWidgetArea
         )
         tick_widget, tick_dock = self.create_dock(
-            TickMonitor, _("行情"), QtCore.Qt.RightDockWidgetArea
+            TickMonitor, _("行情"), QtCore.Qt.DockWidgetArea.RightDockWidgetArea
         )
         order_widget, order_dock = self.create_dock(
             OrderMonitor, _("委托"), QtCore.Qt.RightDockWidgetArea
@@ -96,6 +99,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
         tick_widget.itemDoubleClicked.connect(self.trading_widget.update_with_cell)
         position_widget.itemDoubleClicked.connect(self.trading_widget.update_with_cell)
+
+    def init_chart(self) -> None:
+        """
+        initiate the chart graph
+        """
+        self.setCentralWidget(self.chartWidget)
+        hour = [1,2,3,4,5,6,7,8,9,10]
+        temperature = [30,32,34,32,33,31,29,32,35,45]
+        self.chartWidget.setBackground(None)
+        self.chartWidget.plotItem.plot(hour, temperature)
 
     def init_menu(self) -> None:
         """"""

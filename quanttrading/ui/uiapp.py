@@ -11,7 +11,7 @@ import types
 import threading
 
 import qdarkstyle
-from PySide6 import QtGui, QtWidgets, QtCore
+from PySide6 import QtGui, QtWidgets, QtCore, QtCharts
 
 
 from pathlib import Path  # if you haven't already done so

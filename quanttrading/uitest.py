@@ -1,7 +1,7 @@
 """
 test example for the ui
 """
-
+import pyqtgraph as pg
 
 from event.engine import EventEngine
 
@@ -26,6 +26,7 @@ def main():
 
     # main_engine.add_gateway(CtpGateway)
     main_window = MainWindow(main_engine, event_engine)
+
     main_window.showMaximized()
 
     qapp.exec()
