@@ -1,3 +1,8 @@
+CANDLE_WIDTH: 0.4
+DOWN_COLOR: r
+MAX_NUM_CANDLE: 1000
+PEN_WIDTH: 6
+UP_COLOR: g
 __version__: '1.0'
 database.database: database.db
 database.host: ''

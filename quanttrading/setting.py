@@ -167,7 +167,12 @@ def initialize_settings_data():
             "database.password": "",
 
             "__version__": "1.0",
-            "palette": "dark"
+            "palette": "dark",
+            "MAX_NUM_CANDLE": 1000,
+            "DOWN_COLOR": "r",
+            "UP_COLOR": "g",
+            "PEN_WIDTH": 6,
+            "CANDLE_WIDTH": 0.4
         }
     
 
