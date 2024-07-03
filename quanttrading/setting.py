@@ -168,11 +168,13 @@ def initialize_settings_data():
 
             "__version__": "1.0",
             "palette": "dark",
-            "MAX_NUM_CANDLE": 1000,
+            "MAX_NUM_CANDLE": 300,
             "DOWN_COLOR": "r",
             "UP_COLOR": "g",
             "PEN_WIDTH": 6,
-            "CANDLE_WIDTH": 0.4
+            "CANDLE_WIDTH": 0.3,
+            "AXIS_WIDTH": 2,
+            "NORMAL_FONT": "Arial"
         }
     
 

@@ -106,21 +106,8 @@ class MainWindow(QtWidgets.QMainWindow):
         initiate the chart graph
         """
         self.setCentralWidget(self.chartWidget)
-        hour = [1,2,3,4,5,6,7,8,9,10]
-        temperature = [30,32,34,32,33,31,29,32,35,45]
         self.chartWidget.setBackground(None)
         self.chartWidget.setWindowTitle("Real Time Chart")
-
-        # self.chartWidget.plotItem.plot(hour, temperature)
-        # self.chartWidget.addItem()
-
-        data1 = Asset("AAPL").fetch_his_price(period=5)
-        data1 = data1.reset_index()
-
-        self.chartWidget.plotItem.plot()
-        item = CandlestickItems(data1)
-        # item.draw_candle(0)
-        self.chartWidget.addItem(item)
 
 
     def init_menu(self) -> None:
