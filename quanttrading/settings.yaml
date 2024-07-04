@@ -1,7 +1,9 @@
+AXIS_WIDTH: 1
 CANDLE_WIDTH: 0.3
 DOWN_COLOR: r
 MAX_NUM_CANDLE: 300
-PEN_WIDTH: 6
+NORMAL_FONT: Arial
+PEN_WIDTH: 1
 UP_COLOR: g
 __version__: '1.0'
 database.database: database.db

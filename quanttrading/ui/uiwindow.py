@@ -16,6 +16,7 @@ file = Path(__file__).resolve()
 sys.path.append(str(file.parents[1]))
 
 from .chartitems import Asset, CandlestickItems
+from .chart import Chart
 from .uiapp import QtCore, QtGui, QtWidgets
 from .widget import (
     BaseMonitor,
@@ -54,7 +55,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.widgets: Dict[str, QtWidgets.QWidget] = {}
         self.monitors: Dict[str, BaseMonitor] = {}
-        self.chartWidget = pg.PlotWidget()
+        # self.chartWidget = pg.PlotWidget()
+        self.chartWidget: Chart = None
 
         self.init_ui()
 
@@ -105,9 +107,21 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         initiate the chart graph
         """
+        data1 = Asset("AAPL").fetch_his_price(period=5)
+        data1 = data1.reset_index()
+
+        self.chartWidget = Chart(data1)
         self.setCentralWidget(self.chartWidget)
         self.chartWidget.setBackground(None)
         self.chartWidget.setWindowTitle("Real Time Chart")
+
+        item = CandlestickItems(self.chartWidget._dataManager)
+        self.chartWidget.add_item(item, "CandlestickItems", self.chartWidget._first_plot.objectName())
+
+        # self.chartWidget.plotItem.plot()
+        # item = CandlestickItems(data1)
+        # # item.draw_candle(0)
+        # self.chartWidget.addItem(item)
 
 
     def init_menu(self) -> None:

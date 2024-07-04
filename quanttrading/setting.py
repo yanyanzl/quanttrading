@@ -171,9 +171,9 @@ def initialize_settings_data():
             "MAX_NUM_CANDLE": 300,
             "DOWN_COLOR": "r",
             "UP_COLOR": "g",
-            "PEN_WIDTH": 6,
+            "PEN_WIDTH": 1,
             "CANDLE_WIDTH": 0.3,
-            "AXIS_WIDTH": 2,
+            "AXIS_WIDTH": 1,
             "NORMAL_FONT": "Arial"
         }
     
