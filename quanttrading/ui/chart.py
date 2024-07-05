@@ -18,7 +18,9 @@ file = Path(__file__).resolve()
 # print(str(file.parents[1]))
 pt.append(str(file.parents[1]))
 
-from .chartitems import Asset, CandlestickItems, ChartBase, DataManager, DatetimeAxis
+from .chartitems import Asset, CandlestickItems, ChartBase, DataManager, DatetimeAxis, Ticker
+from setting import Aiconfig
+import data.finlib as fb
 
 CURSOR_COLOR = 'g'
 BLACK_COLOR = 'm'
@@ -36,30 +38,38 @@ class Chart(pg.PlotWidget):
     Chart(PlotWidget) --> central Item is layout (GraphicsLayout) --> PlotItem (added by Layout.additem())
     """
         
-    def __init__(self, data: DataFrame = None, parent: QtWidgets.QWidget = None, show=False, size=None, title=None, **kargs):
+    def __init__(self, assetName: str = None, parent: QtWidgets.QWidget = None, show=False, size=None, title=None, **kargs):
         super().__init__(parent, plotItem= None, **kargs)
 
-        self._dataManager: DataManager = DataManager(data)
+        self._assetName = assetName
+        # self._chartInterval = Aiconfig.get("DEFAULT_CHART_INTERVAL")
+        self._dataManager: DataManager = None
+
         self._plots: Dict[str, pg.PlotItem] = {}
         self._items: Dict[str, ChartBase] = {}
         self._item_plot_map: Dict[ChartBase, pg.PlotItem] = {}
 
         self._first_plot: pg.PlotItem = None
 
+        # minimum bars could be zoomed in
         self.MIN_BAR_COUNT = MIN_BAR_COUNT
         self._right_ix: int = 0                     # Index of most right data
+        # the current visible amount of bars 
         self._bar_count: int = MIN_BAR_COUNT   # Total bar visible in chart
 
+        self._initData()
         self._init_ui()
         self._cursor = ChartCursor(self, self._dataManager, self._plots, self._item_plot_map)
-        self._initData()
-
+        
     def _initData(self) -> None:
-        manager = self._dataManager 
-        if manager is not None and manager.getData() is not None:
-            # set the visible range related parameters.
-            pass
+        """
+        initialize the data for the chart. 
+        """
+        if self._assetName is None:
+            self._assetName = Aiconfig.get("DEFAULT_ASSET")
 
+        self._dataManager: DataManager = DataManager(self._assetName)
+        self.setAsset(self._assetName)
 
 
     def _init_ui(self) -> None:
@@ -77,6 +87,7 @@ class Chart(pg.PlotWidget):
 
         # create self._first_plot which is candle_plot
         self.add_plot(CANDLE_PLOT_NAME)
+        self._initTickers()
 
     def add_plot(
         self,
@@ -129,6 +140,61 @@ class Chart(pg.PlotWidget):
         # Add plot onto the layout
         self._layout.nextRow()
         self._layout.addItem(plot)
+
+    def _initTickers(self):
+        self.tickers = Ticker(Aiconfig.get("ASSET_LIST"))
+        self.tickers.currentTextChanged.connect(self._tickerChanged)
+        self.tickers.editTextChanged.connect(self._tickerEdited)
+        self._first_plot.addItem(self.tickers)
+        pass
+
+    def _tickerChanged(self, tickerText) -> None:
+        """
+        the ticker/asset selected to display was changed. 
+        """
+        self.setAsset(tickerText)
+
+    def _tickerEdited(self, tickerText) -> None:
+        """
+        the user added a new asset/ticker. add it to the tickers list.
+        """
+        print(f"the ticker edited is {tickerText}")
+
+        # if the edited/added text is not in the ticker list already.
+        # add it
+        if self.tickers.findText(tickerText) == -1:
+            # check if the ticker/asset name is a valid name
+            # (can be found in exchanges)
+            if fb.Asset.is_valid(tickerText):
+                self.tickers.addItem(text=tickerText)
+                # add it to the settings file. so you can use it
+                # whenever you open the platform again. 
+                Aiconfig.append_to_list("ASSET_LIST")
+
+        self.setAsset(tickerText)
+
+
+    def setAsset(self, assetName: str = None) -> bool:
+        """
+        set the current displaying asset in the chart to the new asset.
+        """
+        if assetName is not None and isinstance(assetName, str):
+            fb.Asset.is_valid(assetName)
+            print(f"Asset for the chart changed to {assetName} now!")
+
+            self._assetName = assetName
+            
+            manager = self._dataManager
+            if self._dataManager is None:
+                self._dataManager = DataManager(assetName)
+            else:
+                self._dataManager.changeAsset(assetName)
+                # ***********come back from here
+
+            # set the visible range related parameters.
+            return True
+        
+        return False
 
     def set_data(self, data: DataFrame = None) ->bool:
         if isinstance(data, DataFrame):

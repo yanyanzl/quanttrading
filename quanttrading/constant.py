@@ -16,6 +16,23 @@ def _(name):
     return str(name)
 
 
+class ChartInterval(Enum):
+    """
+    interval for the chart candles.
+    """
+    S1 = "1 Second"
+    M1 = "1 Minite"
+    M5 = "5 Minites"
+    M10 = "10 Minites"
+    M15 = "15 Minites"
+    M30 = "30 Minites"
+    H1 = "1 Hour"
+    H4 = "4 Hours"
+    D1 = "1 Day"
+    W1 = "1 Week"
+
+
+
 """
 Event type string used in the trading platform.
 """

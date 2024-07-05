@@ -174,7 +174,18 @@ def initialize_settings_data():
             "PEN_WIDTH": 1,
             "CANDLE_WIDTH": 0.3,
             "AXIS_WIDTH": 1,
-            "NORMAL_FONT": "Arial"
+            "NORMAL_FONT": "Arial", 
+            'ASSET_LIST': [
+                'TSLA', 
+                'AAPL', 
+                'NVDA', 
+                'META', 
+                'AMD', 
+                'AMZN', 
+                'GOOG', 
+            ],
+            "DEFAULT_ASSET": "TSLA",
+            "DEFAULT_CHART_INTERVAL": "1 Minite",
         }
     
 

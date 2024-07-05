@@ -6,6 +6,7 @@ import time
 from ui.chartitems import DataManager
 
 
+
 def testLoc():
     data = data1
     # print(f"data.iloc[0]['Open'] is {data.iloc[0]['Open']}")
@@ -16,18 +17,18 @@ def testLoc():
     # print(f"data['Open'].values[0] is {data['Open'].values[0]}")
 
 
-data1 = Asset("AAPL").fetch_his_price(period=1)
-data1 = data1.reset_index()
-print(data1)
-print("****************************")
-index = len(data1.index)
-print(f"index is {index}")
-data = data1.iloc[index-11:index]
-print(data)
+    data1 = Asset("AAPL").fetch_his_price(period=1)
+    data1 = data1.reset_index()
+    print(data1)
+    print("****************************")
+    index = len(data1.index)
+    print(f"index is {index}")
+    data = data1.iloc[index-11:index]
+    print(data)
 
-min = data['Low'].min()
-max = data['High'].max()
-print(f"min is {min} \n max is {max}")
+    min = data['Low'].min()
+    max = data['High'].max()
+    print(f"min is {min} \n max is {max}")
 
 def testConcat():
     dm = DataManager(data1)

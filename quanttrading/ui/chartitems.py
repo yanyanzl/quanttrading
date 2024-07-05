@@ -5,19 +5,51 @@ from abc import abstractmethod
 from typing import Tuple, List
 import pyqtgraph as pg
 from pandas import DataFrame, Timestamp, concat
-from .uiapp import QtGui, QtCore
+from .uiapp import QtGui, QtCore, QtWidgets
 from setting import Aiconfig
 from datetime import datetime
 from data.finlib import Asset
+from constant import ChartInterval
 
 
 class DataManager():
 
-    def __init__(self, data: DataFrame = None) -> None:
-        self._data: DataFrame = data
-        self._data.reset_index(inplace=True)
+    def __init__(self, assetName: str = None) -> None:
+        self._data: DataFrame = None
+        # self._data.reset_index(inplace=True)
         self._xMax = 300  # the max visible data's index x
         self._xMin = 0      # the min visible data's index x
+        self._assetName: str = assetName
+        self._nterval = Aiconfig.get("DEFAULT_CHART_INTERVAL")
+        if assetName is not None:
+            self.setData()
+
+    def setAsset(self, name: str = None) -> bool:
+        """
+        set the asset to the name given. 
+        this will change all the data hold by the Datamanager
+        the interval will be not be changed.
+        """
+        if name is not None and isinstance(name, str):
+
+            self._assetName = name
+
+            return True
+        return False
+
+    def setInterval(self, interval: ChartInterval = None)
+        """
+        set the interval of the data for the chart/candlestick
+        this will trigger the action to get data for the new Interval.
+        """
+        
+        if interval is not None and isinstance(interval, ChartInterval):
+
+            self._interval = interval
+
+            return True
+        return False
+
 
     def getDateTime(self, index: int) -> datetime:
         """
@@ -33,9 +65,17 @@ class DataManager():
     def getData(self) -> DataFrame:
         return self._data
     
-    def setData(self, data: DataFrame = None) -> bool:
-        if isinstance(data, DataFrame):
-            self._data = data
+    def setData(self, assetName: str = None, chartInterval: ChartInterval = None) -> bool:
+        """
+        change the data to the specified assetName and chartInterval.
+        """
+        if assetName is None or chartInterval is None:
+            return False
+        
+        if isinstance(assetName, str) and isinstance(chartInterval, ChartInterval):
+            
+            asset = Asset(assetName)
+            self._data = asset
             self._data.reset_index(inplace=True)
             return True
         else:
@@ -432,6 +472,17 @@ class DatetimeAxis(pg.AxisItem):
             strings.append(s)
 
         return strings
+
+
+class Ticker(QtWidgets.QComboBox):
+
+    def __init__(self, tickers: List[str] = None):
+        super.__init__()
+
+        if tickers is not None and len(tickers) > 0:
+
+            self.addItems(tickers)
+            self.setEditable(True)
 
 
 

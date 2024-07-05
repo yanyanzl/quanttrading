@@ -26,6 +26,7 @@ file = Path(__file__).resolve()
 pt.append(str(file.parents[1]))
 
 from data.db.db_settings import VALIDATION_ADDRESS, DEBUG
+from constant import ChartInterval
 
 # this is the only way works so far. to use yfinance override pandas_datareader.
 yf.pdr_override()
@@ -196,11 +197,18 @@ class Asset:
         except Exception as ex:
             pass
         return False
-
-    # Get Asset Expected return: get the expected return for a specific asset based on the historical data
-    # the return is an average return for the given period (number of years, default current year only)
+    
+    def getData(self, chartInterval: ChartInterval = None):
+        
+        data = yf.download()
+        return data
+        pass
 
     def get_return_his(self, name="", period=0):
+        """
+        Get Asset Expected return: get the expected return for a specific asset based on the historical data
+        the return is an average return for the given period (number of years, default current year only)
+        """
         try:
             # bey default, get the class's price data.
             if name == "" and period == 0:
@@ -421,6 +429,7 @@ class Asset:
         except Exception as ex:
             format_excetpion_message(ex)
 
+
     # fetch history price data for asset "name". default is the class's
     # history price, for period of n years
     def fetch_his_price(self, name="", period=0) -> pd.DataFrame:
@@ -445,6 +454,7 @@ class Asset:
 
                 # period is specified. get data for period years
                 else:
+                    # yf.download()
                     his_price = data.DataReader(
                         self.name,
                         datetime(datetime.now().year - period, 1, 1),
