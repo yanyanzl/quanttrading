@@ -131,8 +131,10 @@ class StringName(str):
 
 class Asset:
     # intiate the attributes of the asset. 
-    def __init__(self, asset_name=default_asset, startdate=start, enddate=end):
+    def __init__(self, asset_name=default_asset, data_interval: ChartInterval = ChartInterval.D1, startdate: datetime = start, enddate: datetime = end):
         self.name = StringName(asset_name)
+
+        self._interval = data_interval
 
         self.startdate = startdate
 
@@ -179,8 +181,10 @@ class Asset:
         # αp = Rp - [Rf + β(Rm -Rf)]
         self.alpha = 0
 
-    # check if the give name is an valid asset ticker online. if name is empty. check the asset itself.
     def is_valid(self, name=""):
+        """
+        check if the give name is an valid asset ticker online. if name is empty. check the asset itself.
+        """
         if name == "":
             name = self.name
         try:
@@ -199,7 +203,10 @@ class Asset:
         return False
     
     def getData(self, chartInterval: ChartInterval = None):
+        """
         
+        """
+        ticker = yf.Ticker(self.name)
         data = yf.download()
         return data
         pass
