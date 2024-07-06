@@ -15,7 +15,7 @@ ACTIVE_STATUSES = set([Status.SUBMITTING, Status.NOTTRADED, Status.PARTTRADED])
 
 
 if TYPE_CHECKING:
-    from .engine import BaseEngine
+    from ...engine import BaseEngine
 
 
 class BaseApp(ABC):

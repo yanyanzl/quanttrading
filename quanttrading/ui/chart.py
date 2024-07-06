@@ -15,7 +15,6 @@ from datetime import datetime
 from pathlib import Path  # if you haven't already done so
 from sys import path as pt
 file = Path(__file__).resolve()
-# print(str(file.parents[1]))
 pt.append(str(file.parents[1]))
 
 from .chartitems import Asset, CandlestickItems, ChartBase, DataManager, DatetimeAxis, Ticker
@@ -32,7 +31,10 @@ CANDLE_PLOT_NAME = "Candle_Plot"
 pg.setConfigOptions(antialias=True)
 
 
-class Chart(pg.PlotWidget):
+class Chart()
+
+
+class ChartGraph(pg.PlotWidget):
     """
     main chart window.
     Chart(PlotWidget) --> central Item is layout (GraphicsLayout) --> PlotItem (added by Layout.additem())
@@ -142,10 +144,14 @@ class Chart(pg.PlotWidget):
         self._layout.addItem(plot)
 
     def _initTickers(self):
-        self.tickers = Ticker(Aiconfig.get("ASSET_LIST"))
+        # self.tickers = Ticker(Aiconfig.get("ASSET_LIST"))
+        self.tickers = QtWidgets.QComboBox(self)
         self.tickers.currentTextChanged.connect(self._tickerChanged)
         self.tickers.editTextChanged.connect(self._tickerEdited)
-        self._first_plot.addItem(self.tickers)
+        # self.tickers.set
+        # self._first_plot.addItem(self.tickers)
+        self._layout.nextRow()
+        self._layout.addItem(self.tickers)
         pass
 
     def _tickerChanged(self, tickerText) -> None:

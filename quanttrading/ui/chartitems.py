@@ -37,7 +37,7 @@ class DataManager():
             return True
         return False
 
-    def setInterval(self, interval: ChartInterval = None)
+    def setInterval(self, interval: ChartInterval = None) -> bool:
         """
         set the interval of the data for the chart/candlestick
         this will trigger the action to get data for the new Interval.
@@ -477,12 +477,12 @@ class DatetimeAxis(pg.AxisItem):
 class Ticker(QtWidgets.QComboBox):
 
     def __init__(self, tickers: List[str] = None):
-        super.__init__()
+        super().__init__()
 
         if tickers is not None and len(tickers) > 0:
 
             self.addItems(tickers)
             self.setEditable(True)
 
-
-
+        box = pg.ComboBox()
+        box.setZValue()

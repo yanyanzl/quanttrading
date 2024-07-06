@@ -1,7 +1,7 @@
 from copy import copy
 from typing import Dict, List, Set, TYPE_CHECKING
 
-from object import (
+from data.gateway.object import (
     ContractData,
     OrderData,
     TradeData,

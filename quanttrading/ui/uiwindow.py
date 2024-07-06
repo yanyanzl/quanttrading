@@ -75,25 +75,25 @@ class MainWindow(QtWidgets.QMainWindow):
             TradingWidget, _("Trading"), QtCore.Qt.LeftDockWidgetArea
         )
         tick_widget, tick_dock = self.create_dock(
-            TickMonitor, _("行情"), QtCore.Qt.DockWidgetArea.RightDockWidgetArea
+            TickMonitor, _("MarketData"), QtCore.Qt.DockWidgetArea.RightDockWidgetArea
         )
         order_widget, order_dock = self.create_dock(
-            OrderMonitor, _("委托"), QtCore.Qt.RightDockWidgetArea
+            OrderMonitor, _("Order"), QtCore.Qt.RightDockWidgetArea
         )
         active_widget, active_dock = self.create_dock(
-            ActiveOrderMonitor, _("活动"), QtCore.Qt.RightDockWidgetArea
+            ActiveOrderMonitor, _("ActiveOrder"), QtCore.Qt.RightDockWidgetArea
         )
         trade_widget, trade_dock = self.create_dock(
-            TradeMonitor, _("成交"), QtCore.Qt.RightDockWidgetArea
+            TradeMonitor, _("Trade"), QtCore.Qt.RightDockWidgetArea
         )
         log_widget, log_dock = self.create_dock(
-            LogMonitor, _("日志"), QtCore.Qt.BottomDockWidgetArea
+            LogMonitor, _("Log"), QtCore.Qt.BottomDockWidgetArea
         )
         account_widget, account_dock = self.create_dock(
-            AccountMonitor, _("资金"), QtCore.Qt.BottomDockWidgetArea
+            AccountMonitor, _("Account"), QtCore.Qt.BottomDockWidgetArea
         )
         position_widget, position_dock = self.create_dock(
-            PositionMonitor, _("持仓"), QtCore.Qt.BottomDockWidgetArea
+            PositionMonitor, _("Position"), QtCore.Qt.BottomDockWidgetArea
         )
 
         self.tabifyDockWidget(active_dock, order_dock)
@@ -112,6 +112,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.chartWidget = Chart(data1)
         self.setCentralWidget(self.chartWidget)
+        
         self.chartWidget.setBackground(None)
         self.chartWidget.setWindowTitle("Real Time Chart")
 

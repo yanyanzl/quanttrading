@@ -11,7 +11,7 @@ from threading import Thread
 from typing import Any, Type, Dict, List, Optional
 
 from event.engine import Event, EventEngine
-from object import BaseApp
+from data.gateway.object import BaseApp
 from constant import (
     EVENT_TICK,
     EVENT_ORDER,
@@ -22,8 +22,8 @@ from constant import (
     EVENT_LOG,
     EVENT_QUOTE
 )
-from gateway import BaseGateway
-from object import (
+from data.gateway.gateway import BaseGateway
+from data.gateway.object import (
     CancelRequest,
     LogData,
     OrderRequest,

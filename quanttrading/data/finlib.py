@@ -26,6 +26,7 @@ pt.append(str(file.parents[1]))
 
 from data.db.db_settings import VALIDATION_ADDRESS, DEBUG
 from constant import ChartInterval
+from .gateway.gateway import BaseGateway
 
 # this is the only way works so far. to use yfinance override pandas_datareader.
 yf.pdr_override()
@@ -133,11 +134,14 @@ class AssetBase(object):
     # intiate the attributes of the asset. 
     def __init__(self, asset_name: str = default_asset,
                  chartInterval: ChartInterval = ChartInterval.D1,
+                 gateWay: BaseGateway = None,
                  startdate=start, enddate=end):
         
         self.name = StringName(asset_name)
 
         self._interval = chartInterval
+
+        self._exchange = gateWay
 
         self.startdate = startdate
 
@@ -205,13 +209,18 @@ class AssetBase(object):
             pass
         return False
 
-    def getData(self, chartInterval: ChartInterval = None):
+    def getMarketData(self, chartInterval: ChartInterval = None):
         """
-        
+        get the candle stick data for the asset based on the interval of chartInterval
         """
+
         pass
 
-    
+    def getSharesFull(self):
+        """
+        get number of shares 
+        """
+        pass
 
 
 class Asset(AssetBase):
@@ -221,12 +230,13 @@ class Asset(AssetBase):
     # intiate the attributes of the asset. 
     def __init__(self, asset_name: str = default_asset,
                  chartInterval: ChartInterval = ChartInterval.D1,
+                 gateWay: BaseGateway = None,
                  startdate=start, enddate=end):
         
-        super.__init__(self, asset_name, chartInterval, startdate, enddate)
+        super().__init__(asset_name, chartInterval,
+                         gateWay, startdate, enddate)
 
-    
-    def getData(self, chartInterval: ChartInterval = None):
+    def getMarketData(self, chartInterval: ChartInterval = None):
         """
         
         """

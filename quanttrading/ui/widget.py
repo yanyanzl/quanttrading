@@ -25,7 +25,7 @@ from constant import (
     EVENT_ACCOUNT,
     EVENT_LOG
 )
-from object import (
+from data.gateway.object import (
     OrderRequest,
     SubscribeRequest,
     CancelRequest,
