@@ -6,7 +6,6 @@ Created on Fri Nov 24 12:39:21 2023
 
 """
 
-
 import pandas as pd
 from pandas_datareader import data
 from datetime import datetime, timedelta
@@ -30,7 +29,6 @@ from constant import ChartInterval
 
 # this is the only way works so far. to use yfinance override pandas_datareader.
 yf.pdr_override()
-
 
 default_asset = "SPX"
 start = datetime(datetime.now().year, 1, 1)
@@ -126,15 +124,15 @@ class StringName(str):
 # to be added:
 # max draw down (month, year): from nearest peak to nearest trough 
 # to define a function to get N months max draw down for the asset.
-
 # and unit test cases
 
-class Asset:
+class AssetBase():
+    """
+    the Abstract base class for Asset. 
+    """
     # intiate the attributes of the asset. 
-    def __init__(self, asset_name=default_asset, data_interval: ChartInterval = ChartInterval.D1, startdate: datetime = start, enddate: datetime = end):
+    def __init__(self, asset_name=default_asset, startdate=start, enddate=end):
         self.name = StringName(asset_name)
-
-        self._interval = data_interval
 
         self.startdate = startdate
 
@@ -200,7 +198,63 @@ class Asset:
                 return True
         except Exception as ex:
             pass
-        return False
+        return False    
+
+
+class Asset(AssetBase):
+    """
+    Equity class
+    """
+    # intiate the attributes of the asset. 
+    def __init__(self, asset_name=default_asset, startdate=start, enddate=end):
+        super.__init__(self, asset_name)
+        self.name = StringName(asset_name)
+
+        self.startdate = startdate
+
+        self.enddate = enddate
+
+        # format the data structure for target, prices info get from internet
+        # from startdate to enddate
+        self.his_price = pd.DataFrame()
+
+        # mean value for prices from startdate to enddate
+        self.price_mean = PositiveNumber()
+
+        # standard deviation of the asset based on the prices
+        # from startdate to enddate, is the risk of the asset
+        self.price_sd = PositiveNumber()
+
+        # variation of the asset based on the prices from startdate to enddate
+        self.price_va = PositiveNumber()
+
+        # variation of the asset based on the prices from startdate to enddate
+        self.expect_return = PositiveNumber()
+
+        # Beta (β) is primarily used in the capital asset pricing model (CAPM), is a measure of the volatility–or systematic risk–of a security or portfolio compared to the market as a whole (usually the S&P 500); 
+        # can only provide an investor with an approximation of how much risk the stock will add to a (presumably) diversified portfolio
+        # Stocks with betas above 1 will tend to move with more momentum than the S&P 500; stocks with betas less than 1 with less momentum
+        # In order to make sure that a specific stock is being compared to the right benchmark, it should have a high R-squared value in relation to the benchmark
+        # Cov(Ri,Rm)/σm2 : correlation between an asset and the market devided by the market variance. or (ρ * σi) / σm : correlation coefficient * standard deviation of asset devided by standard deviation of market
+        self.beta = 0
+
+        # Sharpe Ratio : The Sharpe ratio compares the return of an investment with its risk.
+        # Sharpe = (Rp - Rf) / σp : (return of portfolio - Risk-free rate) / Standard deviation of the portfolio's return
+        self.sharpe = 0
+
+        # The Treynor ratio is a simple extension of the Sharpe ratio and resolves the Sharpe ratio’s first limitation by substituting beta (systematic risk) for total risk
+        # Treynor Ratio = (Rp - Rf) / βp : (asset return - risk-free rate) / systematic risk β.
+        self.treynor = 0
+
+        # M2 provides a measure of portfolio return that is adjusted for the total risk of the portfolio relative to that of some benchmark. risk-adjusted performance
+        # M2 borrows from capital market theory by assuming a portfolio is leveraged or de-leveraged until its volatility (as measured by standard deviation) matches that of the market. This adjustment produces a portfolio-specific leverage ratio that equates the portfolio’s risk to that of the market. The portfolio’s excess return times the lever- age ratio plus the risk-free rate is then compared with the markets actual return to determine whether the portfolio has outperformed or underperformed the market on a risk-adjusted basis.M can be thought of as a rescaling of the Sharpe ratio that allows for easier comparisons among different portfolios. M2 = (Rp - Rf) * σm / σp + Rf = SharpeRatio * σm + Rf
+        self.m2 = 0
+
+        # Jensen’s Alpha
+        # Jensen’s alpha is based on systematic risk. We can measure a portfolio’s systematic risk by estimating the market model, which is done by regress- ing the portfolio’s daily return on the market’s daily return. The coefficient on the market return is an estimate of the beta risk of the portfolio. We can calculate the risk-adjusted return of the portfolio using the beta of the portfolio and the CAPM. The difference between the actual portfolio return and the calculated risk-adjusted return is a measure of the portfolio’s performance relative to the market portfolio and is called Jensen’s alpha. By definition, αm of the market is zero. Jensen’s alpha is also the vertical distance from the SML measuring the excess return for the same risk as that of the market
+        # αp = Rp - [Rf + β(Rm -Rf)]
+        self.alpha = 0
+
     
     def getData(self, chartInterval: ChartInterval = None):
         """
