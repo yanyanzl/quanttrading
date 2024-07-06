@@ -179,7 +179,8 @@ class DataManager():
             return len(self._data.index)
 
     def clearAll(self) -> None:
-        self._data.drop(self._data.index, inplace=True)
+        if not self.isEmpty():
+            self._data.drop(self._data.index, inplace=True)
 
     def isEmpty(self) -> bool:
         if self._data is None or self._data.empty:

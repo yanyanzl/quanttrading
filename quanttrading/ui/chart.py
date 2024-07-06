@@ -6,6 +6,8 @@ support real time data and data from files
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
 from PySide6 import QtWidgets
+from PySide6.QtWidgets import QFrame
+from PySide6.QtGui import Qt
 from typing import Dict, List
 from pandas import DataFrame
 from datetime import datetime
@@ -31,7 +33,41 @@ CANDLE_PLOT_NAME = "Candle_Plot"
 pg.setConfigOptions(antialias=True)
 
 
-class Chart()
+class Chart(QtWidgets.QFrame):
+    """
+    This is the QtWidget that use as the container of the chartGraph and 
+    other widgets around it. like ticker combobox, interval spinner
+    """
+    def __init__(self, chartName: str = None, assetName: str = None) -> None:
+        super().__init__()
+        self._name = chartName
+
+        if assetName is None:
+            assetName = Aiconfig.get("DEFAULT_ASSET")
+        self._assetName = assetName
+
+        # self._layout = QtWidgets.QBoxLayout()
+        self._layout = QtWidgets.QGridLayout()
+        self._tickers: QtWidgets.QComboBox = None
+        self._chartGraph: ChartGraph = None
+        self._interval = None # to be defined. as subclass of QSpinbox
+        self._initUI()
+    
+    def _initUI(self) -> None:
+        """ """
+        self.setWindowTitle(f"chart title : {self._assetName}")
+
+        self._chartGraph = ChartGraph(self._assetName, self)
+
+        self._tickers = Ticker(Aiconfig.get("ASSET_LIST"))
+        self._tickers.currentTextChanged.connect(self._chartGraph._tickerChanged)
+        self._tickers.editTextChanged.connect(self._chartGraph._tickerEdited)
+        
+        self._layout.addWidget(self._chartGraph, 0, 0, 2, 1,alignment=Qt.AlignmentFlag.AlignCenter)
+        self._layout.addWidget(self._tickers, 1, 0,Qt.AlignmentFlag.AlignLeft)
+        # central_widget = QFrame()
+
+        self.setLayout(self._layout)
 
 
 class ChartGraph(pg.PlotWidget):
@@ -59,6 +95,8 @@ class ChartGraph(pg.PlotWidget):
         # the current visible amount of bars 
         self._bar_count: int = MIN_BAR_COUNT   # Total bar visible in chart
 
+        self._candlestickManager: CandlestickItems = None
+
         self._initData()
         self._init_ui()
         self._cursor = ChartCursor(self, self._dataManager, self._plots, self._item_plot_map)
@@ -72,7 +110,6 @@ class ChartGraph(pg.PlotWidget):
 
         self._dataManager: DataManager = DataManager(self._assetName)
         self.setAsset(self._assetName)
-
 
     def _init_ui(self) -> None:
         """
@@ -144,14 +181,7 @@ class ChartGraph(pg.PlotWidget):
         self._layout.addItem(plot)
 
     def _initTickers(self):
-        # self.tickers = Ticker(Aiconfig.get("ASSET_LIST"))
-        self.tickers = QtWidgets.QComboBox(self)
-        self.tickers.currentTextChanged.connect(self._tickerChanged)
-        self.tickers.editTextChanged.connect(self._tickerEdited)
-        # self.tickers.set
-        # self._first_plot.addItem(self.tickers)
-        self._layout.nextRow()
-        self._layout.addItem(self.tickers)
+
         pass
 
     def _tickerChanged(self, tickerText) -> None:
@@ -171,7 +201,7 @@ class ChartGraph(pg.PlotWidget):
         if self.tickers.findText(tickerText) == -1:
             # check if the ticker/asset name is a valid name
             # (can be found in exchanges)
-            if fb.Asset.is_valid(tickerText):
+            if fb.Asset().is_valid(tickerText):
                 self.tickers.addItem(text=tickerText)
                 # add it to the settings file. so you can use it
                 # whenever you open the platform again. 
@@ -185,7 +215,7 @@ class ChartGraph(pg.PlotWidget):
         set the current displaying asset in the chart to the new asset.
         """
         if assetName is not None and isinstance(assetName, str):
-            fb.Asset.is_valid(assetName)
+            fb.Asset().is_valid(assetName)
             print(f"Asset for the chart changed to {assetName} now!")
 
             self._assetName = assetName
@@ -194,8 +224,15 @@ class ChartGraph(pg.PlotWidget):
             if self._dataManager is None:
                 self._dataManager = DataManager(assetName)
             else:
-                self._dataManager.changeAsset(assetName)
-                # ***********come back from here
+                self._dataManager.setAsset(assetName)
+                
+
+            self.clear_all()
+
+            self._candlestickManager = CandlestickItems(self._dataManager)
+
+            # ***********come back from here to be check here
+            self.add_item(self._candlestickManager, "CandlestickItems", self._first_plot.objectName())
 
             # set the visible range related parameters.
             return True

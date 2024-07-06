@@ -107,17 +107,16 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         initiate the chart graph
         """
-        data1 = Asset("AAPL").fetch_his_price(period=5)
-        data1 = data1.reset_index()
+        # data1 = Asset("AAPL").fetch_his_price(period=5)
+        # data1 = data1.reset_index()
 
-        self.chartWidget = Chart(data1)
+        # to be changed: 
+        self.chartWidget = Chart("First Chart", "TSLA")
         self.setCentralWidget(self.chartWidget)
         
-        self.chartWidget.setBackground(None)
-        self.chartWidget.setWindowTitle("Real Time Chart")
+        # self.chartWidget.setBackground(None)
+        # self.chartWidget.setWindowTitle("Real Time Chart")
 
-        item = CandlestickItems(self.chartWidget._dataManager)
-        self.chartWidget.add_item(item, "CandlestickItems", self.chartWidget._first_plot.objectName())
 
         # self.chartWidget.plotItem.plot()
         # item = CandlestickItems(data1)

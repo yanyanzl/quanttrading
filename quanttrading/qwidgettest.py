@@ -1,5 +1,7 @@
 import sys
 
+from PySide6.QtGui import Qt
+# from PySide6.Qt import AlignmentFlag
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -21,6 +23,10 @@ from PySide6.QtWidgets import (
     QTimeEdit,
     QVBoxLayout,
     QWidget,
+    QFrame,
+    QBoxLayout,
+    QHBoxLayout,
+    QGridLayout,
 )
 
 class MainWindow(QMainWindow):
@@ -29,8 +35,13 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Widgets App")
 
-        layout = QVBoxLayout()
+        layout = QGridLayout()
+        # QBoxLayout(QBoxLayout.Direction.TopToBottom)
+        # layout1 = QHBoxLayout()
+        # layout2 = QHBoxLayout()
+        # layout.add
         widgets = [
+
             QCheckBox,
             QComboBox,
             QDateEdit,
@@ -47,12 +58,17 @@ class MainWindow(QMainWindow):
             QSlider,
             QSpinBox,
             QTimeEdit,
+            QFrame,
         ]
 
-        for widget in widgets:
-            layout.addWidget(widget())
-
-        central_widget = QWidget()
+        # for widget in widgets:
+        #     layout.addWidget(widget())
+        # layout.addWidget(QCheckBox())
+        # central_widget = QWidget()
+        layout = QGridLayout()
+        layout.addWidget(QFrame(), 0, 0, 2, 1,alignment=Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(QComboBox(), 1, 0,Qt.AlignmentFlag.AlignLeft)
+        central_widget = QFrame()
         central_widget.setLayout(layout)
 
         self.setCentralWidget(central_widget)
