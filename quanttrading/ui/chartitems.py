@@ -20,22 +20,36 @@ class DataManager():
         self._xMax = 300  # the max visible data's index x
         self._xMin = 0      # the min visible data's index x
         self._assetName: str = assetName
-        self._nterval = Aiconfig.get("DEFAULT_CHART_INTERVAL")
+        self._chartInterval = Aiconfig.get("DEFAULT_CHART_INTERVAL")
         if assetName is not None:
-            self.setData()
+            self.setAsset(assetName)
 
-    def setAsset(self, name: str = None) -> bool:
+    def setAsset(self, assetName: str = None, chartInterval: ChartInterval = None) -> bool:
         """
         set the asset to the name given. 
         this will change all the data hold by the Datamanager
         the interval will be not be changed.
         """
-        if name is not None and isinstance(name, str):
+        if assetName is None:
+            return False
+        
+        if (chartInterval is not None and isinstance(chartInterval, ChartInterval)):
+            
+            self._chartInterval = chartInterval
 
-            self._assetName = name
+        if isinstance(assetName, str):
+            self._assetName = assetName
 
+            asset = Asset(assetName)
+            print(f"asset is {asset}")
+
+            self._data = asset.fetch_his_price()
+            print(f"self._data is {self._data}")
+
+            self._data.reset_index(inplace=True)
             return True
-        return False
+        else:
+            return False
 
     def setInterval(self, interval: ChartInterval = None) -> bool:
         """
@@ -65,21 +79,16 @@ class DataManager():
     def getData(self) -> DataFrame:
         return self._data
     
-    def setData(self, assetName: str = None, chartInterval: ChartInterval = None) -> bool:
+    def setData(self, data: DataFrame = None) -> bool:
         """
-        change the data to the specified assetName and chartInterval.
+        change the data to a new specified DataFrame
         """
-        if assetName is None or chartInterval is None:
-            return False
-        
-        if isinstance(assetName, str) and isinstance(chartInterval, ChartInterval):
-            
-            asset = Asset(assetName)
-            self._data = asset
-            self._data.reset_index(inplace=True)
+        if data is not None and isinstance(data, DataFrame):
+            self._data = data
             return True
-        else:
-            return False
+        return False
+            
+        pass
         
     def append(self, data: DataFrame) -> bool:
 
@@ -247,7 +256,7 @@ class ChartBase(pg.GraphicsObject):
         """
         pass
 
-    def clear_all():
+    def clear_all(self):
         """
         clear all data and pictures.
         """
@@ -340,9 +349,10 @@ class CandlestickItems(ChartBase):
         self.max_candle = Aiconfig.get("MAX_NUM_CANDLE")
 
         # candlesticks list corresponding to the dataManager's data
-        self._candles: List[CandlestickItem] = [CandlestickItem(dataManager, index) for index in dataManager._data.index]
-
-        self.generate_picture()
+        self._candles: List[CandlestickItem] = None
+        if not dataManager.isEmpty():
+            self._candles = [CandlestickItem(dataManager, index) for index in dataManager._data.index]
+            self.generate_picture()
 
     def generate_picture(self):
         """
@@ -430,9 +440,8 @@ class CandlestickItems(ChartBase):
 
         return text
 
-    def update():
-
-        pass
+    # def update():
+    #     pass
 
 
 class DatetimeAxis(pg.AxisItem):
@@ -455,7 +464,7 @@ class DatetimeAxis(pg.AxisItem):
         Convert original index to datetime string.
         """
         # Show no axis string if spacing smaller than 1
-        if spacing < 1:
+        if spacing < 1 or self._manager is None:
             return ["" for i in values]
 
         strings: list = []
@@ -485,5 +494,3 @@ class Ticker(QtWidgets.QComboBox):
             self.addItems(tickers)
             self.setEditable(True)
 
-        box = pg.ComboBox()
-        box.setZValue()

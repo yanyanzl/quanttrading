@@ -6,7 +6,7 @@ support real time data and data from files
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
 from PySide6 import QtWidgets
-from PySide6.QtWidgets import QFrame
+from PySide6.QtWidgets import QFrame, QSizePolicy
 from PySide6.QtGui import Qt
 from typing import Dict, List
 from pandas import DataFrame
@@ -33,7 +33,7 @@ CANDLE_PLOT_NAME = "Candle_Plot"
 pg.setConfigOptions(antialias=True)
 
 
-class Chart(QtWidgets.QFrame):
+class Chart(QtWidgets.QWidget):
     """
     This is the QtWidget that use as the container of the chartGraph and 
     other widgets around it. like ticker combobox, interval spinner
@@ -47,7 +47,8 @@ class Chart(QtWidgets.QFrame):
         self._assetName = assetName
 
         # self._layout = QtWidgets.QBoxLayout()
-        self._layout = QtWidgets.QGridLayout()
+        self._mainLayout = QtWidgets.QVBoxLayout()
+        self._widgetsLayout = QtWidgets.QHBoxLayout()
         self._tickers: QtWidgets.QComboBox = None
         self._chartGraph: ChartGraph = None
         self._interval = None # to be defined. as subclass of QSpinbox
@@ -56,19 +57,46 @@ class Chart(QtWidgets.QFrame):
     def _initUI(self) -> None:
         """ """
         self.setWindowTitle(f"chart title : {self._assetName}")
+        # self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum, QtWidgets.QSizePolicy.Policy.Maximum)
+        self._mainLayout.setContentsMargins(10, 10, 10, 10)
+        self._mainLayout.setSpacing(0)
+        
+        # self._mainLayout.setBorder(color='g', width=0.8)
+        # self._mainLayout.setZValue(0)
+        # self.setCentralItem(self._layout) 
 
         self._chartGraph = ChartGraph(self._assetName, self)
 
         self._tickers = Ticker(Aiconfig.get("ASSET_LIST"))
         self._tickers.currentTextChanged.connect(self._chartGraph._tickerChanged)
-        self._tickers.editTextChanged.connect(self._chartGraph._tickerEdited)
+        self._tickers.editTextChanged.connect(self._tickerEdited)
         
-        self._layout.addWidget(self._chartGraph, 0, 0, 2, 1,alignment=Qt.AlignmentFlag.AlignCenter)
-        self._layout.addWidget(self._tickers, 1, 0,Qt.AlignmentFlag.AlignLeft)
+        self._mainLayout.addWidget(self._chartGraph, stretch=10, alignment=Qt.AlignmentFlag.AlignCenter)
+        self._widgetsLayout.addWidget(self._tickers, alignment=Qt.AlignmentFlag.AlignRight)
+        # self._mainLayout.addLayout(self._widgetsLayout,stretch=0)
         # central_widget = QFrame()
 
-        self.setLayout(self._layout)
+        self.setLayout(self._mainLayout)
 
+
+    def _tickerEdited(self, tickerText) -> None:
+        """
+        the user added a new asset/ticker. add it to the tickers list.
+        """
+        print(f"the ticker edited is {tickerText}")
+
+        # if the edited/added text is not in the ticker list already.
+        # add it
+        if self._tickers.findText(tickerText) == -1:
+            # check if the ticker/asset name is a valid name
+            # (can be found in exchanges)
+            if fb.Asset().is_valid(tickerText):
+                self._tickers.addItem(text=tickerText)
+                # add it to the settings file. so you can use it
+                # whenever you open the platform again. 
+                Aiconfig.append_to_list("ASSET_LIST")
+
+        self._chartGraph._tickerChanged(tickerText)
 
 class ChartGraph(pg.PlotWidget):
     """
@@ -96,20 +124,25 @@ class ChartGraph(pg.PlotWidget):
         self._bar_count: int = MIN_BAR_COUNT   # Total bar visible in chart
 
         self._candlestickManager: CandlestickItems = None
+        self._chartCursor: ChartCursor = None
+        if self._assetName is None:
+            self._assetName = Aiconfig.get("DEFAULT_ASSET")
 
-        self._initData()
+        self._dataManager: DataManager = DataManager(self._assetName)
+
         self._init_ui()
-        self._cursor = ChartCursor(self, self._dataManager, self._plots, self._item_plot_map)
+
+        self.setAsset(self._assetName)
+
+        self._chartCursor = ChartCursor(self, self._dataManager, self._plots, self._item_plot_map)
         
     def _initData(self) -> None:
         """
         initialize the data for the chart. 
         """
-        if self._assetName is None:
-            self._assetName = Aiconfig.get("DEFAULT_ASSET")
+        pass
 
-        self._dataManager: DataManager = DataManager(self._assetName)
-        self.setAsset(self._assetName)
+        
 
     def _init_ui(self) -> None:
         """
@@ -123,6 +156,7 @@ class ChartGraph(pg.PlotWidget):
         self._layout.setBorder(color='g', width=0.8)
         self._layout.setZValue(0)
         self.setCentralItem(self._layout)
+        self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
 
         # create self._first_plot which is candle_plot
         self.add_plot(CANDLE_PLOT_NAME)
@@ -147,7 +181,8 @@ class ChartGraph(pg.PlotWidget):
         plot.setDownsampling(mode="peak")
         # plot.setRange(xRange=(0, 1), yRange=(0, 1))
         plot.hideButtons()
-        plot.setMinimumHeight(minimum_height)
+        # plot.setMinimumHeight(minimum_height)
+        plot.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
         plot.setObjectName(plot_name)
 
         if maximum_height:
@@ -188,58 +223,44 @@ class ChartGraph(pg.PlotWidget):
         """
         the ticker/asset selected to display was changed. 
         """
-        self.setAsset(tickerText)
+        if tickerText is not None:
 
-    def _tickerEdited(self, tickerText) -> None:
-        """
-        the user added a new asset/ticker. add it to the tickers list.
-        """
-        print(f"the ticker edited is {tickerText}")
-
-        # if the edited/added text is not in the ticker list already.
-        # add it
-        if self.tickers.findText(tickerText) == -1:
-            # check if the ticker/asset name is a valid name
-            # (can be found in exchanges)
-            if fb.Asset().is_valid(tickerText):
-                self.tickers.addItem(text=tickerText)
-                # add it to the settings file. so you can use it
-                # whenever you open the platform again. 
-                Aiconfig.append_to_list("ASSET_LIST")
-
-        self.setAsset(tickerText)
-
+            self.setAsset(tickerText)
 
     def setAsset(self, assetName: str = None) -> bool:
         """
         set the current displaying asset in the chart to the new asset.
         """
         if assetName is not None and isinstance(assetName, str):
-            fb.Asset().is_valid(assetName)
-            print(f"Asset for the chart changed to {assetName} now!")
-
-            self._assetName = assetName
             
-            manager = self._dataManager
-            if self._dataManager is None:
-                self._dataManager = DataManager(assetName)
+            if fb.Asset().is_valid(assetName):
+
+                self.clear_all()
+
+                print(f"Asset for the chart changed to {assetName} now!")
+
+                self._assetName = assetName
+
+                if self._dataManager is None:
+                    self._dataManager = DataManager(assetName)
+                else:
+                    self._dataManager.setAsset(assetName)
+
+                print(f"chart.setAsset() {self._dataManager.getData()}")
+
+                self._candlestickManager = CandlestickItems(self._dataManager)
+
+                # ***********come back from here to be check here
+                self.add_item(self._candlestickManager, "CandlestickItems", self._first_plot.objectName())
+
+                # set the visible range related parameters.
+                return True
             else:
-                self._dataManager.setAsset(assetName)
-                
-
-            self.clear_all()
-
-            self._candlestickManager = CandlestickItems(self._dataManager)
-
-            # ***********come back from here to be check here
-            self.add_item(self._candlestickManager, "CandlestickItems", self._first_plot.objectName())
-
-            # set the visible range related parameters.
-            return True
+                raise ValueError(f"assetName {assetName} is invalid!")
         
         return False
 
-    def set_data(self, data: DataFrame = None) ->bool:
+    def set_data(self, data: DataFrame = None) -> bool:
         if isinstance(data, DataFrame):
             self._dataManager.setData(data)
             return True
@@ -252,8 +273,8 @@ class ChartGraph(pg.PlotWidget):
 
     def add_cursor(self) -> None:
         """"""
-        if not self._cursor:
-            self._cursor = ChartCursor(
+        if not self._chartCursor:
+            self._chartCursor = ChartCursor(
                 self, self._dataManager.getData(), self._plots, self._item_plot_map)
 
     def add_item(self, item: ChartBase, item_name: str,
@@ -289,8 +310,8 @@ class ChartGraph(pg.PlotWidget):
         for item in self._items.values():
             item.clear_all()
 
-        if self._cursor:
-            self._cursor.clear_all()
+        if self._chartCursor is not None:
+            self._chartCursor.clear_all()
 
     def update_bar(self, barData: DataFrame = None) -> None:
         """
@@ -394,8 +415,8 @@ class ChartGraph(pg.PlotWidget):
         self._right_ix = max(self._right_ix, self._bar_count)
 
         self._update_x_range()
-        self._cursor.move_left()
-        self._cursor.update_info()
+        self._chartCursor.move_left()
+        self._chartCursor.update_info()
 
     def _on_key_right(self) -> None:
         """
@@ -405,8 +426,8 @@ class ChartGraph(pg.PlotWidget):
         self._right_ix = min(self._right_ix, self._dataManager.getXMax())
 
         self._update_x_range()
-        self._cursor.move_right()
-        self._cursor.update_info()
+        self._chartCursor.move_right()
+        self._chartCursor.update_info()
 
     def _on_key_down(self) -> None:
         """
@@ -417,7 +438,7 @@ class ChartGraph(pg.PlotWidget):
         self._bar_count = min(int(self._bar_count), self._dataManager.getTotalDataNum())
 
         self._update_x_range()
-        self._cursor.update_info()
+        self._chartCursor.update_info()
 
     def _on_key_up(self) -> None:
         """
@@ -427,7 +448,7 @@ class ChartGraph(pg.PlotWidget):
         self._bar_count = max(int(self._bar_count), self.MIN_BAR_COUNT)
 
         self._update_x_range()
-        self._cursor.update_info()
+        self._chartCursor.update_info()
 
     def move_to_right(self) -> None:
         """
@@ -435,7 +456,7 @@ class ChartGraph(pg.PlotWidget):
         """
         self._right_ix = self._dataManager.lastIndex()
         self._update_x_range()
-        self._cursor.update_info()
+        self._chartCursor.update_info()
 
 
 class ChartCursor(QtCore.QObject):
