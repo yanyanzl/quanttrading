@@ -60,12 +60,17 @@ class Chart(QtWidgets.QWidget):
         # self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum, QtWidgets.QSizePolicy.Policy.Maximum)
         self._mainLayout.setContentsMargins(10, 10, 10, 10)
         self._mainLayout.setSpacing(0)
-        
+        screen = QtWidgets.QApplication.primaryScreen()
+        print(f"screen is {screen} \n and screen.size is {screen.availableGeometry()}")
+        screensize = screen.availableSize() * 0.8
+        self.setMaximumSize(screensize)
+
         # self._mainLayout.setBorder(color='g', width=0.8)
         # self._mainLayout.setZValue(0)
         # self.setCentralItem(self._layout) 
 
         self._chartGraph = ChartGraph(self._assetName, self)
+        # self._chartGraph.setMaximumSize(screensize*0.9)
 
         self._tickers = Ticker(Aiconfig.get("ASSET_LIST"))
         self._tickers.currentTextChanged.connect(self._chartGraph._tickerChanged)

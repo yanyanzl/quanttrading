@@ -111,9 +111,9 @@ class MainWindow(QtWidgets.QMainWindow):
         # data1 = data1.reset_index()
 
         # to be changed: 
-        # self.chartWidget = Chart("First Chart", "TSLA")
-        self.chartWidget = ChartGraph("AAPL", self)
-        self.chartWidget.layout()
+        self.chartWidget = Chart("First Chart", "TSLA")
+        # self.chartWidget = Chart(""AAPL", self)
+        # self.chartWidget.layout()
 
         self.setCentralWidget(self.chartWidget)
         
