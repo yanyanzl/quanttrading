@@ -76,9 +76,9 @@ class Chart(QtWidgets.QWidget):
         self._tickers.currentTextChanged.connect(self._chartGraph._tickerChanged)
         self._tickers.editTextChanged.connect(self._tickerEdited)
         
-        self._mainLayout.addWidget(self._chartGraph, stretch=10, alignment=Qt.AlignmentFlag.AlignCenter)
-        self._widgetsLayout.addWidget(self._tickers, alignment=Qt.AlignmentFlag.AlignRight)
-        # self._mainLayout.addLayout(self._widgetsLayout,stretch=0)
+        self._mainLayout.addWidget(self._chartGraph, stretch=7, alignment=Qt.AlignmentFlag.AlignCenter)
+        self._widgetsLayout.addWidget(self._tickers, stretch = 1, alignment=Qt.AlignmentFlag.AlignRight)
+        self._mainLayout.addLayout(self._widgetsLayout,stretch=1)
         # central_widget = QFrame()
 
         self.setLayout(self._mainLayout)
@@ -147,25 +147,21 @@ class ChartGraph(pg.PlotWidget):
         """
         pass
 
-        
-
     def _init_ui(self) -> None:
         """
         Init the UI framework  of the chart
         """
         # self.setWindowTitle("Chart For Quant Trading")
-
         self._layout: pg.GraphicsLayout = pg.GraphicsLayout()
         self._layout.setContentsMargins(10, 10, 10, 10)
         self._layout.setSpacing(0)
         self._layout.setBorder(color='g', width=0.8)
         self._layout.setZValue(0)
         self.setCentralItem(self._layout)
-        self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        # self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
 
         # create self._first_plot which is candle_plot
         self.add_plot(CANDLE_PLOT_NAME)
-        self._initTickers()
 
     def add_plot(
         self,
@@ -186,7 +182,7 @@ class ChartGraph(pg.PlotWidget):
         plot.setDownsampling(mode="peak")
         # plot.setRange(xRange=(0, 1), yRange=(0, 1))
         plot.hideButtons()
-        # plot.setMinimumHeight(minimum_height)
+        plot.setMinimumHeight(minimum_height)
         plot.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
         plot.setObjectName(plot_name)
 
@@ -251,7 +247,7 @@ class ChartGraph(pg.PlotWidget):
                 else:
                     self._dataManager.setAsset(assetName)
 
-                print(f"chart.setAsset() {self._dataManager.getData()}")
+                # print(f"chart.setAsset() {self._dataManager.getData()}")
 
                 self._candlestickManager = CandlestickItems(self._dataManager)
 
@@ -357,6 +353,7 @@ class ChartGraph(pg.PlotWidget):
         min_ix: int = self._right_ix - self._bar_count
 
         for plot in self._plots.values():
+            print(f"chartGraph :_update_x_range: plot is {plot.objectName()} and min_ix, max_ix is {min_ix, max_ix}")
             plot.setRange(xRange=(min_ix, max_ix), padding=0)
 
     def _update_y_range(self) -> None:
@@ -385,6 +382,8 @@ class ChartGraph(pg.PlotWidget):
         # Return a the view's visible range as a list: [[xmin, xmax], [ymin, ymax]]
         view_range: list = view.viewRange()
         self._right_ix = max(0, view_range[0][1])
+        print(f"chartGraph :paintEvent: _right_ix is {self._right_ix}")
+        print(f"chartGraph :paintEvent: view_range is {view_range}")
 
         super().paintEvent(event)
 

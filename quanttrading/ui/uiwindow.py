@@ -15,7 +15,7 @@ from pathlib import Path  # if you haven't already done so
 file = Path(__file__).resolve()
 sys.path.append(str(file.parents[1]))
 
-from .chartitems import Asset, CandlestickItems
+from .chartitems import Asset, CandlestickItems, DataManager
 from .chart import Chart, ChartGraph
 from .uiapp import QtCore, QtGui, QtWidgets
 from .widget import (
@@ -107,24 +107,11 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         initiate the chart graph
         """
-        # data1 = Asset("AAPL").fetch_his_price(period=5)
-        # data1 = data1.reset_index()
-
-        # to be changed: 
-        self.chartWidget = Chart("First Chart", "TSLA")
-        # self.chartWidget = Chart(""AAPL", self)
-        # self.chartWidget.layout()
-
+        # to be changed: ***************
+        self.chartWidget = Chart("AAPL", self)
+        
         self.setCentralWidget(self.chartWidget)
         
-        # self.chartWidget.setBackground(None)
-        # self.chartWidget.setWindowTitle("Real Time Chart")
-
-
-        # self.chartWidget.plotItem.plot()
-        # item = CandlestickItems(data1)
-        # # item.draw_candle(0)
-        # self.chartWidget.addItem(item)
 
 
     def init_menu(self) -> None:

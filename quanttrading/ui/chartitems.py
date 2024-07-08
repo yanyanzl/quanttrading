@@ -44,7 +44,7 @@ class DataManager():
             print(f"asset is {asset}")
 
             self._data = asset.fetch_his_price()
-            print(f"self._data is {self._data}")
+            # print(f"self._data is {self._data}")
 
             self._data.reset_index(inplace=True)
             return True
@@ -179,6 +179,10 @@ class DataManager():
             return self._data.last_valid_index()
         
         return None
+    
+    def getPriceRange() -> Tuple[float, float]:
+
+        return (50.0, 50.0)
 
     def getTotalDataNum(self) -> int:
         """
@@ -278,6 +282,10 @@ class ChartBase(pg.GraphicsObject):
         pass
 
     def paint(self, painter: QtGui.QPainter, *args):
+        # **********************************************
+        print(f"chartbase: paint: picture.size. {self.picture.boundingRect()}")
+        print(f"chartbase: paint: picture.. {self.picture}")
+
         painter.drawPicture(0, 0, self.picture)
 
     def boundingRect(self):
@@ -286,6 +294,8 @@ class ChartBase(pg.GraphicsObject):
         or else we will get artifacts and possibly crashing.
         (in this case, QPicture does all the work of computing the bouning rect for us)
         """
+        print(f"chartbase: boundingRect: .size. {self.picture.boundingRect()}")
+        print(f"chartbase: paint: picture.. {self.picture}")
         return QtCore.QRectF(self.picture.boundingRect())
 
 
@@ -353,6 +363,7 @@ class CandlestickItems(ChartBase):
         if not dataManager.isEmpty():
             self._candles = [CandlestickItem(dataManager, index) for index in dataManager._data.index]
             self.generate_picture()
+            print(f"candlstickitems --init-- picture: {self.picture}")
 
     def generate_picture(self):
         """
@@ -376,17 +387,44 @@ class CandlestickItems(ChartBase):
         # candle_num = len(data.index)
 
         # i = candle_num
-        i = candle_num
-        max = self._dataManager.getXMax()
-        while i < max:
-            # candle = CandlestickItem(data.iloc[[i]])
-            # candle = CandlestickItem(self._dataManager, i)
-            # print(f"candlestickitems i is {i}")
-            self._candles[i].draw_candle(p)
-            # candle.draw_candle(p)
-            i += 1
+        # i = candle_num
+        # max = self._dataManager.getXMax()
+        # while i < max:
+        #     # candle = CandlestickItem(data.iloc[[i]])
+        #     # candle = CandlestickItem(self._dataManager, i)
+        #     # print(f"candlestickitems i is {i}")
+        #     self._candles[i].draw_candle(p)
+        #     # candle.draw_candle(p)
+        #     i += 1
+        w = 0.33
+        for candle in self._candles:
+            p.drawLine(QtCore.QPointF(candle._index_x, candle.low), QtCore.QPointF(candle._index_x, candle.high))
+            if candle.open > candle.close:
+                p.setBrush(pg.mkBrush('r'))
+            else:
+                p.setBrush(pg.mkBrush('g'))
+            p.drawRect(QtCore.QRectF(candle._index_x-w, candle.open, w*2, candle.close-candle.open))            
 
         p.end()
+
+    def boundingRect(self) -> QtCore.QRectF:
+        """
+        reimplement boundingRect method which set the size of the graph
+        """
+        min_x = self._dataManager.getXMin()
+        max_x = self._dataManager.getXMax()
+
+        min_price, max_price = self._dataManager.getYRange(min_x, max_x)
+        rect: QtCore.QRectF = QtCore.QRectF(
+            0,
+            min_price,
+            max_x - min_x,
+            max_price - min_price
+        )
+
+        # **********************************************
+        print(f" Candlestickitems: bounding rect: rect is {rect}")
+        return rect
 
     def get_y_range(self, min_ix: int = None, max_ix: int = None) -> Tuple[float, float]:
         """
