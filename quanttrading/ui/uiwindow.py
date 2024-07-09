@@ -16,7 +16,7 @@ file = Path(__file__).resolve()
 sys.path.append(str(file.parents[1]))
 
 from .chartitems import Asset, CandlestickItems, DataManager
-from .chart import Chart, ChartGraph
+from .chart import Chart, ChartGraph, chartTest
 from .uiapp import QtCore, QtGui, QtWidgets
 from .widget import (
     BaseMonitor,
@@ -108,7 +108,10 @@ class MainWindow(QtWidgets.QMainWindow):
         initiate the chart graph
         """
         # to be changed: ***************
-        self.chartWidget = Chart("AAPL", self)
+        # self.chartWidget = Chart("AAPL", self)
+        self.chartWidget = chartTest("TSLA", self)
+        self.chartWidget.addCandleItem()
+
         
         self.setCentralWidget(self.chartWidget)
         

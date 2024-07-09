@@ -103,6 +103,30 @@ class Chart(QtWidgets.QWidget):
 
         self._chartGraph._tickerChanged(tickerText)
 
+
+class chartTest(pg.PlotWidget):
+
+    def __init__(self, assetName: str = None, parent: QtWidgets.QWidget = None, **kargs):
+        super().__init__(parent, plotItem= None, **kargs)
+
+        self._assetName = assetName
+        self._layout: pg.GraphicsLayout = pg.GraphicsLayout()
+        self._layout.setContentsMargins(10, 10, 10, 10)
+        self._layout.setSpacing(0)
+        self._layout.setBorder(color='g', width=0.8)
+        self._layout.setZValue(0)
+        self.candle_plot = pg.PlotItem()
+        self._layout.addItem(self.candle_plot)
+        self.setCentralItem(self._layout)
+
+
+    def addCandleItem(self) -> None:
+        dataManager = DataManager(self._assetName)
+        candleitems = CandlestickItems(dataManager)
+        self.candle_plot.addItem(candleitems)
+
+
+
 class ChartGraph(pg.PlotWidget):
     """
     main chart window.
@@ -174,6 +198,7 @@ class ChartGraph(pg.PlotWidget):
         Add plot area.
         """
         # Create plot object
+        # pg.plot()
         plot: pg.PlotItem = pg.PlotItem(axisItems={"bottom": self._get_new_x_axis()})
         plot.setMenuEnabled(False)
         plot.setClipToView(True)
@@ -183,7 +208,7 @@ class ChartGraph(pg.PlotWidget):
         # plot.setRange(xRange=(0, 1), yRange=(0, 1))
         plot.hideButtons()
         plot.setMinimumHeight(minimum_height)
-        plot.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        # plot.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
         plot.setObjectName(plot_name)
 
         if maximum_height:
@@ -194,6 +219,7 @@ class ChartGraph(pg.PlotWidget):
 
         if not self._first_plot:
             self._first_plot = plot
+            # plot.setMinimumSize(800, 800)
 
         # Connect view change signal to update y range function
         view: pg.ViewBox = plot.getViewBox()
@@ -211,7 +237,9 @@ class ChartGraph(pg.PlotWidget):
 
         # Store plot object in dict
         self._plots[plot_name] = plot
-
+        print(f"chartGraph: addPlot: plot view pos is {plot.viewPos()}")
+        print(f"chartGraph: addPlot: plot view range is {plot.viewRect()}")
+        print(f"chartGraph: addPlot: plot viewbox range is {plot.getViewBox().viewRange()}")
         # Add plot onto the layout
         self._layout.nextRow()
         self._layout.addItem(plot)
@@ -289,6 +317,7 @@ class ChartGraph(pg.PlotWidget):
         plot.addItem(item)
 
         self._item_plot_map[item] = plot
+        self._update_plot_limits()
 
     def get_plot(self, plot_name: str) -> pg.PlotItem:
         """
@@ -336,7 +365,7 @@ class ChartGraph(pg.PlotWidget):
         Update the limit of plots.
         """
         for item, plot in self._item_plot_map.items():
-            min_value, max_value = item.get_y_range()
+            min_value, max_value = item.get_y_range(self._dataManager.getXMin(), self._dataManager.getXMax())
 
             plot.setLimits(
                 xMin=-1,
@@ -697,7 +726,7 @@ class ChartCursor(QtCore.QObject):
         # bar = self._data.iloc[self._x]
         print(f"chartcursor, self._x is {self._x}")
         bar: DataFrame = self._dataManager.getByIndex(self._x)
-        if bar:
+        if bar is not None and not bar.empty:
             self._y = bar.at[bar.first_valid_index(), 'Close']
 
         self._update_line()

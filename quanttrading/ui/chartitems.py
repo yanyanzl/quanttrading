@@ -281,12 +281,36 @@ class ChartBase(pg.GraphicsObject):
         """
         pass
 
-    def paint(self, painter: QtGui.QPainter, *args):
+    def paint(self,
+              painter: QtGui.QPainter,
+              opt: QtWidgets.QStyleOptionGraphicsItem,
+              w: QtWidgets.QWidget
+              ):
         # **********************************************
         print(f"chartbase: paint: picture.size. {self.picture.boundingRect()}")
         print(f"chartbase: paint: picture.. {self.picture}")
 
         painter.drawPicture(0, 0, self.picture)
+
+        """ 
+        rect = opt.exposedRect
+
+        min_ix: int = int(rect.left())
+        max_ix: int = int(rect.right())
+        max_ix: int = min(max_ix, len(self._bar_picutures))
+
+        rect_area: tuple = (min_ix, max_ix)
+        if (
+            self._to_update
+            or rect_area != self._rect_area
+            or not self._item_picuture
+        ):
+            self._to_update = False
+            self._rect_area = rect_area
+            self._draw_item_picture(min_ix, max_ix)
+
+        self._item_picuture.play(painter)
+        """
 
     def boundingRect(self):
         """ 
@@ -294,17 +318,16 @@ class ChartBase(pg.GraphicsObject):
         or else we will get artifacts and possibly crashing.
         (in this case, QPicture does all the work of computing the bouning rect for us)
         """
-        print(f"chartbase: boundingRect: .size. {self.picture.boundingRect()}")
-        print(f"chartbase: paint: picture.. {self.picture}")
-        return QtCore.QRectF(self.picture.boundingRect())
+        pass
 
 
-class CandlestickItem(ChartBase):
+class CandlestickItem(object):
     """
     single candlestick item on the chart.
     """
     def __init__(self, dataManager: DataManager = None, index: int = None):
-        super().__init__(dataManager)
+        # super().__init__(dataManager)
+        self._dataManager = dataManager
         self._index_x: int = index
         self.dateTime = self._dataManager.getDateTime(index)
 
@@ -398,6 +421,8 @@ class CandlestickItems(ChartBase):
         #     i += 1
         w = 0.33
         for candle in self._candles:
+            print(f"candle {candle._index_x} is {candle}")
+
             p.drawLine(QtCore.QPointF(candle._index_x, candle.low), QtCore.QPointF(candle._index_x, candle.high))
             if candle.open > candle.close:
                 p.setBrush(pg.mkBrush('r'))
@@ -424,6 +449,7 @@ class CandlestickItems(ChartBase):
 
         # **********************************************
         print(f" Candlestickitems: bounding rect: rect is {rect}")
+        print(f" Candlestickitems: bounding rect: self.picture.rect is {self.picture.boundingRect()}")
         return rect
 
     def get_y_range(self, min_ix: int = None, max_ix: int = None) -> Tuple[float, float]:
