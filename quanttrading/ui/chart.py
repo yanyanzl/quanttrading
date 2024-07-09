@@ -133,8 +133,8 @@ class ChartGraph(pg.PlotWidget):
     Chart(PlotWidget) --> central Item is layout (GraphicsLayout) --> PlotItem (added by Layout.additem())
     """
         
-    def __init__(self, assetName: str = None, parent: QtWidgets.QWidget = None, show=False, size=None, title=None, **kargs):
-        super().__init__(parent, plotItem= None, **kargs)
+    def __init__(self, assetName: str = None, parent: QtWidgets.QWidget = None, size=None, title=None, **kargs):
+        super().__init__(parent, **kargs)
 
         self._assetName = assetName
         # self._chartInterval = Aiconfig.get("DEFAULT_CHART_INTERVAL")
@@ -164,12 +164,6 @@ class ChartGraph(pg.PlotWidget):
         self.setAsset(self._assetName)
 
         self._chartCursor = ChartCursor(self, self._dataManager, self._plots, self._item_plot_map)
-        
-    def _initData(self) -> None:
-        """
-        initialize the data for the chart. 
-        """
-        pass
 
     def _init_ui(self) -> None:
         """
