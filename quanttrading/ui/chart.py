@@ -231,8 +231,8 @@ class ChartGraph(pg.PlotWidget):
 
         # Store plot object in dict
         self._plots[plot_name] = plot
-        print(f"chartGraph: addPlot: plot view pos is {plot.viewPos()}")
-        print(f"chartGraph: addPlot: plot view range is {plot.viewRect()}")
+        # print(f"chartGraph: addPlot: plot view pos is {plot.viewPos()}")
+        # print(f"chartGraph: addPlot: plot view range is {plot.viewRect()}")
         print(f"chartGraph: addPlot: plot viewbox range is {plot.getViewBox().viewRange()}")
         # Add plot onto the layout
         self._layout.nextRow()

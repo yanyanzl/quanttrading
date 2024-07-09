@@ -109,8 +109,8 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         # to be changed: ***************
         # self.chartWidget = Chart("AAPL", self)
-        self.chartWidget = chartTest("TSLA", self)
-        self.chartWidget.addCandleItem()
+        self.chartWidget = ChartGraph("TSLA", parent=self)
+        # self.chartWidget.addCandleItem()
 
         
         self.setCentralWidget(self.chartWidget)

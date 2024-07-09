@@ -446,11 +446,10 @@ class CandlestickItems(ChartBase):
             max_x - min_x,
             max_price - min_price
         )
-
         # **********************************************
         print(f" Candlestickitems: bounding rect: rect is {rect}")
         print(f" Candlestickitems: bounding rect: self.picture.rect is {self.picture.boundingRect()}")
-        return rect
+        return self.picture.boundingRect()
 
     def get_y_range(self, min_ix: int = None, max_ix: int = None) -> Tuple[float, float]:
         """
