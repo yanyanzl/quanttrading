@@ -19,7 +19,7 @@ from sys import path as pt
 file = Path(__file__).resolve()
 pt.append(str(file.parents[1]))
 
-from .chartitems import Asset, CandlestickItems, ChartBase, DataManager, DatetimeAxis, Ticker
+from .chartitems import Asset, CandlestickItems, ChartBase, DataManager, DatetimeAxis, Ticker, IntervalBox
 from setting import Aiconfig
 import data.finlib as fb
 
@@ -47,41 +47,41 @@ class Chart(QtWidgets.QWidget):
         self._assetName = assetName
 
         # self._layout = QtWidgets.QBoxLayout()
-        self._mainLayout = QtWidgets.QVBoxLayout()
-        self._widgetsLayout = QtWidgets.QHBoxLayout()
+        self._mainLayout:QtWidgets.QVBoxLayout = None
+        self._widgetsLayout:QtWidgets.QHBoxLayout = None
         self._tickers: QtWidgets.QComboBox = None
         self._chartGraph: ChartGraph = None
-        self._interval = None # to be defined. as subclass of QSpinbox
+        self._interval:IntervalBox = None # to be defined. as subclass of QSpinbox
         self._initUI()
     
     def _initUI(self) -> None:
         """ """
         self.setWindowTitle(f"chart title : {self._assetName}")
-        # self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum, QtWidgets.QSizePolicy.Policy.Maximum)
+        self._mainLayout = QtWidgets.QVBoxLayout(self)
         self._mainLayout.setContentsMargins(10, 10, 10, 10)
         self._mainLayout.setSpacing(0)
-        screen = QtWidgets.QApplication.primaryScreen()
-        print(f"screen is {screen} \n and screen.size is {screen.availableGeometry()}")
-        screensize = screen.availableSize() * 0.8
-        self.setMaximumSize(screensize)
+        # screen = QtWidgets.QApplication.primaryScreen()
+        # print(f"screen is {screen} \n and screen.size is {screen.availableGeometry()}")
+        # screensize = screen.availableSize() * 0.8
+        # self.setMaximumSize(screensize)
 
-        # self._mainLayout.setBorder(color='g', width=0.8)
-        # self._mainLayout.setZValue(0)
-        # self.setCentralItem(self._layout) 
-
-        self._chartGraph = ChartGraph(self._assetName, self)
-        # self._chartGraph.setMaximumSize(screensize*0.9)
+        self._chartGraph = ChartGraph(self._assetName)
 
         self._tickers = Ticker(Aiconfig.get("ASSET_LIST"))
         self._tickers.currentTextChanged.connect(self._chartGraph._tickerChanged)
         self._tickers.editTextChanged.connect(self._tickerEdited)
-        
-        self._mainLayout.addWidget(self._chartGraph, stretch=7, alignment=Qt.AlignmentFlag.AlignCenter)
-        self._widgetsLayout.addWidget(self._tickers, stretch = 1, alignment=Qt.AlignmentFlag.AlignRight)
-        self._mainLayout.addLayout(self._widgetsLayout,stretch=1)
-        # central_widget = QFrame()
 
-        self.setLayout(self._mainLayout)
+        self._interval = IntervalBox()
+        self._interval.currentTextChanged.connect(self._chartGraph._intervalChanged)
+
+        self._widgetsLayout = QtWidgets.QHBoxLayout()
+        self._widgetsLayout.addWidget(self._tickers)
+        self._widgetsLayout.addWidget(self._interval)
+        self._widgetsLayout.addStretch(stretch=1)
+        # self._widgetsLayout.addSpacing(50)
+
+        self._mainLayout.addWidget(self._chartGraph)
+        self._mainLayout.addLayout(self._widgetsLayout)
 
 
     def _tickerEdited(self, tickerText) -> None:
@@ -118,7 +118,6 @@ class chartTest(pg.PlotWidget):
         self.candle_plot = pg.PlotItem()
         self._layout.addItem(self.candle_plot)
         self.setCentralItem(self._layout)
-
 
     def addCandleItem(self) -> None:
         dataManager = DataManager(self._assetName)
@@ -249,6 +248,12 @@ class ChartGraph(pg.PlotWidget):
         if tickerText is not None:
 
             self.setAsset(tickerText)
+
+    def _intervalChanged(self, intervalText) -> None:
+        """
+        when the interval selected to display was changed.
+        """
+        pass
 
     def setAsset(self, assetName: str = None) -> bool:
         """

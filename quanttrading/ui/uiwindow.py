@@ -109,13 +109,11 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         # to be changed: ***************
         # self.chartWidget = Chart("AAPL", self)
-        self.chartWidget = ChartGraph("TSLA", parent=self)
+        self.chartWidget = Chart("Real Time Chart", "TSLA")
+        # self.chartWidget = ChartGraph("TSLA", self)
         # self.chartWidget.addCandleItem()
 
-        
         self.setCentralWidget(self.chartWidget)
-        
-
 
     def init_menu(self) -> None:
         """"""

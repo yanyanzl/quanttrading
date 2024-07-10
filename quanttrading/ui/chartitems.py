@@ -26,7 +26,7 @@ class DataManager():
 
     def setAsset(self, assetName: str = None, 
                  chartInterval: ChartInterval = None,
-                 period: ChartPeriod = ChartPeriod.MAX
+                 period: ChartPeriod = ChartPeriod.Y1
                  ) -> bool:
         """
         set the asset to the name given. 
@@ -45,7 +45,7 @@ class DataManager():
                 chartInterval = ChartInterval.D1
 
             if period is None:
-                period = ChartPeriod.MAX
+                period = ChartPeriod.Y1
 
             if isinstance(assetName, str):
                 self._assetName = assetName
@@ -570,3 +570,14 @@ class Ticker(QtWidgets.QComboBox):
             self.addItems(tickers)
             self.setEditable(True)
 
+
+class IntervalBox(QtWidgets.QComboBox):
+    """
+    1m,2m,5m,15m,30m,60m,90m,1h,1d,1wk
+    """
+    def __init__(self):
+        super().__init__()
+        intervals = ["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "1wk"]
+        self.addItems(intervals)
+        self.setEditable(False)
+        self.adjustSize()
