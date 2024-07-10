@@ -7,7 +7,7 @@ Created on Fri Nov 24 12:39:21 2023
 """
 
 import pandas as pd
-from pandas_datareader import data
+# from pandas_datareader import data
 from datetime import datetime, timedelta
 import requests_cache
 import sys
@@ -483,7 +483,7 @@ class Asset(AssetBase):
                 if period == 0:
                     # if history price for self is not available yet. get it.
                     if len(self.his_price) == 0:
-                       self.his_price = data.DataReader(
+                       self.his_price = yf.download(
                             self.name,
                             # data_source = 'yahoo',
                             start = self.startdate,
@@ -496,7 +496,7 @@ class Asset(AssetBase):
                 # period is specified. get data for period years
                 else:
                     # yf.download()
-                    his_price = data.DataReader(
+                    his_price = yf.download(
                         self.name,
                         datetime(datetime.now().year - period, 1, 1),
                         self.enddate,
@@ -507,13 +507,13 @@ class Asset(AssetBase):
             else:
                 # no input for period
                 if period == 0:
-                    his_price = data.DataReader(
+                    his_price = yf.download(
                         name, self.startdate, self.enddate, session=csession
                     )
 
                 # period is specified. get data for period years
                 else:
-                    his_price = data.DataReader(
+                    his_price = yf.download(
                         name,
                         datetime(datetime.now().year - period, 1, 1),
                         self.enddate,
