@@ -19,18 +19,34 @@ def _(name):
 class ChartInterval(Enum):
     """
     interval for the chart candles.
+    1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo Intraday data cannot extend last 60 days
     """
-    S1 = "1 Second"
-    M1 = "1 Minite"
-    M5 = "5 Minites"
-    M10 = "10 Minites"
-    M15 = "15 Minites"
-    M30 = "30 Minites"
-    H1 = "1 Hour"
-    H4 = "4 Hours"
-    D1 = "1 Day"
-    W1 = "1 Week"
+    S1 = "1s"
+    M1 = "1m"
+    M5 = "5m"
+    # M10 = "10"
+    M15 = "15m"
+    M30 = "30m"
+    H1 = "1h"
+    # H4 = "1d"
+    D1 = "1d"
+    W1 = "1Wk"
 
+class ChartPeriod(Enum):
+    """
+    the period for the chart candles.
+    Valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd, max Either Use period parameter or use start and end
+    """
+    D1 = "1d"
+    D5 = "5d"
+    M1 = "1mo"
+    M3 = "3mo"
+    M6 = "6mo"
+    Y1 = "1y"
+    Y2 = "2y"
+    Y5 = "5y"
+    y10 = "10y"
+    MAX = "max"
 
 
 """

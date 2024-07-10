@@ -9,7 +9,7 @@ from .uiapp import QtGui, QtCore, QtWidgets
 from setting import Aiconfig
 from datetime import datetime
 from data.finlib import Asset
-from constant import ChartInterval
+from constant import ChartInterval, ChartPeriod
 
 
 class DataManager():
@@ -24,31 +24,44 @@ class DataManager():
         if assetName is not None:
             self.setAsset(assetName)
 
-    def setAsset(self, assetName: str = None, chartInterval: ChartInterval = None) -> bool:
+    def setAsset(self, assetName: str = None, 
+                 chartInterval: ChartInterval = None,
+                 period: ChartPeriod = ChartPeriod.MAX
+                 ) -> bool:
         """
         set the asset to the name given. 
         this will change all the data hold by the Datamanager
         the interval will be not be changed.
         """
-        if assetName is None:
-            return False
-        
-        if (chartInterval is not None and isinstance(chartInterval, ChartInterval)):
+        try:
+
+            if assetName is None:
+                return False
             
-            self._chartInterval = chartInterval
+            if (chartInterval is not None and isinstance(chartInterval, ChartInterval)):
+                self._chartInterval = chartInterval
+            else:
+                self._chartInterval = ChartInterval.D1
+                chartInterval = ChartInterval.D1
 
-        if isinstance(assetName, str):
-            self._assetName = assetName
+            if period is None:
+                period = ChartPeriod.MAX
 
-            asset = Asset(assetName)
-            print(f"asset is {asset}")
+            if isinstance(assetName, str):
+                self._assetName = assetName
 
-            self._data = asset.fetch_his_price()
-            # print(f"self._data is {self._data}")
+                asset = Asset(assetName)
+                print(f"asset is {asset}")
 
-            self._data.reset_index(inplace=True)
-            return True
-        else:
+                self._data = asset.getMarketData(chartInterval, period)
+                # print(f"self._data is {self._data}")
+
+                self._data.reset_index(inplace=True)
+                return True
+            else:
+                return False
+        except Exception as e:
+            print(f"DataManager: setAsset(): failed to setAsset for {assetName}, interval {chartInterval}, period: {period}")
             return False
 
     def setInterval(self, interval: ChartInterval = None) -> bool:

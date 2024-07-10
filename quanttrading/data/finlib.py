@@ -25,7 +25,7 @@ file = Path(__file__).resolve()
 pt.append(str(file.parents[1]))
 
 from data.db.db_settings import VALIDATION_ADDRESS, DEBUG
-from constant import ChartInterval
+from constant import ChartInterval, ChartPeriod
 from .gateway.gateway import BaseGateway
 
 # this is the only way works so far. to use yfinance override pandas_datareader.
@@ -139,6 +139,8 @@ class AssetBase(object):
         
         self.name = StringName(asset_name)
 
+        self.ticker: yf.Ticker = yf.Ticker(asset_name, session=csession)
+
         self._interval = chartInterval
 
         self._exchange = gateWay
@@ -209,12 +211,38 @@ class AssetBase(object):
             pass
         return False
 
-    def getMarketData(self, chartInterval: ChartInterval = None):
+    def getMarketData(self, chartInterval: ChartInterval = ChartInterval.D1,
+                       period:ChartPeriod = ChartPeriod.M6) -> pd.DataFrame:
         """
         get the candle stick data for the asset based on the interval of chartInterval
+        ticker: self.name
+        period : str
+            Valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max Either Use period parameter or use start and end
+        interval : str
+            Valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo Intraday data cannot extend last 60 days
+        start: str
+            Download start date string (YYYY-MM-DD) or _datetime, inclusive. Default is 99 years ago E.g. for start="2020-01-01", the first data point will be on "2020-01-01"
+        end: str
+            Download end date string (YYYY-MM-DD) or _datetime, exclusive. Default is now E.g. for end="2023-01-01", the last data point will be on "2022-12-31"
         """
+        try:
 
-        pass
+            if chartInterval is not None and isinstance(chartInterval, ChartInterval):
+                if period is None:
+                    period = ChartPeriod.M6
+
+                self.his_price = yf.download(self.name, 
+                                             interval=chartInterval.value,
+                                              period=period.value,
+                                              rounding=True, 
+                                              session=csession
+                                              )
+
+                return self.his_price
+            return None
+        except Exception as e:
+            print(f"Asset: getMarketData(): can't get data for {self.name} for interval {chartInterval} and period: {period}")
+            return None
 
     def getSharesFull(self):
         """
@@ -235,15 +263,6 @@ class Asset(AssetBase):
         
         super().__init__(asset_name, chartInterval,
                          gateWay, startdate, enddate)
-
-    def getMarketData(self, chartInterval: ChartInterval = None):
-        """
-        
-        """
-        ticker = yf.Ticker(self.name)
-        data = yf.download()
-        return data
-        pass
 
     def get_return_his(self, name="", period=0):
         """
