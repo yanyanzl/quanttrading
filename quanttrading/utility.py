@@ -1,4 +1,3 @@
-
 """
 General utility functions.
 """
@@ -33,7 +32,6 @@ else:
 
 
 log_formatter: logging.Formatter = logging.Formatter("[%(asctime)s] %(message)s")
-
 
 
 def encrypt(key, source, encode=True):

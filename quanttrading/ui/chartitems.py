@@ -1,8 +1,9 @@
 """
 define all the items used in the chart
 """
+from dataclasses import dataclass
 from abc import abstractmethod
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 import pyqtgraph as pg
 from pandas import DataFrame, Timestamp, concat
 from .uiapp import QtGui, QtCore, QtWidgets
@@ -21,6 +22,7 @@ class DataManager():
         self._xMin = 0      # the min visible data's index x
         self._assetName: str = assetName
         self._chartInterval = Aiconfig.get("DEFAULT_CHART_INTERVAL")
+        self._yMarginPercent:int = int(Aiconfig.get("DEFAULT_Y_MARGIN"))/100
         if assetName is not None:
             self.setAsset(assetName)
 
@@ -170,19 +172,40 @@ class DataManager():
     def getYRange(self, min_ix: int = None, max_ix: int = None) -> Tuple[float, float]:
         """
         get the min and max Y within the index of min_ix to max_ix
+        return the whole range of price Y if none of the min_ix and max_ix provided
+        return 0,1 if there is no data in the datamanager.
         """
         # print(f"min_ix is {min_ix} \n")
         # print(f"max_ix is {max_ix} \n")
-        if isinstance(min_ix, int) and isinstance(max_ix, int) and min_ix < max_ix:
-            if min_ix in self._data.index and max_ix in self._data.index:
-                # print(self._data)
-                data = self._data[min_ix:max_ix]
-                # print(data)
-                # data = self._data.iloc[min_ix, max_ix]
-                min = data['Low'].min()
-                max = data['High'].max()
-                return (min, max)
-        return None
+        if self.isEmpty():
+            return 0, 1
+
+        if not min_ix or max_ix:
+            min_ix: int = 0
+            max_ix: int = self.getTotalDataNum() - 1
+        else:
+            min_ix: int = int(min_ix)
+            max_ix: int = int(max_ix)
+            max_ix = min(max_ix, self.getTotalDataNum())
+
+        if min_ix > max_ix:
+            i = min_ix
+            min_ix = max_ix
+            max_ix = i
+
+        if min_ix in self._data.index and max_ix in self._data.index:
+            # print(self._data)
+            data = self._data[min_ix:max_ix]
+            # print(data)
+            # data = self._data.iloc[min_ix, max_ix]
+            min = data['Low'].min()
+
+            max = data['High'].max() 
+            margin = (max - min) * (self._yMarginPercent)
+            min -= margin
+            max += margin
+
+            return (min, max)
 
     def lastIndex(self) -> int:
         """
@@ -205,10 +228,16 @@ class DataManager():
             return len(self._data.index)
 
     def clearAll(self) -> None:
+        """
+        drop all _data in the dataframe
+        """
         if not self.isEmpty():
             self._data.drop(self._data.index, inplace=True)
 
     def isEmpty(self) -> bool:
+        """
+        return True if the _data is None or is empty
+        """
         if self._data is None or self._data.empty:
             return True
 
@@ -226,6 +255,11 @@ class ChartBase(pg.GraphicsObject):
         self._dataManager: DataManager = dataManager
         self.picture = QtGui.QPicture()
 
+        self._bar_picutures: Dict[int, QtGui.QPicture] = {}
+        self._initBarPictures()
+
+        self._item_picuture: QtGui.QPicture = None
+
         self._up_pen: QtGui.QPen = pg.mkPen(
             color=Aiconfig.get("UP_COLOR"), 
             width=Aiconfig.get("PEN_WIDTH")
@@ -239,6 +273,22 @@ class ChartBase(pg.GraphicsObject):
         self._down_brush: QtGui.QBrush = pg.mkBrush(color=Aiconfig.get("DOWN_COLOR"))
         self._candle_width = Aiconfig.get("CANDLE_WIDTH")
 
+        self._rect_area: Tuple[float, float] = None
+
+        # Very important! Only redraw the visible part and improve speed a lot.
+        self.setFlag(self.GraphicsItemFlag.ItemUsesExtendedStyleOption)
+
+        # Force update during the next paint
+        self._to_update: bool = False
+
+    def _initBarPictures(self):
+        barNum = 100
+        if not self._dataManager:
+            pass
+        else:
+            barNum = self._dataManager.getTotalDataNum()
+        self._bar_picutures = {n:None for n in range(barNum)}
+
     def generate_picture(self):
         """
         pre-computing a QPicture object allows paint() to run much more quickly,
@@ -250,7 +300,9 @@ class ChartBase(pg.GraphicsObject):
         """
         only update the drawing for the changed part of the data
         """
-        pass
+        if self.scene():
+            self._to_update = True
+            self.scene().update()
 
     def update_all(self):
         """
@@ -273,11 +325,13 @@ class ChartBase(pg.GraphicsObject):
         """
         pass
 
-    def clear_all(self):
+    def clearAll(self):
         """
         clear all data and pictures.
         """
-        pass
+        self._item_picuture = None
+        self._bar_picutures.clear()
+        self.update()
 
     @abstractmethod
     def get_y_range(self, min_ix: int = None, max_ix: int = None) -> Tuple[float, float]:
@@ -301,12 +355,11 @@ class ChartBase(pg.GraphicsObject):
               ):
         # **********************************************
         print(f"chartbase: paint: picture.size. {self.picture.boundingRect()}")
+        """
         print(f"chartbase: paint: picture.. {self.picture}")
-
         painter.drawPicture(0, 0, self.picture)
-
         """ 
-        rect = opt.exposedRect
+        rect:QtWidgets.QStyleOptionGraphicsItem = opt.exposedRect
 
         min_ix: int = int(rect.left())
         max_ix: int = int(rect.right())
@@ -320,11 +373,37 @@ class ChartBase(pg.GraphicsObject):
         ):
             self._to_update = False
             self._rect_area = rect_area
-            self._draw_item_picture(min_ix, max_ix)
+            self._drawItemPicture(min_ix, max_ix)
 
         self._item_picuture.play(painter)
-        """
 
+    def _drawItemPicture(self, min_ix: int, max_ix: int) -> None:
+        """
+        Draw the picture of item in specific range.
+        """
+        self._item_picuture = QtGui.QPicture()
+        painter: QtGui.QPainter = QtGui.QPainter(self._item_picuture)
+
+        for ix in range(min_ix, max_ix):
+            bar_picture: QtGui.QPicture = self._bar_picutures[ix]
+            
+            if bar_picture is None:
+                # bar:DataFrame  = self._dataManager.getByIndex(ix)
+                bar_picture = self._drawBarPicture(ix)
+                self._bar_picutures[ix] = bar_picture
+
+            bar_picture.play(painter)
+
+        painter.end()        
+
+    @abstractmethod
+    def _drawBarPicture(self, ix: int) -> QtGui.QPicture:
+        """
+        Draw picture for specific bar.
+        """
+        pass
+
+    @abstractmethod
     def boundingRect(self):
         """ 
         boundingRect _must_ indicate the entire area that will be drawn on
@@ -333,8 +412,8 @@ class ChartBase(pg.GraphicsObject):
         """
         pass
 
-
-class CandlestickItem(object):
+@dataclass
+class Candlestick:
     """
     single candlestick item on the chart.
     """
@@ -351,19 +430,92 @@ class CandlestickItem(object):
             self.high = data.at[index, 'High']
             self.low = data.at[index, 'Low']
 
-    def draw_candle(self, painter: QtGui.QPainter = None, index_x: int = None) -> None:
-        """
-        draw candle with provided painter
-        """
-        p = painter
-        if p is None:
-            self.picture = QtGui.QPicture()
-            p = QtGui.QPainter(self.picture)
 
-        data = None
+class CandlestickItems(ChartBase):
+    """
+    candlesticks object for the chart
+    Create a subclass of GraphicsObject.
+    The only required methods are paint() and boundingRect() 
+    (see QGraphicsItem documentation)
+    """
+    def __init__(self, dataManager: DataManager):
+        super().__init__(dataManager)
 
-        if index_x is None:
-            index_x = self._index_x
+        self.max_candle = Aiconfig.get("MAX_NUM_CANDLE")
+
+        # candlesticks list corresponding to the dataManager's data
+        # self._candles: List[CandlestickItem] = None
+        if not dataManager.isEmpty():
+            # self._candles = [CandlestickItem(dataManager, index) for index in dataManager._data.index]
+            self.generate_picture()
+            print(f"candlstickitems --init-- picture: {self.picture}")
+
+    def generate_picture(self):
+        """
+        pre-computing a QPicture object allows paint() to run much more quickly, 
+        rather than re-drawing the shapes every time.
+        """
+        data_len = self._dataManager.getTotalDataNum()
+        print(f"data_len in Candlestickitems is {data_len}")
+        min_x = 0
+        max_x = data_len-1
+
+        self._drawItemPicture(min_x, max_x)
+
+        candle_num = 0
+        if data_len > self.max_candle:
+            candle_num = data_len - self.max_candle
+        self._dataManager.setXMin(candle_num)
+        self._dataManager.setXMax(self._dataManager.lastIndex())
+
+    def boundingRect(self) -> QtCore.QRectF:
+        """
+        reimplement boundingRect method which set the size of the graph
+        
+        min_x = self._dataManager.getXMin()
+        max_x = self._dataManager.getXMax()
+
+        min_price, max_price = self._dataManager.getYRange(min_x, max_x)
+        rect: QtCore.QRectF = QtCore.QRectF(
+            0,
+            min_price,
+            max_x - min_x,
+            max_price - min_price
+        )
+        """
+        min_price, max_price = self._dataManager.getYRange()
+        rect: QtCore.QRectF = QtCore.QRectF(
+            0,
+            min_price,
+            len(self._bar_picutures),
+            max_price - min_price
+        )
+        return rect
+
+        """
+        # **********************************************
+        print(f" Candlestickitems: bounding rect: rect is {rect}")
+        print(f" Candlestickitems: bounding rect: self.picture.rect is {self.picture.boundingRect()}")
+        return self.picture.boundingRect()
+        """
+
+    def get_y_range(self, min_ix: int = None, max_ix: int = None) -> Tuple[float, float]:
+        """
+        Get range of y-axis with given x-axis range.
+
+        If min_ix and max_ix not specified, then return range with whole data set.
+        """
+        return self._dataManager.getYRange(min_ix, max_ix)
+    
+
+    def _drawBarPicture(self, index_x: int) -> QtGui.QPicture:
+        """
+        Draw picture for specific bar.
+        """
+        
+        # Create candle picture's object
+        candle_picture: QtGui.QPicture = QtGui.QPicture()
+        p: QtGui.QPainter = QtGui.QPainter(candle_picture)
 
         data = self._dataManager.getByIndex(index_x)
         if data is not None and not data.empty:
@@ -380,99 +532,11 @@ class CandlestickItem(object):
             p.drawRect(QtCore.QRectF(index_x-w, data.at[index_x, 'Open'], w * 2, data.at[index_x, 'Close'] - data.at[index_x, 'Open']))
         else:
             print(f"no data find in the datamanager index is {index_x}")
-
-
-class CandlestickItems(ChartBase):
-    """
-    candlesticks object for the chart
-    Create a subclass of GraphicsObject.
-    The only required methods are paint() and boundingRect() 
-    (see QGraphicsItem documentation)
-    """
-    def __init__(self, dataManager: DataManager):
-        super().__init__(dataManager)
-
-        self.max_candle = Aiconfig.get("MAX_NUM_CANDLE")
-
-        # candlesticks list corresponding to the dataManager's data
-        self._candles: List[CandlestickItem] = None
-        if not dataManager.isEmpty():
-            self._candles = [CandlestickItem(dataManager, index) for index in dataManager._data.index]
-            self.generate_picture()
-            print(f"candlstickitems --init-- picture: {self.picture}")
-
-    def generate_picture(self):
-        """
-        pre-computing a QPicture object allows paint() to run much more quickly, 
-        rather than re-drawing the shapes every time.
-        """
-        self.picture = QtGui.QPicture()
-        p = QtGui.QPainter(self.picture)
-        p.setPen(pg.mkPen('w'))
-
-        candle_num = 0
-        data_len = len(self._dataManager.getData().index)
-        print(f"data_len in Candlestickitems is {data_len}")
-
-        if data_len > self.max_candle:
-            candle_num = data_len - self.max_candle
-        self._dataManager.setXMin(candle_num)
-        self._dataManager.setXMax(self._dataManager.lastIndex())
-
-        # data: DataFrame = self._data[candle_num:]
-        # candle_num = len(data.index)
-
-        # i = candle_num
-        # i = candle_num
-        # max = self._dataManager.getXMax()
-        # while i < max:
-        #     # candle = CandlestickItem(data.iloc[[i]])
-        #     # candle = CandlestickItem(self._dataManager, i)
-        #     # print(f"candlestickitems i is {i}")
-        #     self._candles[i].draw_candle(p)
-        #     # candle.draw_candle(p)
-        #     i += 1
-        w = 0.33
-        for candle in self._candles:
-            print(f"candle {candle._index_x} is {candle}")
-
-            p.drawLine(QtCore.QPointF(candle._index_x, candle.low), QtCore.QPointF(candle._index_x, candle.high))
-            if candle.open > candle.close:
-                p.setBrush(pg.mkBrush('r'))
-            else:
-                p.setBrush(pg.mkBrush('g'))
-            p.drawRect(QtCore.QRectF(candle._index_x-w, candle.open, w*2, candle.close-candle.open))            
-
+        
+        # Finish
         p.end()
-
-    def boundingRect(self) -> QtCore.QRectF:
-        """
-        reimplement boundingRect method which set the size of the graph
-        """
-        min_x = self._dataManager.getXMin()
-        max_x = self._dataManager.getXMax()
-
-        min_price, max_price = self._dataManager.getYRange(min_x, max_x)
-        rect: QtCore.QRectF = QtCore.QRectF(
-            0,
-            min_price,
-            max_x - min_x,
-            max_price - min_price
-        )
-        # **********************************************
-        print(f" Candlestickitems: bounding rect: rect is {rect}")
-        print(f" Candlestickitems: bounding rect: self.picture.rect is {self.picture.boundingRect()}")
-        return self.picture.boundingRect()
-
-    def get_y_range(self, min_ix: int = None, max_ix: int = None) -> Tuple[float, float]:
-        """
-        Get range of y-axis with given x-axis range.
-
-        If min_ix and max_ix not specified, then return range with whole data set.
-        """
-        return self._dataManager.getYRange(min_ix, max_ix)
+        return candle_picture
     
-
     def get_info_text(self, ix: int) -> str:
         """
         Get information text to show by cursor.
@@ -485,7 +549,7 @@ class CandlestickItems(ChartBase):
                 print(f"ix in get_info_text is invalid. with value {ix}")
                 return ""
 
-        candle: CandlestickItem = CandlestickItem(self._dataManager, ix)
+        candle: Candlestick = Candlestick(self._dataManager, ix)
 
         if candle is not None and candle._index_x is not None and candle.dateTime is not None:
             # print(f"candle is {candle}")
@@ -515,9 +579,6 @@ class CandlestickItems(ChartBase):
             text: str = ""
 
         return text
-
-    # def update():
-    #     pass
 
 
 class DatetimeAxis(pg.AxisItem):

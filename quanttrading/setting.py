@@ -186,6 +186,7 @@ def initialize_settings_data():
             ],
             "DEFAULT_ASSET": "TSLA",
             "DEFAULT_CHART_INTERVAL": "1 Minite",
+            "DEFAULT_Y_MARGIN": 5,
         }
     
 

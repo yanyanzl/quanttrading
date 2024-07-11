@@ -60,10 +60,6 @@ class Chart(QtWidgets.QWidget):
         self._mainLayout = QtWidgets.QVBoxLayout(self)
         self._mainLayout.setContentsMargins(10, 10, 10, 10)
         self._mainLayout.setSpacing(0)
-        # screen = QtWidgets.QApplication.primaryScreen()
-        # print(f"screen is {screen} \n and screen.size is {screen.availableGeometry()}")
-        # screensize = screen.availableSize() * 0.8
-        # self.setMaximumSize(screensize)
 
         self._chartGraph = ChartGraph(self._assetName)
 
@@ -263,7 +259,7 @@ class ChartGraph(pg.PlotWidget):
             
             if fb.Asset().is_valid(assetName):
 
-                self.clear_all()
+                self.clearAll()
 
                 print(f"Asset for the chart changed to {assetName} now!")
 
@@ -330,17 +326,17 @@ class ChartGraph(pg.PlotWidget):
         """
         return self._plots.values()
 
-    def clear_all(self) -> None:
+    def clearAll(self) -> None:
         """
         Clear all data.
         """
         self._dataManager.clearAll()
 
         for item in self._items.values():
-            item.clear_all()
+            item.clearAll()
 
         if self._chartCursor is not None:
-            self._chartCursor.clear_all()
+            self._chartCursor.clearAll()
 
     def update_bar(self, barData: DataFrame = None) -> None:
         """
@@ -731,7 +727,7 @@ class ChartCursor(QtCore.QObject):
         self._update_line()
         self._update_label()
 
-    def clear_all(self) -> None:
+    def clearAll(self) -> None:
         """
         Clear all data.
         """
