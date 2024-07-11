@@ -53,13 +53,13 @@ class DataManager():
                 self._chartInterval = chartInterval
 
             if period is None:
-                period = ChartPeriod.M3
+                period = ChartPeriod.Y1
             
             if chartInterval.value in ["1s", "1m", "5m", "15m", "30m", "1h"]:
                 if period.value in ["1d", "5d", "1mo"]:
                     pass
                 else:
-                    period = ChartPeriod.D5
+                    period = ChartPeriod.M1
 
             if isinstance(assetName, str):
                 self._assetName = assetName

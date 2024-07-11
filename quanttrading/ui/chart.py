@@ -100,27 +100,6 @@ class Chart(QtWidgets.QWidget):
         self._chartGraph._tickerChanged(tickerText)
 
 
-class chartTest(pg.PlotWidget):
-
-    def __init__(self, assetName: str = None, parent: QtWidgets.QWidget = None, **kargs):
-        super().__init__(parent, plotItem= None, **kargs)
-
-        self._assetName = assetName
-        self._layout: pg.GraphicsLayout = pg.GraphicsLayout()
-        self._layout.setContentsMargins(10, 10, 10, 10)
-        self._layout.setSpacing(0)
-        self._layout.setBorder(color='g', width=0.8)
-        self._layout.setZValue(0)
-        self.candle_plot = pg.PlotItem()
-        self._layout.addItem(self.candle_plot)
-        self.setCentralItem(self._layout)
-
-    def addCandleItem(self) -> None:
-        dataManager = DataManager(self._assetName)
-        candleitems = CandlestickItems(dataManager)
-        self.candle_plot.addItem(candleitems)
-
-
 class ChartGraph(pg.PlotWidget):
     """
     main chart window.
@@ -152,6 +131,8 @@ class ChartGraph(pg.PlotWidget):
             self._assetName = Aiconfig.get("DEFAULT_ASSET")
 
         self._dataManager: DataManager = DataManager(self._assetName)
+
+        self.lastMousePos = None
 
         self._init_ui()
 
@@ -280,11 +261,8 @@ class ChartGraph(pg.PlotWidget):
                 self._dataManager.setAsset(assetName, chartInterval, chartPeriod)
 
             # print(f"chart.setAsset() {self._dataManager.getData()}")
-
             self._candlestickManager = CandlestickItems(self._dataManager)
-
-            # ***********come back from here to be check here
-            self.add_item(self._candlestickManager, "CandlestickItems", self._first_plot.objectName())
+            self.add_item(self._candlestickManager, "CandlestickItems", self._first_plot.objectName())                
 
             # set the visible range related parameters.
             return True
@@ -432,6 +410,30 @@ class ChartGraph(pg.PlotWidget):
             self._on_key_up()
         elif event.key() == QtCore.Qt.Key.Key_Down:
             self._on_key_down()
+        
+    # def mouseMoveEvent(self, ev:QtGui.QMouseEvent):
+    #     if self.lastMousePos is not None:
+    #         print(f"self.lastMousePos is {self.lastMousePos}")
+    #         lpos = ev.position() if hasattr(ev, 'position') else ev.localPos()
+    #         if self.lastMousePos is None:
+    #             self.lastMousePos = lpos
+    #         # delta = Point(lpos - self.lastMousePos)
+    #         self.lastMousePos = lpos
+    #         print(f"chartGraph mousemoveEvent: pos {lpos}")
+    #     super().mouseMoveEvent(ev)
+
+    # def mousePressEvent(self, ev:QtGui.QMouseEvent):
+    #     lpos = ev.position() if hasattr(ev, 'position') else ev.localPos()
+    #     if self.lastMousePos is None:
+    #         self.lastMousePos = lpos
+    #     self.lastMousePos = lpos
+    #     print(f"chartGraph mousePressEvent: pos {lpos}")
+    #     super().mousePressEvent(ev)
+
+    # def mouseReleaseEvent(self, ev:QtGui.QMouseEvent):
+    #     self.lastMousePos = None
+    #     print(f"chartGraph mouseReleaseEvent:")
+    #     super().mouseReleaseEvent(ev)
 
     def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
         """
@@ -454,6 +456,7 @@ class ChartGraph(pg.PlotWidget):
         self._update_x_range()
         self._chartCursor.move_left()
         self._chartCursor.update_info()
+    
 
     def _on_key_right(self) -> None:
         """

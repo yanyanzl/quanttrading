@@ -16,7 +16,7 @@ file = Path(__file__).resolve()
 sys.path.append(str(file.parents[1]))
 
 from .chartitems import Asset, CandlestickItems, DataManager
-from .chart import Chart, ChartGraph, chartTest
+from .chart import Chart, ChartGraph
 from .uiapp import QtCore, QtGui, QtWidgets
 from .widget import (
     BaseMonitor,
