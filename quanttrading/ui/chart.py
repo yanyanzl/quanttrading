@@ -18,7 +18,7 @@ from pathlib import Path  # if you haven't already done so
 from sys import path as pt
 file = Path(__file__).resolve()
 pt.append(str(file.parents[1]))
-
+from constant import ChartInterval, ChartPeriod, stringToInterval
 from .chartitems import Asset, CandlestickItems, ChartBase, DataManager, DatetimeAxis, Ticker, IntervalBox
 from setting import Aiconfig
 import data.finlib as fb
@@ -119,7 +119,6 @@ class chartTest(pg.PlotWidget):
         dataManager = DataManager(self._assetName)
         candleitems = CandlestickItems(dataManager)
         self.candle_plot.addItem(candleitems)
-
 
 
 class ChartGraph(pg.PlotWidget):
@@ -249,38 +248,48 @@ class ChartGraph(pg.PlotWidget):
         """
         when the interval selected to display was changed.
         """
-        pass
+        if not intervalText:
+            return
+        if intervalText in ChartInterval.values():
+            interval = stringToInterval(intervalText)
+            self.setAsset(chartInterval=interval)
 
-    def setAsset(self, assetName: str = None) -> bool:
+    def setAsset(self, assetName: str = None, 
+                 chartInterval:ChartInterval = None,
+                 chartPeriod: ChartPeriod = None) -> bool:
         """
         set the current displaying asset in the chart to the new asset.
         """
-        if assetName is not None and isinstance(assetName, str):
-            
-            if fb.Asset().is_valid(assetName):
-
-                self.clearAll()
-
-                print(f"Asset for the chart changed to {assetName} now!")
-
-                self._assetName = assetName
-
-                if self._dataManager is None:
-                    self._dataManager = DataManager(assetName)
-                else:
-                    self._dataManager.setAsset(assetName)
-
-                # print(f"chart.setAsset() {self._dataManager.getData()}")
-
-                self._candlestickManager = CandlestickItems(self._dataManager)
-
-                # ***********come back from here to be check here
-                self.add_item(self._candlestickManager, "CandlestickItems", self._first_plot.objectName())
-
-                # set the visible range related parameters.
-                return True
+        if not assetName:
+            if not self._assetName:
+                return False
             else:
-                raise ValueError(f"assetName {assetName} is invalid!")
+                assetName = self._assetName
+
+        if fb.Asset().is_valid(assetName):
+
+            self.clearAll()
+
+            print(f"Asset for the chart changed to {assetName} now!")
+
+            self._assetName = assetName
+
+            if self._dataManager is None:
+                self._dataManager = DataManager(assetName)
+            else:
+                self._dataManager.setAsset(assetName, chartInterval, chartPeriod)
+
+            # print(f"chart.setAsset() {self._dataManager.getData()}")
+
+            self._candlestickManager = CandlestickItems(self._dataManager)
+
+            # ***********come back from here to be check here
+            self.add_item(self._candlestickManager, "CandlestickItems", self._first_plot.objectName())
+
+            # set the visible range related parameters.
+            return True
+        else:
+            raise ValueError(f"assetName {assetName} is invalid!")
         
         return False
 
@@ -406,8 +415,8 @@ class ChartGraph(pg.PlotWidget):
         # Return a the view's visible range as a list: [[xmin, xmax], [ymin, ymax]]
         view_range: list = view.viewRange()
         self._right_ix = max(0, view_range[0][1])
-        print(f"chartGraph :paintEvent: _right_ix is {self._right_ix}")
-        print(f"chartGraph :paintEvent: view_range is {view_range}")
+        # print(f"chartGraph :paintEvent: _right_ix is {self._right_ix}")
+        # print(f"chartGraph :paintEvent: view_range is {view_range}")
 
         super().paintEvent(event)
 
@@ -451,7 +460,7 @@ class ChartGraph(pg.PlotWidget):
         Move chart to right.
         """
         self._right_ix += 1
-        self._right_ix = min(self._right_ix, self._dataManager.getXMax())
+        # self._right_ix = min(self._right_ix, self._dataManager.getXMax())
 
         self._update_x_range()
         self._chartCursor.move_right()
@@ -483,6 +492,7 @@ class ChartGraph(pg.PlotWidget):
         Move chart to the most right.
         """
         self._right_ix = self._dataManager.lastIndex()
+
         self._update_x_range()
         self._chartCursor.update_info()
 

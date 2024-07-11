@@ -3,7 +3,7 @@ General constant enums used in the trading platform.
 """
 
 from enum import Enum
-
+from typing import List
 
 # from .locale import _
 
@@ -31,6 +31,30 @@ class ChartInterval(Enum):
     # H4 = "1d"
     D1 = "1d"
     W1 = "1Wk"
+
+    @staticmethod
+    def values() -> List[str]:
+        return ["1s", "1m", "5m", "15m", "30m", "1h", "1d", "1wk"]
+
+def stringToInterval(value:str) -> ChartInterval:
+    if value == "1s":
+        return ChartInterval.S1
+    elif value == "1m":
+        return ChartInterval.M1
+    elif value == "5m":
+        return ChartInterval.M5
+    elif value == "15m":
+        return ChartInterval.M15
+    elif value == "30m":
+        return ChartInterval.M30
+    elif value == "1h":
+        return ChartInterval.H1
+    elif value == "1d":
+        return ChartInterval.D1
+    elif value == "1wk":
+        return ChartInterval.W1
+    else:
+        return ChartInterval.D1
 
 class ChartPeriod(Enum):
     """

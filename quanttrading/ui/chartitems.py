@@ -37,17 +37,29 @@ class DataManager():
         """
         try:
 
-            if assetName is None:
+            if not assetName and not chartInterval:
                 return False
             
-            if (chartInterval is not None and isinstance(chartInterval, ChartInterval)):
-                self._chartInterval = chartInterval
-            else:
+            if not assetName:
+                if not self._assetName:
+                    return False
+                else:
+                    assetName = self._assetName
+            
+            if not chartInterval:
                 self._chartInterval = ChartInterval.D1
                 chartInterval = ChartInterval.D1
+            else:
+                self._chartInterval = chartInterval
 
             if period is None:
-                period = ChartPeriod.Y1
+                period = ChartPeriod.M3
+            
+            if chartInterval.value in ["1s", "1m", "5m", "15m", "30m", "1h"]:
+                if period.value in ["1d", "5d", "1mo"]:
+                    pass
+                else:
+                    period = ChartPeriod.D5
 
             if isinstance(assetName, str):
                 self._assetName = assetName
@@ -58,7 +70,8 @@ class DataManager():
                 self._data = asset.getMarketData(chartInterval, period)
                 # print(f"self._data is {self._data}")
 
-                self._data.reset_index(inplace=True)
+                self._formatData()
+
                 return True
             else:
                 return False
@@ -66,6 +79,16 @@ class DataManager():
             print(f"DataManager: setAsset(): failed to setAsset for {assetName}, interval {chartInterval}, period: {period}")
             return False
 
+    def _formatData(self, data:DataFrame = None) -> DataFrame:
+        if not data and self.isEmpty():
+            return None
+        if not data:
+            self._data.reset_index(inplace=True)
+            self._data.rename(columns={"Datetime":"Date"}, inplace=True)
+        else:
+            data.rename(columns={"Datetime":"Date"}, inplace=True)
+            return data
+        
     def setInterval(self, interval: ChartInterval = None) -> bool:
         """
         set the interval of the data for the chart/candlestick
@@ -78,7 +101,6 @@ class DataManager():
 
             return True
         return False
-
 
     def getDateTime(self, index: int) -> datetime:
         """
@@ -100,6 +122,7 @@ class DataManager():
         """
         if data is not None and isinstance(data, DataFrame):
             self._data = data
+            self._formatData()
             return True
         return False
             
@@ -108,6 +131,7 @@ class DataManager():
     def append(self, data: DataFrame) -> bool:
 
         if isinstance(data, DataFrame) and not data.empty:
+            data = self._formatData(data)
             self._data = concat([self._data, data], ignore_index=True)
             return True
         return False
@@ -354,7 +378,7 @@ class ChartBase(pg.GraphicsObject):
               w: QtWidgets.QWidget
               ):
         # **********************************************
-        print(f"chartbase: paint: picture.size. {self.picture.boundingRect()}")
+        # print(f"chartbase: paint: picture.size. {self.picture.boundingRect()}")
         """
         print(f"chartbase: paint: picture.. {self.picture}")
         painter.drawPicture(0, 0, self.picture)
