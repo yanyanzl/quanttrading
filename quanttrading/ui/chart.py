@@ -2,6 +2,7 @@
 This is the module for chart displaying and interactive
 support real time data and data from files
 """
+from time import perf_counter, perf_counter_ns
 
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
@@ -30,6 +31,7 @@ MIN_BAR_COUNT = 100
 CANDLE_PLOT_NAME = "Candle_Plot"
 VOLUME_PLOT_NAME = "Volume_Plot"
 
+getMillis = lambda: perf_counter_ns()
 
 pg.setConfigOptions(antialias=True)
 
@@ -135,6 +137,9 @@ class ChartGraph(pg.PlotWidget):
         self._dataManager: DataManager = DataManager(self._assetName)
 
         self.lastMousePos = None
+        self._lastMoveEventTime = None
+        self._draged = False
+        self._dragStartPoint:QtCore.QPointF = None
 
         self._init_ui()
 
@@ -417,30 +422,57 @@ class ChartGraph(pg.PlotWidget):
             self._on_key_up()
         elif event.key() == QtCore.Qt.Key.Key_Down:
             self._on_key_down()
-        
-    # def mouseMoveEvent(self, ev:QtGui.QMouseEvent):
-    #     if self.lastMousePos is not None:
-    #         print(f"self.lastMousePos is {self.lastMousePos}")
-    #         lpos = ev.position() if hasattr(ev, 'position') else ev.localPos()
-    #         if self.lastMousePos is None:
-    #             self.lastMousePos = lpos
-    #         # delta = Point(lpos - self.lastMousePos)
-    #         self.lastMousePos = lpos
-    #         print(f"chartGraph mousemoveEvent: pos {lpos}")
-    #     super().mouseMoveEvent(ev)
 
-    # def mousePressEvent(self, ev:QtGui.QMouseEvent):
-    #     lpos = ev.position() if hasattr(ev, 'position') else ev.localPos()
-    #     if self.lastMousePos is None:
-    #         self.lastMousePos = lpos
-    #     self.lastMousePos = lpos
-    #     print(f"chartGraph mousePressEvent: pos {lpos}")
-    #     super().mousePressEvent(ev)
+    def mouseMoveEvent(self, ev:QtGui.QMouseEvent):
+            """
+            reimplement mouserMoveEvent. to get the mouseDrag event from it.
+            when dragged. move the chart acordingly.
+            """
+            if self._lastMoveEventTime is None:
+                self._lastMoveEventTime = getMillis()
+            # First allow the normal process for the event.
+            super().mouseMoveEvent(ev)
 
-    # def mouseReleaseEvent(self, ev:QtGui.QMouseEvent):
-    #     self.lastMousePos = None
-    #     print(f"chartGraph mouseReleaseEvent:")
-    #     super().mouseReleaseEvent(ev)
+            # Next check if it's a drag event
+            if ev.buttons():    
+                # button is pressed' and check if it's a drag event
+                # now = perf_counter()
+                btn = QtCore.Qt.MouseButton.LeftButton
+                if (ev.buttons() & btn):
+                    # print(f"getmillis is {getMillis()} and lastMoveeventtime is {self._lastMoveEventTime}")
+                    if (getMillis() - self._lastMoveEventTime >= 100000000) and not self._draged:
+                        self._draged = True
+                        self._dragStartPoint = self.lastMousePos
+                        # print(f"getmillis is {getMillis()} and lastMoveeventtime is {self._lastMoveEventTime}")
+                        # print(f"ev.buttons is {ev.buttons()} \n @@@@@@@@")
+                        print(f"_dragStartPoint is {self._dragStartPoint}")
+                    elif (getMillis() - self._lastMoveEventTime >= 100000000):
+                        # print(f"lastMousepos.x is {self.lastMousePos.x()}")
+                        # print(f"_dragStartPoint.x is {self._dragStartPoint.x()}")
+                        dis = self.lastMousePos.x() - self._dragStartPoint.x()
+                        if abs(dis) > 6:
+                            # print(f"distance is {dis}")
+                            dis /= 6
+                            print(f"distance is {int(dis)}")
+                            self._right_ix -= int(dis)
+                            self._dragStartPoint = self.lastMousePos
+                            self._update_x_range()
+                            print(f"righx is {self._right_ix}")
+
+
+    def mousePressEvent(self, ev:QtGui.QMouseEvent):
+        # lpos = ev.position() if hasattr(ev, 'position') else ev.localPos()
+        # if self.lastMousePos is None:
+        #     self.lastMousePos = lpos
+        # self.lastMousePos = lpos
+        # print(f"chartGraph mousePressEvent: pos {lpos}")
+        super().mousePressEvent(ev)
+
+    def mouseReleaseEvent(self, ev:QtGui.QMouseEvent):
+        self._draged = False
+        # print(f"chartGraph mouseReleaseEvent:")
+        self._lastMoveEventTime = None
+        super().mouseReleaseEvent(ev)
 
     def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
         """

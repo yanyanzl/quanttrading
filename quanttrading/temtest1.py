@@ -16,6 +16,8 @@ k = float(k)
 
 print(f"n = {n} and m = {m} and k is {k} and type of k is {type(k)}")
 
+print(f"3.0 >= 2 is {int(3.3)}")
+
 def assetTest():
     asset = Asset("TSLA")
     print(f"asset is {asset}")

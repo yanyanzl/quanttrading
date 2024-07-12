@@ -545,11 +545,12 @@ class CandlestickItems(ChartBase):
             max_price - min_price
         )
         """
+        print(f"candlestickItems: boundingRect: {len(self._bar_picutures)}")
         min_price, max_price = self._dataManager.getYRange()
         rect: QtCore.QRectF = QtCore.QRectF(
             0,
             min_price,
-            len(self._bar_picutures),
+            len(self._bar_picutures)+10,
             max_price - min_price
         )
         return rect
