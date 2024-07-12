@@ -231,6 +231,38 @@ class DataManager():
 
             return (min, max)
 
+    def getVolumeRange(self, min_ix: int = None, max_ix: int = None) -> Tuple[float, float]:
+        """
+        get the min and max Volume within the index of min_ix to max_ix
+        return the whole range of volume if none of the min_ix and max_ix provided
+        return 0,1 if there is no data in the datamanager.
+        """
+        # print(f"min_ix is {min_ix} \n")
+        # print(f"max_ix is {max_ix} \n")
+        if self.isEmpty():
+            return 0, 1
+
+        if not min_ix or max_ix:
+            min_ix: int = 0
+            max_ix: int = self.getTotalDataNum() - 1
+        else:
+            min_ix: int = int(min_ix)
+            max_ix: int = int(max_ix)
+            max_ix = min(max_ix, self.getTotalDataNum())
+
+        if min_ix > max_ix:
+            i = min_ix
+            min_ix = max_ix
+            max_ix = i
+
+        if min_ix in self._data.index and max_ix in self._data.index:
+            data = self._data[min_ix:max_ix]
+            # print(data)
+            min = data['Volume'].min()
+            max = data['Volume'].max() 
+
+            return (min, max)
+
     def lastIndex(self) -> int:
         """
         return the last element's index in the data list (DataFrame)
@@ -270,7 +302,7 @@ class DataManager():
 
 class ChartBase(pg.GraphicsObject):
     """
-    base class for chart related Item. 
+    base class for chart related Graphics Items. 
     """
     def __init__(self, dataManager: DataManager = None):
         pg.GraphicsObject.__init__(self)
@@ -441,18 +473,24 @@ class Candlestick:
     """
     single candlestick item on the chart.
     """
+    volume:int
+    open:float
+    high:float
+    low:float
+    close:float
+    _index_x:int
     def __init__(self, dataManager: DataManager = None, index: int = None):
         # super().__init__(dataManager)
         self._dataManager = dataManager
         self._index_x: int = index
         self.dateTime = self._dataManager.getDateTime(index)
-
         data = self._dataManager.getByIndex(index)
         if data is not None:
             self.open = data.at[index, 'Open']
             self.close = data.at[index, 'Close']
             self.high = data.at[index, 'High']
             self.low = data.at[index, 'Low']
+            self.volume = data.at[index, 'Volume']
 
 
 class CandlestickItems(ChartBase):
@@ -605,6 +643,101 @@ class CandlestickItems(ChartBase):
         return text
 
 
+class VolumeItem(ChartBase):
+    """
+    the graph item show the Volume
+    """
+    BAR_WIDTH = Aiconfig.get("BAR_WIDTH")
+
+    def __init__(self, dataManager: DataManager) -> None:
+        """"""
+        super().__init__(dataManager)
+        
+
+    def _drawBarPicture(self, ix: int) -> QtGui.QPicture:
+        """
+        draw a single Bar picture for the Volume
+        """
+        # Create objects
+        volume_picture: QtGui.QPicture = QtGui.QPicture()
+        painter: QtGui.QPainter = QtGui.QPainter(volume_picture)
+
+        # data = self._dataManager.getByIndex(ix)
+        bar = Candlestick(self._dataManager, ix)
+
+        if bar is not None and bar.dateTime is not None:
+
+            # Set painter color
+            if bar.close >= bar.open:
+                painter.setPen(self._up_pen)
+                painter.setBrush(self._up_brush)
+            else:
+                painter.setPen(self._down_pen)
+                painter.setBrush(self._down_brush)
+
+            # Draw volume body
+            rect: QtCore.QRectF = QtCore.QRectF(
+                ix - self.BAR_WIDTH,
+                0,
+                self.BAR_WIDTH * 2,
+                bar.volume
+            )
+            painter.drawRect(rect)
+        
+        else:
+            print(f"VolumeItem: _drawBarPicture: no data find in the datamanager index is {ix}")
+
+        # Finish
+        painter.end()
+        return volume_picture
+
+    def boundingRect(self) -> QtCore.QRectF:
+        """
+        reimplement the method to return the size of the graph.
+        """
+        min_volume, max_volume = self._dataManager.getVolumeRange()
+        rect: QtCore.QRectF = QtCore.QRectF(
+            0,
+            min_volume,
+            len(self._bar_picutures),
+            max_volume - min_volume
+        )
+        return rect
+
+    def get_y_range(self, min_ix: int = None, max_ix: int = None) -> Tuple[float, float]:
+        """
+        Get range of y-axis with given x-axis range.
+
+        If min_ix and max_ix not specified, then return range with whole data set.
+        """
+        min_volume, max_volume = self._dataManager.getVolumeRange(min_ix, max_ix)
+        return min_volume, max_volume
+
+    def get_info_text(self, ix: int) -> str:
+        """
+        Get information text to show by cursor.
+        """
+        # data: DataFrame = self._dataManager.getByIndex(ix)
+        if not isinstance(ix, int):
+            if isinstance(ix, float):
+                ix = int(ix)
+            else:
+                print(f"ix in get_info_text is invalid. with value {ix}")
+                return ""
+
+        candle: Candlestick = Candlestick(self._dataManager, ix)
+
+        if candle is not None and candle._index_x is not None and candle.dateTime is not None:
+            # print(f"candle is {candle}")
+            # print(f"candle.dateTime is {candle.dateTime}")
+            text = f"Volume: {candle.volume}"
+        else:
+            print(f"no candle exist, index is {ix}")
+            text: str = ""
+
+        return text
+
+
 class DatetimeAxis(pg.AxisItem):
     """
     Datetime Axis for the X-Axis
@@ -646,7 +779,9 @@ class DatetimeAxis(pg.AxisItem):
 
 
 class Ticker(QtWidgets.QComboBox):
-
+    """
+    ComboBox for choosing asset/ticker.
+    """
     def __init__(self, tickers: List[str] = None):
         super().__init__()
 
@@ -658,6 +793,7 @@ class Ticker(QtWidgets.QComboBox):
 
 class IntervalBox(QtWidgets.QComboBox):
     """
+    Combobox for choosing interval for displaying in the chart
     1m,2m,5m,15m,30m,60m,90m,1h,1d,1wk
     """
     def __init__(self):

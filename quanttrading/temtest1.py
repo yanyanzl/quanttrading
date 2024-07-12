@@ -3,19 +3,35 @@ import yfinance as yf
 import requests_cache
 from data.finlib import Asset
 from constant import ChartInterval, ChartPeriod
+from utility import volumeToPicture
 
-asset = Asset("TSLA")
-print(f"asset is {asset}")
-data = asset.getMarketData(ChartInterval.M15, ChartPeriod.D5)
-data.reset_index(inplace=True)
-print(f"self._data is \n {data.index}")
-print(f"self._data is \n {data.columns}")
-data.rename(columns={"Datetime":"Date"}, inplace=True)
-print(f"self._data is \n {data}")
-data.rename(columns={"Datetime":"Date"}, inplace=True)
-print(f"self._data is \n {data}")
+y = volumeToPicture(25678900, 3)
+print(f"y = {y}")
+i = 2567890
+n = i // 10
+m = i / 10
+k = str(i)
+k = k[0]+"."+k[1:]
+k = float(k)
 
+print(f"n = {n} and m = {m} and k is {k} and type of k is {type(k)}")
 
+def assetTest():
+    asset = Asset("TSLA")
+    print(f"asset is {asset}")
+    data = asset.getMarketData(ChartInterval.M15, ChartPeriod.D5)
+    data.reset_index(inplace=True)
+    print(f"self._data is \n {data.index}")
+    print(f"self._data is \n {data.columns}")
+    data.rename(columns={"Datetime":"Date"}, inplace=True)
+    print(f"self._data is \n {data}")
+    data.rename(columns={"Datetime":"Date"}, inplace=True)
+    print(f"self._data is \n {data}")
+
+    min = data['Volume'].min()
+    max = data['Volume'].max()
+
+    print(f"min is {min} \n max is {max}")
 
 ac = None
 if not ac:

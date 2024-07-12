@@ -34,6 +34,22 @@ else:
 log_formatter: logging.Formatter = logging.Formatter("[%(asctime)s] %(message)s")
 
 
+def volumeToPicture(volume:float = None, digNum:int=None) -> float:
+    """
+    transfer a big float/int volume to a small number of float.
+    so the picture size in the volume graph could be scaled.
+    """
+    if volume is None:
+        return None
+    
+    if digNum is None:
+        digNum = 1
+    k = str(volume)
+    k = k[:digNum]+"."+k[digNum:]
+    k = float(k)
+    return k
+
+
 def encrypt(key, source, encode=True):
     key = SHA256.new(key).digest()  # use SHA-256 over our key to get a proper-sized AES key
     IV = Random.new().read(AES.block_size)  # generate IV

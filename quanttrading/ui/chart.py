@@ -19,7 +19,7 @@ from sys import path as pt
 file = Path(__file__).resolve()
 pt.append(str(file.parents[1]))
 from constant import ChartInterval, ChartPeriod, stringToInterval
-from .chartitems import Asset, CandlestickItems, ChartBase, DataManager, DatetimeAxis, Ticker, IntervalBox
+from .chartitems import Asset, CandlestickItems, ChartBase, DataManager, DatetimeAxis, Ticker, IntervalBox,VolumeItem
 from setting import Aiconfig
 import data.finlib as fb
 
@@ -28,6 +28,7 @@ BLACK_COLOR = 'm'
 NORMAL_FONT = 'Arial'
 MIN_BAR_COUNT = 100
 CANDLE_PLOT_NAME = "Candle_Plot"
+VOLUME_PLOT_NAME = "Volume_Plot"
 
 
 pg.setConfigOptions(antialias=True)
@@ -126,6 +127,7 @@ class ChartGraph(pg.PlotWidget):
         self._bar_count: int = MIN_BAR_COUNT   # Total bar visible in chart
 
         self._candlestickManager: CandlestickItems = None
+        self._volumeManager: VolumeItem = None
         self._chartCursor: ChartCursor = None
         if self._assetName is None:
             self._assetName = Aiconfig.get("DEFAULT_ASSET")
@@ -155,6 +157,8 @@ class ChartGraph(pg.PlotWidget):
 
         # create self._first_plot which is candle_plot
         self.add_plot(CANDLE_PLOT_NAME)
+        # create volume_plot
+        self.add_plot(VOLUME_PLOT_NAME,maximum_height=200)
 
     def add_plot(
         self,
@@ -262,7 +266,10 @@ class ChartGraph(pg.PlotWidget):
 
             # print(f"chart.setAsset() {self._dataManager.getData()}")
             self._candlestickManager = CandlestickItems(self._dataManager)
-            self.add_item(self._candlestickManager, "CandlestickItems", self._first_plot.objectName())                
+            self._volumeManager = VolumeItem(self._dataManager)
+
+            self.add_item(self._candlestickManager, "CandlestickItems", plot_name=CANDLE_PLOT_NAME)  
+            self.add_item(self._volumeManager, "VolumeItems", plot_name=VOLUME_PLOT_NAME)          
 
             # set the visible range related parameters.
             return True
