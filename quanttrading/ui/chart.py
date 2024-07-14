@@ -244,6 +244,13 @@ class ChartGraph(pg.PlotWidget):
             interval = stringToInterval(intervalText)
             self.setAsset(chartInterval=interval)
 
+    def _initViewRange(self):
+        """
+        """
+        if not self._dataManager.isEmpty():
+            self._right_ix = self._dataManager.lastIndex()
+            barNum = self._dataManager.getTotalDataNum()
+            # if barNum > self._dataMan
     def setAsset(self, assetName: str = None, 
                  chartInterval:ChartInterval = None,
                  chartPeriod: ChartPeriod = None) -> bool:

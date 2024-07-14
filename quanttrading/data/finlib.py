@@ -29,7 +29,7 @@ from constant import ChartInterval, ChartPeriod
 from .gateway.gateway import BaseGateway
 
 # this is the only way works so far. to use yfinance override pandas_datareader.
-yf.pdr_override()
+# yf.pdr_override()
 
 default_asset = "SPX"
 start = datetime(datetime.now().year, 1, 1)

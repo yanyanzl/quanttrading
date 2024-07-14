@@ -9,13 +9,13 @@ from functools import partial
 from importlib import import_module
 from typing import Callable, Dict, List, Tuple
 import sys
-import pyqtgraph as pg
+# import pyqtgraph as pg
 
 from pathlib import Path  # if you haven't already done so
 file = Path(__file__).resolve()
 sys.path.append(str(file.parents[1]))
 
-from .chartitems import Asset, CandlestickItems, DataManager
+# from .chartitems import Asset, CandlestickItems, DataManager
 from .chart import Chart, ChartGraph
 from .uiapp import QtCore, QtGui, QtWidgets
 from .widget import (

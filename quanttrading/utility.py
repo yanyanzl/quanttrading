@@ -19,7 +19,7 @@ from Crypto import Random
 
 import numpy as np
 import talib
-
+import asyncio
 from data.gateway.object import BarData, TickData
 from constant import Exchange, Interval
 # from locale import _
@@ -33,6 +33,28 @@ else:
 
 log_formatter: logging.Formatter = logging.Formatter("[%(asctime)s] %(message)s")
 
+def printD(*args, **kwargs):
+    print(f"==>" + f"***"*20)
+    print(*args, **kwargs)
+    print(f"==>" + f"***"*20)
+
+async def current_task():
+    # get current running event loop
+    loop = asyncio.get_running_loop()
+    if loop is not None:
+        print(f"the current running loop is : {loop}")
+
+    print(f"the current task is :{asyncio.current_task()}")
+    """ 
+    print(f"all tasks: {'-->' * 5 } \n ")
+
+    for task in asyncio.all_tasks():
+        print(
+            f"{'-->' * 6} \n {task.get_name()} \n : done:{task.done()} \n"
+            + f"cancelled : {task.cancelled()} \n"
+            + f"stack : {task.get_stack()}"
+        )
+    """
 
 def volumeToPicture(volume:float = None, digNum:int=None) -> float:
     """
