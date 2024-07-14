@@ -13,6 +13,7 @@ from typing import Dict, List
 from pandas import DataFrame
 from datetime import datetime
 # from abc import ABC
+import asyncio
 
 
 from pathlib import Path  # if you haven't already done so
@@ -109,7 +110,7 @@ class ChartGraph(pg.PlotWidget):
     Chart(PlotWidget) --> central Item is layout (GraphicsLayout) --> PlotItem (added by Layout.additem())
     """
         
-    def __init__(self, assetName: str = None, parent: QtWidgets.QWidget = None, size=None, title=None, **kargs):
+    async def __init__(self, assetName: str = None, parent: QtWidgets.QWidget = None, size=None, title=None, **kargs):
         super().__init__(parent, **kargs)
 
         self._assetName = assetName
@@ -143,6 +144,8 @@ class ChartGraph(pg.PlotWidget):
 
         self._init_ui()
 
+        # postpone the initialize of the asset and drawing of chart picture
+        asyncio.sleep(2)
         self.setAsset(self._assetName)
 
         self._chartCursor = ChartCursor(self, self._dataManager, self._plots, self._item_plot_map)
