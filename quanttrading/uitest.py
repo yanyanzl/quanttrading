@@ -7,13 +7,19 @@ from event.engine import EventEngine
 
 from engine import MainEngine
 from ui import MainWindow, create_qapp
-from utility import current_task, printD
+from utility import current_task, printD, setUpLogger
+import logging
 
 async def main():
     """
     main entrence of the program
     """
-    printD(f"main function started at {time.strftime('%X')}")
+
+    setUpLogger(logging.INFO)
+    logger = logging.getLogger(__name__)
+    # logger.warning("this is the warning in uitest...")
+
+    logger.info(f"main function started at {time.strftime('%X')}")
 
     qapp = create_qapp()
     event_engine = EventEngine()
@@ -25,7 +31,7 @@ async def main():
         loop = asyncio.get_running_loop()
         deadline = loop.time() + 2
         background_tasks = set()
-        print(f"background_tasks started at {time.strftime('%X')}")
+        logger.info(f"background_tasks started at {time.strftime('%X')}")
 
         async with asyncio.timeout_at(deadline) as ta:
             async with asyncio.TaskGroup() as tg:
@@ -33,7 +39,7 @@ async def main():
                 background_tasks.add(task8)
                 task8.add_done_callback(background_tasks.discard)
 
-            print(f"Taskgroup finished at {time.strftime('%X')}")
+            logger.info(f"Taskgroup finished at {time.strftime('%X')}")
 
             # Nothing happens if we just call "nested()".
             # A coroutine object is created but not awaited,
@@ -70,20 +76,20 @@ async def main():
         # print(L)
 
     except TimeoutError:
-        print("the operation timed out, handled it here")
+        logger.warning("the operation timed out, handled it here")
     except asyncio.CancelledError:
-        print("the task was canceled.")
+        logger.warning("the task was canceled.")
     finally:
-        print("here is the clean up part of the program")
+        logger.warning("here is the clean up part of the program")
 
     # main_engine.add_gateway(CtpGateway)
     main_window = MainWindow(main_engine, event_engine)
 
     main_window.showMaximized()
-    printD(f"main function finished 1 at {time.strftime('%X')}")
+    logger.info(f"main function finished 1 at {time.strftime('%X')}")
 
     qapp.exec()
-    printD(f"main function finished 2 at {time.strftime('%X')}")
+    logger.info(f"main function finished 2 at {time.strftime('%X')}")
 
 
 if __name__ == "__main__":

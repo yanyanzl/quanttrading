@@ -3,9 +3,10 @@ General utility functions.
 """
 
 import json
+import logging.handlers
 import yaml
 import logging
-import sys
+import sys, os
 from datetime import datetime, time
 from pathlib import Path
 from typing import Callable, Dict, Tuple, Union, Optional
@@ -30,8 +31,43 @@ if sys.version_info >= (3, 9):
 else:
     from backports.zoneinfo import ZoneInfo, available_timezones    # noqa
 
+class bcolors:
+    """
+    print color text. Example:
+    print(f"{bcolors.WARNING}Warning: No active frommets remain. Continue?{bcolors.ENDC}")
+    """
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
-log_formatter: logging.Formatter = logging.Formatter("[%(asctime)s] %(message)s")
+def setUpLogger(loggingLevel) ->str:
+    """
+    set up the logger for the whole programme.
+    loggingLevel could be :
+    logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL
+    """
+    # same path as utility
+    fh = logging.FileHandler(_getLogFileName())
+    # create console handler with a higher log level
+    ch = logging.StreamHandler()
+    # create formatter and add it to the handlers
+    formatter = logging.Formatter(bcolors.WARNING+' ===> %(asctime)s - %(name)s - %(levelname)s - %(message)s'+ bcolors.ENDC)
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+    handlers = [fh, ch]
+    logging.basicConfig(handlers=handlers, level=loggingLevel)
+
+def _getLogFileName() -> str:
+    timestring = datetime.now().strftime("%Y-%m-%d-%H")
+    return os.path.dirname(os.path.abspath(__file__)) + '/log/' + 'quanttrading'+timestring+'.log'
+
+
 
 def printD(*args, **kwargs):
     print(f"==>" + f"***"*20)

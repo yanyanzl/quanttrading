@@ -1,3 +1,4 @@
+import logging.handlers
 from constant import ChartInterval
 import yfinance as yf
 import requests_cache
@@ -5,18 +6,76 @@ from data.finlib import Asset
 from constant import ChartInterval, ChartPeriod
 from utility import volumeToPicture
 
-y = volumeToPicture(25678900, 3)
-print(f"y = {y}")
-i = 2567890
-n = i // 10
-m = i / 10
-k = str(i)
-k = k[0]+"."+k[1:]
-k = float(k)
+import logging
+from datetime import datetime
+import os
 
-print(f"n = {n} and m = {m} and k is {k} and type of k is {type(k)}")
 
-print(f"3.0 >= 2 is {int(3.3)}")
+
+def logTest():
+    logger = logging.getLogger(__name__)
+    logging.basicConfig(filename='myapp.log', level=logging.INFO)
+    logger.info('Started')
+    print("this is the somthing")
+    logger.info('Finished')
+
+def setUpLogger(loggingLevel) ->str:
+    """
+    set up the logger for the whole programme.
+    loggingLevel could be :
+    logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL
+    """
+    # same path as utility
+    fh = logging.FileHandler(_getLogFileName())
+    # create console handler with a higher log level
+    ch = logging.StreamHandler()
+    # create formatter and add it to the handlers
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+    handlers = [fh, ch]
+    logging.basicConfig(handlers=handlers, level=loggingLevel)
+
+def _getLogFileName() -> str:
+    timestring = datetime.now().strftime("%Y-%m-%d-%H")
+    return os.path.dirname(os.path.abspath(__file__)) + '/log/' + 'quanttrading'+timestring+'.log'
+
+def getLogger(name:str) -> logging.Logger:
+    logger = logging.getLogger(name)
+    # create file handler which logs even debug messages
+    fh = logging.FileHandler(_getLogFileName())
+    # create console handler with a higher log level
+    ch = logging.StreamHandler()
+    # ch.setLevel(logging.ERROR)
+    # create formatter and add it to the handlers
+    # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # fh.setFormatter(formatter)
+    # ch.setFormatter(formatter)
+    # add the handlers to the logger
+
+    # logger.addHandler(fh)
+    # logger.addHandler(ch)
+    logger.info('Started')
+    return logger
+
+setUpLogger(logging.INFO)
+# getLogger(__name__)
+logger = logging.getLogger(__name__)
+logger.info("this is the correct one!")
+
+def intTofloat():
+    y = volumeToPicture(25678900, 3)
+    print(f"y = {y}")
+    i = 2567890
+    n = i // 10
+    m = i / 10
+    k = str(i)
+    k = k[0]+"."+k[1:]
+    k = float(k)
+
+    print(f"n = {n} and m = {m} and k is {k} and type of k is {type(k)}")
+
+    print(f"3.0 >= 2 is {int(3.3)}")
 
 def assetTest():
     asset = Asset("TSLA")

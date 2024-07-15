@@ -224,7 +224,7 @@ class DataManager():
             # data = self._data.iloc[min_ix, max_ix]
             min = data['Low'].min()
 
-            max = data['High'].max() 
+            max = data['High'].max()
             margin = (max - min) * (self._yMarginPercent)
             min -= margin
             max += margin
@@ -524,11 +524,11 @@ class CandlestickItems(ChartBase):
 
         self._drawItemPicture(min_x, max_x)
 
-        candle_num = 0
-        if data_len > self.max_candle:
-            candle_num = data_len - self.max_candle
-        self._dataManager.setXMin(candle_num)
-        self._dataManager.setXMax(self._dataManager.lastIndex())
+        # candle_num = 0
+        # if data_len > self.max_candle:
+        #     candle_num = data_len - self.max_candle
+        # self._dataManager.setXMin(candle_num)
+        # self._dataManager.setXMax(self._dataManager.lastIndex())
 
     def boundingRect(self) -> QtCore.QRectF:
         """
@@ -546,7 +546,8 @@ class CandlestickItems(ChartBase):
         )
         """
         # print(f"candlestickItems: boundingRect: {len(self._bar_picutures)}")
-        min_price, max_price = self._dataManager.getYRange()
+        # min_price, max_price = self._dataManager.getYRange()
+        min_price, max_price = self._dataManager.getYRange(self._dataManager.getXMin(), self._dataManager.getXMax())
         rect: QtCore.QRectF = QtCore.QRectF(
             0,
             min_price,
@@ -618,12 +619,12 @@ class CandlestickItems(ChartBase):
             # print(f"candle is {candle}")
             # print(f"candle.dateTime is {candle.dateTime}")
             words: list = [
-                "Date",
-                candle.dateTime.strftime("%Y-%m-%d"),
-                "",
-                "Time",
-                candle.dateTime.strftime("%H:%M"),
-                "",
+                # "Date",
+                # candle.dateTime.strftime("%Y-%m-%d"),
+                # "",
+                # "Time",
+                # candle.dateTime.strftime("%H:%M"),
+                # "",
                 "Open",
                 str(candle.open),
                 "",
@@ -770,7 +771,8 @@ class DatetimeAxis(pg.AxisItem):
             if not dt:
                 s: str = ""
             elif dt.hour:
-                s: str = dt.strftime("%Y-%m-%d\n%H:%M:%S")
+                # s: str = dt.strftime("%Y-%m-%d\n%H:%M:%S")
+                s: str = dt.strftime("%H:%M:%S")
             else:
                 s: str = dt.strftime("%Y-%m-%d")
 
@@ -802,4 +804,4 @@ class IntervalBox(QtWidgets.QComboBox):
         intervals = ["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "1wk"]
         self.addItems(intervals)
         self.setEditable(False)
-        self.adjustSize()
+        self.setMinimumSize(50,50)

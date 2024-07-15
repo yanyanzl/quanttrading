@@ -12,6 +12,7 @@ from PySide6.QtGui import Qt
 from typing import Dict, List
 from pandas import DataFrame
 from datetime import datetime
+import logging
 # from abc import ABC
 import asyncio
 
@@ -36,6 +37,7 @@ getMillis = lambda: perf_counter_ns()
 
 pg.setConfigOptions(antialias=True)
 
+logger = logging.getLogger(__name__)
 
 class Chart(QtWidgets.QWidget):
     """
@@ -70,15 +72,18 @@ class Chart(QtWidgets.QWidget):
         self._tickers = Ticker(Aiconfig.get("ASSET_LIST"))
         self._tickers.currentTextChanged.connect(self._chartGraph._tickerChanged)
         self._tickers.editTextChanged.connect(self._tickerEdited)
+        # self._tickers.keyPressEvent()
 
         self._interval = IntervalBox()
+        self._interval.setFixedSize(100,100)
         self._interval.currentTextChanged.connect(self._chartGraph._intervalChanged)
 
         self._widgetsLayout = QtWidgets.QHBoxLayout()
         self._widgetsLayout.addWidget(self._tickers)
+        self._widgetsLayout.addSpacing(20)
         self._widgetsLayout.addWidget(self._interval)
         self._widgetsLayout.addStretch(stretch=1)
-        # self._widgetsLayout.addSpacing(50)
+        self._widgetsLayout.addSpacing(50)
 
         self._mainLayout.addWidget(self._chartGraph)
         self._mainLayout.addLayout(self._widgetsLayout)
@@ -96,7 +101,7 @@ class Chart(QtWidgets.QWidget):
             # check if the ticker/asset name is a valid name
             # (can be found in exchanges)
             if fb.Asset().is_valid(tickerText):
-                self._tickers.addItem(text=tickerText)
+                self._tickers.addItem(tickerText)
                 # add it to the settings file. so you can use it
                 # whenever you open the platform again. 
                 Aiconfig.append_to_list("ASSET_LIST")
@@ -110,7 +115,7 @@ class ChartGraph(pg.PlotWidget):
     Chart(PlotWidget) --> central Item is layout (GraphicsLayout) --> PlotItem (added by Layout.additem())
     """
         
-    async def __init__(self, assetName: str = None, parent: QtWidgets.QWidget = None, size=None, title=None, **kargs):
+    def __init__(self, assetName: str = None, parent: QtWidgets.QWidget = None, size=None, title=None, **kargs):
         super().__init__(parent, **kargs)
 
         self._assetName = assetName
@@ -145,9 +150,7 @@ class ChartGraph(pg.PlotWidget):
         self._init_ui()
 
         # postpone the initialize of the asset and drawing of chart picture
-        asyncio.sleep(2)
         self.setAsset(self._assetName)
-
         self._chartCursor = ChartCursor(self, self._dataManager, self._plots, self._item_plot_map)
 
     def _init_ui(self) -> None:
@@ -225,16 +228,11 @@ class ChartGraph(pg.PlotWidget):
         self._layout.nextRow()
         self._layout.addItem(plot)
 
-    def _initTickers(self):
-
-        pass
-
     def _tickerChanged(self, tickerText) -> None:
         """
         the ticker/asset selected to display was changed. 
         """
         if tickerText is not None:
-
             self.setAsset(tickerText)
 
     def _intervalChanged(self, intervalText) -> None:
@@ -247,13 +245,16 @@ class ChartGraph(pg.PlotWidget):
             interval = stringToInterval(intervalText)
             self.setAsset(chartInterval=interval)
 
-    def _initViewRange(self):
+    def _initXRange(self):
         """
+        
         """
         if not self._dataManager.isEmpty():
             self._right_ix = self._dataManager.lastIndex()
-            barNum = self._dataManager.getTotalDataNum()
-            # if barNum > self._dataMan
+            self._bar_count = min(self._bar_count, self._dataManager.getTotalDataNum())
+
+            self._update_x_range()
+
     def setAsset(self, assetName: str = None, 
                  chartInterval:ChartInterval = None,
                  chartPeriod: ChartPeriod = None) -> bool:
@@ -270,7 +271,7 @@ class ChartGraph(pg.PlotWidget):
 
             self.clearAll()
 
-            print(f"Asset for the chart changed to {assetName} now!")
+            logger.info(f"Asset for the chart changed to {assetName} now!")
 
             self._assetName = assetName
 
@@ -287,6 +288,7 @@ class ChartGraph(pg.PlotWidget):
             self.add_item(self._volumeManager, "VolumeItems", plot_name=VOLUME_PLOT_NAME)          
 
             # set the visible range related parameters.
+            self._initXRange()
             return True
         else:
             raise ValueError(f"assetName {assetName} is invalid!")
@@ -385,8 +387,13 @@ class ChartGraph(pg.PlotWidget):
         max_ix: int = self._right_ix
         min_ix: int = self._right_ix - self._bar_count
 
+        self._dataManager.setXMax(self._right_ix)        
+        min_x = max(0, int(self._right_ix - self._bar_count))
+        min_x = min(min_x,self._right_ix)
+        self._dataManager.setXMin(min_x)
+
         for plot in self._plots.values():
-            print(f"chartGraph :_update_x_range: plot is {plot.objectName()} and min_ix, max_ix is {min_ix, max_ix}")
+            # logger.info(f"chartGraph :_update_x_range: plot is {plot.objectName()} and min_ix, max_ix is {min_ix, max_ix}")
             plot.setRange(xRange=(min_ix, max_ix), padding=0)
 
     def _update_y_range(self) -> None:
@@ -455,7 +462,7 @@ class ChartGraph(pg.PlotWidget):
                         self._dragStartPoint = self.lastMousePos
                         # print(f"getmillis is {getMillis()} and lastMoveeventtime is {self._lastMoveEventTime}")
                         # print(f"ev.buttons is {ev.buttons()} \n @@@@@@@@")
-                        print(f"_dragStartPoint is {self._dragStartPoint}")
+                        # logger.info(f"_dragStartPoint is {self._dragStartPoint}")
                     elif (getMillis() - self._lastMoveEventTime >= 100000000):
                         # print(f"lastMousepos.x is {self.lastMousePos.x()}")
                         # print(f"_dragStartPoint.x is {self._dragStartPoint.x()}")
@@ -463,11 +470,11 @@ class ChartGraph(pg.PlotWidget):
                         if abs(dis) > 6:
                             # print(f"distance is {dis}")
                             dis /= 6
-                            print(f"distance is {int(dis)}")
+                            # logger.info(f"distance is {int(dis)}")
                             self._right_ix -= int(dis)
                             self._dragStartPoint = self.lastMousePos
                             self._update_x_range()
-                            print(f"righx is {self._right_ix}")
+                            # logger.info(f"righx is {self._right_ix}")
 
 
     def mousePressEvent(self, ev:QtGui.QMouseEvent):
