@@ -221,7 +221,7 @@ class IbkrApp(AiWrapper, AiClient):
             super().tickPrice(reqId,tickType,price,attrib)
             # for i in range(91):
             #     print(TickTypeEnum.to_str(i), i)
-            tickType = TickTypeEnum.to_str(tickType)
+            tickType = TickTypeEnum.toStr(tickType)
             message = f"reqID is , {reqId}, tickType is : {tickType}, price is: {price}, attrib is: {attrib}"
             if price > 0:
                 if tickType == "LAST":
