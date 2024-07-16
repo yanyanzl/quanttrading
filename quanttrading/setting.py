@@ -5,18 +5,20 @@ Global setting of the trading platform.
 """
 
 from logging import CRITICAL
+import logging
 from typing import Dict, Any
 # from tzlocal import get_localzone_name
 
 import yaml
 import os
+
 # import talib
 
 
 abspath = os.path.dirname(os.path.abspath(__file__))
 # settingfile to be used.
 SETTING_FILE_NAME = abspath + '/settings.yaml'
-
+logger = logging.getLogger(__name__)
 
 class Aiconfig():
 
@@ -85,14 +87,21 @@ class Aiconfig():
                 yaml.dump(Aiconfig.config, writefile)
         else:
             raise ValueError(f"Name invalid: {name} or vlue {args}")
-        
-    def append_to_list(name:str, **args):
+    
+    @staticmethod
+    def append_to_list(name:str, *args):
         if not Aiconfig.config:
             if not Aiconfig._load_config():
                 raise FileExistsError(f"can't get configuration file loaded. file name: {SETTING_FILE_NAME}")
-        print("Aiconfig.config[name] is ",Aiconfig.config[name])
+
+        logger.debug(f"name is {name} , args is {args}, list? : {isinstance(Aiconfig.config[name],list)}")
         if name and Aiconfig.config[name] and args and isinstance(Aiconfig.config[name],list):
-            list(Aiconfig.config[name]).append(args)
+            nameList:list = Aiconfig.config[name]
+            for arg in args:
+                nameList.append(arg)
+            Aiconfig.config[name] = nameList
+
+            logger.debug(f"namelist now is {nameList}")
 
             with open(SETTING_FILE_NAME, 'w') as writefile:
                 yaml.dump(Aiconfig.config, writefile)

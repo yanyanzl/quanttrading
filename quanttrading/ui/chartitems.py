@@ -11,7 +11,9 @@ from setting import Aiconfig
 from datetime import datetime
 from data.finlib import Asset
 from constant import ChartInterval, ChartPeriod
+import logging
 
+logger = logging.getLogger(__name__)
 
 class DataManager():
 
@@ -65,7 +67,7 @@ class DataManager():
                 self._assetName = assetName
 
                 asset = Asset(assetName)
-                print(f"asset is {asset}")
+                logger.debug(f"DataManager:: setAsset() :: assetName is {assetName}")
 
                 self._data = asset.getMarketData(chartInterval, period)
                 # print(f"self._data is {self._data}")
@@ -510,7 +512,7 @@ class CandlestickItems(ChartBase):
         if not dataManager.isEmpty():
             # self._candles = [CandlestickItem(dataManager, index) for index in dataManager._data.index]
             self.generate_picture()
-            print(f"candlstickitems --init-- picture: {self.picture}")
+            logger.debug(f"candlstickitems --init-- picture: {self.picture}")
 
     def generate_picture(self):
         """
@@ -518,7 +520,7 @@ class CandlestickItems(ChartBase):
         rather than re-drawing the shapes every time.
         """
         data_len = self._dataManager.getTotalDataNum()
-        print(f"data_len in Candlestickitems is {data_len}")
+        logger.debug(f"data_len in Candlestickitems is {data_len}")
         min_x = 0
         max_x = data_len-1
 
@@ -547,11 +549,17 @@ class CandlestickItems(ChartBase):
         """
         # print(f"candlestickItems: boundingRect: {len(self._bar_picutures)}")
         # min_price, max_price = self._dataManager.getYRange()
-        min_price, max_price = self._dataManager.getYRange(self._dataManager.getXMin(), self._dataManager.getXMax())
+        min_x = self._dataManager.getXMin()
+        max_x = self._dataManager.getXMax()
+        min_price, max_price = self._dataManager.getYRange(min_x, max_x)
+        # min_x = min(min_x, max_x)
+        # x_range = max_x - min_x
+
         rect: QtCore.QRectF = QtCore.QRectF(
             0,
             min_price,
             len(self._bar_picutures)+10,
+            # x_range +10,
             max_price - min_price
         )
         return rect
@@ -595,7 +603,7 @@ class CandlestickItems(ChartBase):
             p.drawLine(QtCore.QPointF(index_x, data.at[index_x, 'Low']), QtCore.QPointF(index_x, data.at[index_x, 'High']))
             p.drawRect(QtCore.QRectF(index_x-w, data.at[index_x, 'Open'], w * 2, data.at[index_x, 'Close'] - data.at[index_x, 'Open']))
         else:
-            print(f"no data find in the datamanager index is {index_x}")
+            logger.warning(f"no data find in the datamanager index is {index_x}")
         
         # Finish
         p.end()
@@ -610,7 +618,7 @@ class CandlestickItems(ChartBase):
             if isinstance(ix, float):
                 ix = int(ix)
             else:
-                print(f"ix in get_info_text is invalid. with value {ix}")
+                logger.info(f"ix in get_info_text is invalid. with value {ix}")
                 return ""
 
         candle: Candlestick = Candlestick(self._dataManager, ix)
@@ -639,7 +647,7 @@ class CandlestickItems(ChartBase):
             ]
             text: str = "\n".join(words)
         else:
-            print(f"no candle exist, index is {ix}")
+            logger.info(f"no candle exist, index is {ix}")
             text: str = ""
 
         return text
@@ -788,10 +796,20 @@ class Ticker(QtWidgets.QComboBox):
     def __init__(self, tickers: List[str] = None):
         super().__init__()
 
-        if tickers is not None and len(tickers) > 0:
+        self.setMinimumSize(80,50)
+        self.setEditable(True)
 
+        if tickers is not None and len(tickers) > 0:
             self.addItems(tickers)
-            self.setEditable(True)
+        # self.validator = Validator(self)
+        self.lineEdit().setValidator(Validator(self))
+
+class Validator(QtGui.QValidator):
+    def validate(self, string, pos):
+        return QtGui.QValidator.Acceptable, string.upper(), pos
+        # for old code still using QString, use this instead
+        # string.replace(0, string.count(), string.toUpper())
+        # return QtGui.QValidator.Acceptable, pos
 
 
 class IntervalBox(QtWidgets.QComboBox):
@@ -803,5 +821,7 @@ class IntervalBox(QtWidgets.QComboBox):
         super().__init__()
         intervals = ["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "1wk"]
         self.addItems(intervals)
+        self.setCurrentText("1d")
         self.setEditable(False)
-        self.setMinimumSize(50,50)
+        self.setMinimumSize(80,50)
+        

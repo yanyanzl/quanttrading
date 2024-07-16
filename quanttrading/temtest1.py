@@ -10,7 +10,7 @@ import logging
 from datetime import datetime
 import os
 
-
+print(f"equal {"abc" != "abcd"}")
 
 def logTest():
     logger = logging.getLogger(__name__)

@@ -11,6 +11,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 import requests_cache
 import sys
+import logging
 import requests
 import statistics as st
 
@@ -28,9 +29,6 @@ from data.db.db_settings import VALIDATION_ADDRESS, DEBUG
 from constant import ChartInterval, ChartPeriod
 from .gateway.gateway import BaseGateway
 
-# this is the only way works so far. to use yfinance override pandas_datareader.
-# yf.pdr_override()
-
 default_asset = "SPX"
 start = datetime(datetime.now().year, 1, 1)
 
@@ -42,6 +40,8 @@ target_price = "Close"
 
 # initialize the mode to be test mode
 test_mode = True
+
+logger = logging.getLogger(__name__)
 
 
 """
@@ -198,12 +198,12 @@ class AssetBase(object):
             name = self.name
         try:
             res = requests.get(VALIDATION_ADDRESS + name)
-            if DEBUG:
-                print("----Response in is_valid funcion is ---------", res)
-                print("Status code is ",res.status_code,
-                      "ticker name is ", name, 
-                      "validation address is ", VALIDATION_ADDRESS, 
-                      name)
+
+            logger.debug("----Response in is_valid funcion is ---------", res)
+            logger.debug("Status code is ",res.status_code,
+                    "ticker name is ", name, 
+                    "validation address is ", VALIDATION_ADDRESS, 
+                    name)
 
             if res.status_code == 200:
                 return True
@@ -241,7 +241,7 @@ class AssetBase(object):
                 return self.his_price
             return None
         except Exception as e:
-            print(f"Asset: getMarketData(): can't get data for {self.name} for interval {chartInterval} and period: {period}")
+            logger.warning(f"Asset: getMarketData(): can't get data for {self.name} for interval {chartInterval} and period: {period}")
             return None
 
     def getSharesFull(self):

@@ -56,8 +56,11 @@ class Chart(QtWidgets.QWidget):
         self._mainLayout:QtWidgets.QVBoxLayout = None
         self._widgetsLayout:QtWidgets.QHBoxLayout = None
         self._tickers: QtWidgets.QComboBox = None
+        self._addedTicker: str = ""
+        self._tickerIndexAdded:bool = False
         self._chartGraph: ChartGraph = None
         self._interval:IntervalBox = None # to be defined. as subclass of QSpinbox
+
         self._initUI()
     
     def _initUI(self) -> None:
@@ -70,44 +73,77 @@ class Chart(QtWidgets.QWidget):
         self._chartGraph = ChartGraph(self._assetName)
 
         self._tickers = Ticker(Aiconfig.get("ASSET_LIST"))
-        self._tickers.currentTextChanged.connect(self._chartGraph._tickerChanged)
+        
+        # connect the events to functions/methods to handle them.
+        self._tickers.currentIndexChanged.connect(self._tickerIndexChanged)
         self._tickers.editTextChanged.connect(self._tickerEdited)
-        # self._tickers.keyPressEvent()
+        self._tickers.lineEdit().editingFinished.connect(self._tickerEditFinished)
 
         self._interval = IntervalBox()
-        self._interval.setFixedSize(100,100)
         self._interval.currentTextChanged.connect(self._chartGraph._intervalChanged)
 
         self._widgetsLayout = QtWidgets.QHBoxLayout()
         self._widgetsLayout.addWidget(self._tickers)
         self._widgetsLayout.addSpacing(20)
         self._widgetsLayout.addWidget(self._interval)
+
+        # fill the remaining space with stretch and reserved spacing.
         self._widgetsLayout.addStretch(stretch=1)
         self._widgetsLayout.addSpacing(50)
 
         self._mainLayout.addWidget(self._chartGraph)
         self._mainLayout.addLayout(self._widgetsLayout)
 
+    def _tickerIndexChanged(self, index_t) -> None:
+        """
+        index selected is changed
+        """
+        currentTicker = self._tickers.itemText(index_t)
+        print(f"items are {[self._tickers.itemText(i) for i in range(self._tickers.count())]}")
+        logger.debug(f"_tickerIndexChanged : text changed is {currentTicker} and items are items are {[self._tickers.itemText(i) for i in range(self._tickers.count())]}")
+
+        if currentTicker != self._assetName:
+            self._assetName = currentTicker
+            self._chartGraph._tickerChanged(currentTicker)
 
     def _tickerEdited(self, tickerText) -> None:
         """
-        the user added a new asset/ticker. add it to the tickers list.
+        the user is editing a new asset/ticker. keep the edited text in 
+        self._addedTicker
+        # update the addedTicker but don't take any action.
+        # waiting for the editfinished signal to act.
         """
-        print(f"the ticker edited is {tickerText}")
+        logger.debug(f"the ticker edited is {tickerText}")
+        # update the addedTicker but don't take any action.
+        # waiting for the editfinished signal to act.
+        self._addedTicker = tickerText
 
+    def _tickerEditFinished(self):
+        """ 
+        # editing/adding new asset/ticker finished.
         # if the edited/added text is not in the ticker list already.
         # add it
-        if self._tickers.findText(tickerText) == -1:
+        """
+        tickerText = self._addedTicker
+        logger.debug(f"_tickerEditFinished: tickerText is {tickerText} and self.assetName is {self._assetName}" )
+        # print(f"_tickerEditFinished: {tickerText}")
+        if tickerText is not None and tickerText != "":
             # check if the ticker/asset name is a valid name
             # (can be found in exchanges)
             if fb.Asset().is_valid(tickerText):
-                self._tickers.addItem(tickerText)
-                # add it to the settings file. so you can use it
-                # whenever you open the platform again. 
-                Aiconfig.append_to_list("ASSET_LIST")
+                tickerList = Aiconfig.get("ASSET_LIST")
+                if tickerText not in tickerList:
+                     # add it to the settings file. so you can use it
+                    # whenever you open the platform again. 
+                    logger.debug(f"_tickerEditFinished to append_to_list : {tickerText}")
+                    Aiconfig.append_to_list("ASSET_LIST", tickerText)
 
-        self._chartGraph._tickerChanged(tickerText)
-
+            else:
+                logger.debug(f"Chart:_tickerEditFinished :: ticker is invalid : {tickerText}")
+        else:
+            logger.debug(f"Chart:_tickerEditFinished :: tickerText is invalid : {tickerText}")
+        # initialize edited ticker. for the next editing.
+        self._addedTicker = ""
 
 class ChartGraph(pg.PlotWidget):
     """
@@ -223,7 +259,7 @@ class ChartGraph(pg.PlotWidget):
         self._plots[plot_name] = plot
         # print(f"chartGraph: addPlot: plot view pos is {plot.viewPos()}")
         # print(f"chartGraph: addPlot: plot view range is {plot.viewRect()}")
-        print(f"chartGraph: addPlot: plot viewbox range is {plot.getViewBox().viewRange()}")
+        logger.debug(f"chartGraph: addPlot: plot viewbox range is {plot.getViewBox().viewRange()}")
         # Add plot onto the layout
         self._layout.nextRow()
         self._layout.addItem(plot)
@@ -232,7 +268,8 @@ class ChartGraph(pg.PlotWidget):
         """
         the ticker/asset selected to display was changed. 
         """
-        if tickerText is not None:
+        # if tickerText is the same as the current assetName. do nothing.
+        if tickerText is not None and tickerText != "" and tickerText != self._assetName:
             self.setAsset(tickerText)
 
     def _intervalChanged(self, intervalText) -> None:
@@ -271,7 +308,7 @@ class ChartGraph(pg.PlotWidget):
 
             self.clearAll()
 
-            logger.info(f"Asset for the chart changed to {assetName} now!")
+            logger.debug(f"Asset for the chart changed to {assetName} now!")
 
             self._assetName = assetName
 
@@ -389,11 +426,11 @@ class ChartGraph(pg.PlotWidget):
 
         self._dataManager.setXMax(self._right_ix)        
         min_x = max(0, int(self._right_ix - self._bar_count))
-        min_x = min(min_x,self._right_ix)
+        min_x = min(min_x, self._right_ix)
         self._dataManager.setXMin(min_x)
 
         for plot in self._plots.values():
-            # logger.info(f"chartGraph :_update_x_range: plot is {plot.objectName()} and min_ix, max_ix is {min_ix, max_ix}")
+            logger.debug(f"chartGraph :_update_x_range: plot is {plot.objectName()} and min_ix, max_ix is {min_ix, max_ix}")
             plot.setRange(xRange=(min_ix, max_ix), padding=0)
 
     def _update_y_range(self) -> None:
@@ -422,8 +459,7 @@ class ChartGraph(pg.PlotWidget):
         # Return a the view's visible range as a list: [[xmin, xmax], [ymin, ymax]]
         view_range: list = view.viewRange()
         self._right_ix = max(0, view_range[0][1])
-        # print(f"chartGraph :paintEvent: _right_ix is {self._right_ix}")
-        # print(f"chartGraph :paintEvent: view_range is {view_range}")
+        # logger.debug(f"chartGraph :paintEvent: _right_ix is {self._right_ix}")
 
         super().paintEvent(event)
 
