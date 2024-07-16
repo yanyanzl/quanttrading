@@ -4,13 +4,30 @@ import yfinance as yf
 import requests_cache
 from data.finlib import Asset
 from constant import ChartInterval, ChartPeriod
-from utility import volumeToPicture
+from utility import volumeToPicture, setUpLogger
 
 import logging
 from datetime import datetime
 import os
+from event.engine import EventEngine
+from data.ibkr.ibkrgateway import IbkrGateway
 
-print(f"equal {"abc" != "abcd"}")
+setUpLogger(logging.INFO)
+
+logger = logging.getLogger(__name__)
+
+def gatewayTest():
+    engine = EventEngine(10)
+    gw = IbkrGateway(engine, "IbkrGateway")
+    gwSetting = {"IP":"127.0.0.1", "PORT":7497}
+    gw.connect(gwSetting)
+
+    logger.info("connect completed!")
+
+gatewayTest()
+
+
+# print(f"equal {"abc" != "abcd"}")
 
 def logTest():
     logger = logging.getLogger(__name__)
@@ -94,16 +111,16 @@ def assetTest():
 
     print(f"min is {min} \n max is {max}")
 
-ac = None
-if not ac:
-    print("ac is None!!!")
+# ac = None
+# if not ac:
+#     print("ac is None!!!")
     
-print(f"Interval is {ChartInterval}")
-print(f"Interval is {ChartInterval.M1}")
-print(f"Interval is {ChartInterval.M1.name}")
-print(f"Interval is {ChartInterval.M1.value}")
+# print(f"Interval is {ChartInterval}")
+# print(f"Interval is {ChartInterval.M1}")
+# print(f"Interval is {ChartInterval.M1.name}")
+# print(f"Interval is {ChartInterval.M1.value}")
 
-print(f"M1.value is in {ChartInterval.M1.value in ["1s", "1m", "5m", "15m", "30m", "1h"]}")
+# print(f"M1.value is in {ChartInterval.M1.value in ["1s", "1m", "5m", "15m", "30m", "1h"]}")
 
 
 """

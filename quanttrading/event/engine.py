@@ -27,6 +27,8 @@ class Event:
 # Defines handler function to be used in event engine.
 # signifies a function that takes a single parameter of 
 # type Event and returns a None
+# Callable[[int], str] signifies a function that takes a 
+# single parameter of type int and returns a str.
 HandlerType: callable = Callable[[Event], None]
 
 
@@ -49,7 +51,7 @@ class EventEngine:
         self._queue: Queue = Queue()
         self._active: bool = False
         self._thread: Thread = Thread(target=self._run)
-        self._timer: Thread = Thread(target=self._run_timer)
+        # self._timer: Thread = Thread(target=self._run_timer)
         self._handlers: defaultdict = defaultdict(list)
         self._general_handlers: List = []
 
@@ -93,14 +95,14 @@ class EventEngine:
         """
         self._active = True
         self._thread.start()
-        self._timer.start()
+        # self._timer.start()
 
     def stop(self) -> None:
         """
         Stop event engine.
         """
         self._active = False
-        self._timer.join()
+        # self._timer.join()
         self._thread.join()
 
     def put(self, event: Event) -> None:

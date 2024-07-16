@@ -1,14 +1,11 @@
 
 import tkinter as tk
 from tkinter.scrolledtext import ScrolledText
-from aisettings import Aiconfig
+from setting import Aiconfig
 import logging
 import threading
 import requests
 import os
-
-LOGGING_FILE_NAME = os.path.dirname(os.path.abspath(__file__)) + '/' + Aiconfig.get('LOGGING_FILE_NAME')
-
 
 
 class Message_Area():
@@ -24,21 +21,8 @@ def display_message(message:str, st:ScrolledText=None):
         st.pack()
         st.insert(tk.END, message+"\n")
         st.see(tk.END)
-    
-    elif str:
-        with open(LOGGING_FILE_NAME,'a') as file:
-            file.writelines(f"{message}\n")
-            if Aiconfig.get('DEBUG'):
-                print(message)
 
 # display_message("x lines now ...")
-
-
-logging.basicConfig(filename= os.path.dirname(os.path.abspath(__file__)) + '/' + 'log/ailog.log', encoding='utf-8', level=logging.DEBUG)
-# logging.debug('This message should go to the log file')
-# logging.info('So should this')
-# logging.warning('And this, too')
-# logging.error('And non-ASCII stuff, too, like Øresund and Malmö')
 
 
 class StoppableThread(threading.Thread):

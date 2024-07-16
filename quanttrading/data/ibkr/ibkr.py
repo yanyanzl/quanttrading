@@ -1,6 +1,5 @@
 """
-Copyright (C) Steven Jiang. 
-All rights reserved. This code is subject to the terms
+Copyright (C) Steven Jiang. All rights reserved. This code is subject to the terms
  and conditions of the MIT Non-Commercial License, as applicable.
 """
 
@@ -10,15 +9,18 @@ from ibapi.reader import EReader
 
 from ibapi.contract import Contract
 from ibapi.ticktype import TickTypeEnum
-from ibapi.execution import Execution
+from ibapi.execution  import Execution
 from datetime import datetime
 import pandas
 
-from ibapi.common import *  # @UnusedWildImport
-from ibapi.utils import *  # @UnusedWildImport
-from aiorder import *
+from ibapi.common import * # @UnusedWildImport
+from ibapi.utils import * # @UnusedWildImport
+from .aiorder import *
 from setting import Aiconfig
-from aitools import *
+import logging
+from .aitools import *
+
+logger = logging.getLogger(__name__)
 
 # BUY_LMT_PLUS = 0.05
 
@@ -29,7 +31,11 @@ from aitools import *
 # ACCOUNT_INFO_SHOW_LIST = ['UnrealizedPnL','RealizedPnL', "NetLiquidation","TotalCashValue", "BuyingPower","GrossPositionValue", "AvailableFunds"]
 
 class AiWrapper(EWrapper):
-
+    """
+    implement IBKR EWapper class. which is the interface that will need to be overloaded by the customer so
+    that his/her code can receive info from the TWS/IBGW. 
+    The user just needs to override EWrapper methods to receive the answers.
+    """
     # The API treats many items as errors even though they are not.
     def error(self, reqId, errorCode, errorMsg="", advancedOrderRejectJson=""):
         super().error(reqId, errorCode, errorMsg, advancedOrderRejectJson)
@@ -56,12 +62,27 @@ class AiWrapper(EWrapper):
             # logging.debug("Received %d openOrders", len(self.permId2ord))     
 
 class AiClient(EClient):
-     def __init__(self, wrapper):
-         EClient.__init__(self, wrapper)
+    """
+    The main class to use from API user's point of view.
+    It takes care of almost everything:
+    - implementing the requests
+    - creating the answer decoder
+    - creating the connection to TWS/IBGW
+    """
+    def __init__(self, wrapper):
+        EClient.__init__(self, wrapper)
 
-class AiApp(AiWrapper, AiClient):
 
+class IbkrApp(AiWrapper, AiClient):
+    """
+    Reimplement both Client and Wrapper so that
+    we could creating the connection, 
+    send request, receive the answers, decoding the answers,
+    """
+    # message queue is used to process real time messages generated
+    # by the programm. it could help the user to monitor the progress
     message_q = queue.Queue()
+    # data queue is used to transfer data
     data_q = queue.Queue()
     def __init__(self):
         AiWrapper.__init__(self)
@@ -85,15 +106,24 @@ class AiApp(AiWrapper, AiClient):
     
     @staticmethod
     def has_message_queue():
-         if AiApp.message_q and isinstance(AiApp.message_q, queue.Queue):
+         if IbkrApp.message_q and isinstance(IbkrApp.message_q, queue.Queue):
               return True
          return False
     
     @staticmethod
     def has_data_queue():
-         if AiApp.data_q and isinstance(AiApp.data_q, queue.Queue):
+         if IbkrApp.data_q and isinstance(IbkrApp.data_q, queue.Queue):
               return True
          return False
+
+    def _processMessage(self, message:str) -> None:
+        """
+        internal method which used to process Message
+        """
+        if message is not None:
+            logger.info(message)
+            if IbkrApp.has_message_queue():
+                IbkrApp.message_q.put(message)
 
     def reqTickByTickData(self, reqId:int, contract:Contract,tickType:str,numberOfTicks:int,ignoreSize:bool):
          super().reqTickByTickData(reqId, contract, tickType, numberOfTicks, ignoreSize)
@@ -103,9 +133,7 @@ class AiApp(AiWrapper, AiClient):
         super().cancelTickByTickData(reqId)
         self.tick_bidask_reqId = -1
         message = f'cancelTickByTickData... ReqId:, {reqId}'
-        print(message)
-        if AiApp.has_message_queue():
-             AiApp.message_q.put(message)
+        self._processMessage(message)
 
     def reqRealTimeBars(self,reqId:TickerId, contract:Contract, barSize:int,whatToShow:str,useRTH:bool,realTimeBarsOptions:TagValueList):
         super().reqRealTimeBars(reqId,contract,barSize,whatToShow,useRTH,realTimeBarsOptions)
@@ -115,9 +143,7 @@ class AiApp(AiWrapper, AiClient):
         super().cancelRealTimeBars(reqId)
         self.realtime_bar_reqId = -1
         message = f'cancelRealTimeBars... ReqId:, {reqId}'
-        print(message)
-        if AiApp.has_message_queue():
-             AiApp.message_q.put(message)
+        self._processMessage(message)
 
     def reqMktData(self, reqId:TickerId,contract:Contract, genericTickList:str, snapshot:bool,regulatorySnapshot:bool, mktDataOptions:TagValueList):
         super().reqMktData(reqId, contract, genericTickList,snapshot, regulatorySnapshot,mktDataOptions)
@@ -127,9 +153,7 @@ class AiApp(AiWrapper, AiClient):
         super().cancelMktData(reqId)
         self. market_reqId = -1
         message = f'cancelMktData... ReqId:, {reqId}'
-        print(message)
-        if AiApp.has_message_queue():
-             AiApp.message_q.put(message)
+        self._processMessage(message)
 
     # overide the account Summary method. to get all the account summary information
     def accountSummary(self, reqId: int, account: str, tag: str, value: str,currency: str):
@@ -146,9 +170,7 @@ class AiApp(AiWrapper, AiClient):
     # Notifies when all the accounts’ information has ben received.
     def accountSummaryEnd(self, reqId: int):
         message = f'AccountSummaryEnd. ReqId:, {reqId}'
-        print(message)
-        if AiApp.has_message_queue():
-             AiApp.message_q.put(message)
+        self._processMessage(message)
 
     # Receiving Account Updates
     # Resulting account and portfolio information will be delivered via the IBApi.EWrapper.updateAccountValue, IBApi.EWrapper.updatePortfolio, IBApi.EWrapper.updateAccountTime and IBApi.EWrapper.accountDownloadEnd
@@ -187,16 +209,12 @@ class AiApp(AiWrapper, AiClient):
     # Receives the last time on which the account was updated.
     def updateAccountTime(self, timeStamp: str):
         message = f'UpdateAccountTime. Time:, {timeStamp}'
-        print(message)
-        if AiApp.has_message_queue():
-             AiApp.message_q.put(message)
+        self._processMessage(message)
 
     # Notifies when all the account’s information has finished.
     def accountDownloadEnd(self, accountName: str):
         message = f'AccountDownloadEnd. Account:, {accountName}'
-        print(message)
-        if AiApp.has_message_queue():
-             AiApp.message_q.put(message)
+        self._processMessage(message)
 
     # after reqMktData, this function is used to receive the data.
     def tickPrice(self, reqId, tickType, price, attrib):
@@ -212,9 +230,7 @@ class AiApp(AiWrapper, AiClient):
                     self.bid_price = price
                 elif tickType == "ASK":
                     self.ask_price = price
-            print(message)
-            if AiApp.has_message_queue():
-                 AiApp.message_q.put(message)
+            self._processMessage(message)
 
     # after reqHistoricalData, this function is used to receive the data.
     def historicalData(self, reqId, bar):
@@ -227,26 +243,20 @@ class AiApp(AiWrapper, AiClient):
         super().nextValidId(orderId)
         self.nextorderId = orderId
         message = f'The next valid order id is:  {self.nextorderId}'
-        print(message)
-        if AiApp.has_message_queue():
-            AiApp.message_q.put(message)
+        self._processMessage(message)
 
     # order status, will be called after place/cancel order
     def orderStatus(self, orderId, status, filled, remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice):
         super().orderStatus(orderId, status, filled, remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice)
         message = f'orderStatus - orderid: {orderId}, status: {status}, filled: {filled}, remaining: {remaining}, lastFillPrice: {lastFillPrice}, avgFullPrice: {avgFillPrice}, mktCapPrice: {mktCapPrice}'
-        print(message)
-        if AiApp.has_message_queue():
-            AiApp.message_q.put(message) 
+        self._processMessage(message)
 
     # will be called after place order
     def openOrder(self, orderId, contract, order, orderState):
         super().openOrder(orderId, contract, order, orderState)
         message = f'openOrder id: {orderId}, {contract.symbol}, {contract.secType}, @  {contract.exchange} , {order.action}, {order.orderType}, {order.totalQuantity}, at price , {order.lmtPrice}, {orderState.status}'
-        print(message)
         self.lastOrderId = orderId
-        if AiApp.has_message_queue():
-            AiApp.message_q.put(message) 
+        self._processMessage(message)
 
     # tickByTickBidAsk function to receive the data.
     def tickByTickBidAsk(self, reqId: int, time: int, bidPrice: float, askPrice: float, bidSize: Decimal, askSize: Decimal, tickAttribBidAsk: TickAttribBidAsk):
@@ -256,17 +266,12 @@ class AiApp(AiWrapper, AiClient):
         self.ask_price = askPrice
         self.bid_price = bidPrice
         
-        print(message)
-
-        if AiApp.has_message_queue():
-            AiApp.message_q.put(message) 
+        self._processMessage(message)
 
     def realtimeBar(self,reqId:TickerId,time:int,open_:float,high:float,low:float,close:float,volume:Decimal,wap:Decimal, count:int):
         super().realtimeBar(reqId, time, open_,high,low, close, volume, wap,count)
         message = f'Realtime Bar... ReqId:, {reqId}, time: {time}, open: {open_}, high: {high}, low: {low}, close: {close}, volume:{volume}, wap: {wap}, count: {count}'
-        print(message)
-        if AiApp.has_message_queue():
-             AiApp.message_q.put(message)
+        self._processMessage(message)
 
     def close_contract_data(self, contract:Contract=None):
         message = ""
@@ -287,16 +292,14 @@ class AiApp(AiWrapper, AiClient):
             message = "not connected to server yet ..."
             logging.warning(message)
 
-        if AiApp.has_message_queue():
-            AiApp.message_q.put(message)             
+        self._processMessage(message)            
 
     
     def close_previous_contract(self):
         if self.previous_contract and self.currentContract and self.currentContract.symbol != self.previous_contract.symbol:
             self.close_contract_data(self.previous_contract)
-    
 
-    def set_current_Contract(self, contract:Contract()):
+    def set_current_Contract(self, contract: Contract):
         """ change the current contract. all functions use contract will be affected.
         """
         message = ""
@@ -313,15 +316,14 @@ class AiApp(AiWrapper, AiClient):
         else:
             message = "invalid parameter: contract" + str(type(contract.__name__))
         
-        if AiApp.has_message_queue():
-            AiApp.message_q.put(message)
+        self._processMessage(message)
 
     def disconnect(self):
         self.close_contract_data()
         super().disconnect()
 
 
-def place_lmt_order(app=AiApp(), action:str="", tif:str="DAY", increamental=Aiconfig.get('BUY_LMT_PLUS'), quantity=10, priceTickType="LAST"):
+def place_lmt_order(app=IbkrApp(), action:str="", tif:str="DAY", increamental=Aiconfig.get('BUY_LMT_PLUS'), quantity=10, priceTickType="LAST"):
     """
     send limit order to server
     """
@@ -331,14 +333,14 @@ def place_lmt_order(app=AiApp(), action:str="", tif:str="DAY", increamental=Aico
     price = 0
     if action != 'BUY' and action != 'SELL':
              message = f"invalid  action {action} in place_lmt_order!"
-             if AiApp.has_message_queue():
-                  AiApp.message_q.put(message)
+             if IbkrApp.has_message_queue():
+                  IbkrApp.message_q.put(message)
              raise ValueError(message)
     try:
         message = f'ask price {app.ask_price}, bid price {app.bid_price}, last price {app.last_price}'
         print(message)
-        if AiApp.has_message_queue():
-            AiApp.message_q.put(message) 
+        if IbkrApp.has_message_queue():
+            IbkrApp.message_q.put(message) 
         # print("before get order price")
         price = float(_get_order_price_by_type(app, priceTickType))
         # print("after get order price")
@@ -349,8 +351,8 @@ def place_lmt_order(app=AiApp(), action:str="", tif:str="DAY", increamental=Aico
             #Place order
             message = f'placing limit order now ...\n orderid {app.nextorderId}, action: {action}, symbol {app.currentContract.symbol}, quantity: {quantity}, tif: {tif} at price: {order.lmtPrice}'
             print(message)
-            if AiApp.has_message_queue():
-               AiApp.message_q.put(message) 
+            if IbkrApp.has_message_queue():
+               IbkrApp.message_q.put(message) 
             
             # print("id:" , app.nextorderId, "contract", app.currentContract, "order is ", order)
             app.placeOrder(app.nextorderId, app.currentContract, order)
@@ -362,16 +364,16 @@ def place_lmt_order(app=AiApp(), action:str="", tif:str="DAY", increamental=Aico
         else:
             message = f'place order failed.:  symbol is {app.currentContract.symbol}, action is {action}'
             print(message)
-            if AiApp.has_message_queue():
-                AiApp.message_q.put(message) 
+            if IbkrApp.has_message_queue():
+                IbkrApp.message_q.put(message) 
 
     except Exception as ex:
         message = f"place order failed.: for price {price}, priceTickType: {priceTickType}, symbol is {app.currentContract.symbol}, action is {action}"
         print(message, ex.args)
-        if AiApp.has_message_queue():
-            AiApp.message_q.put(message) 
+        if IbkrApp.has_message_queue():
+            IbkrApp.message_q.put(message) 
 
-def _get_order_price_by_type(app=AiApp(),priceTickType="LAST"): 
+def _get_order_price_by_type(app=IbkrApp(),priceTickType="LAST"): 
      """
      get the price for the order based on the priceTickType. inner function
      """
@@ -387,10 +389,9 @@ def _get_order_price_by_type(app=AiApp(),priceTickType="LAST"):
           return app.bid_price
      else:
           raise ValueError(f"unexpected priceTickType {priceTickType} or no correspondont price availalbe.")
-     
-          
+
 # cancel last order
-def cancel_last_order(app=AiApp()):
+def cancel_last_order(app=IbkrApp()):
     message = ""
     if app.lastOrderId > 0:
         message = f'placing orderId {app.lastOrderId} to server now ...'
@@ -400,12 +401,12 @@ def cancel_last_order(app=AiApp()):
         message = 'no order to be cancelled...'
         print(message)
 
-    if AiApp.has_message_queue():
-        AiApp.message_q.put(message)
+    if IbkrApp.has_message_queue():
+        IbkrApp.message_q.put(message)
 
 # cancel all open orders
 # IBApi::EClient::reqGlobalCancel will cancel all open orders, regardless of how they were originally placed.
-def cancel_all_order(app=AiApp()):
+def cancel_all_order(app=IbkrApp()):
     message = ""
     if app.isConnected():
           message = 'Cancelling all open orders to server now ...'
@@ -414,11 +415,11 @@ def cancel_all_order(app=AiApp()):
     else:
           message = 'calling all open orders failed. No connection ...'
           print(message)
-    if AiApp.has_message_queue():
-        AiApp.message_q.put(message)
+    if IbkrApp.has_message_queue():
+        IbkrApp.message_q.put(message)
 
 # show the current portforlio 
-def show_portforlio(app=AiApp()):
+def show_portforlio(app=IbkrApp()):
     message = ""
     if app.isConnected():
         message = f'current portforlio for account {app.account} are showing below ... \n {app.portfolio}'
@@ -426,11 +427,11 @@ def show_portforlio(app=AiApp()):
     else:
         message = 'show portforlio failed. No connection ...'
         print(message)
-    if AiApp.has_message_queue():
-        AiApp.message_q.put(message)
+    if IbkrApp.has_message_queue():
+        IbkrApp.message_q.put(message)
 
 # show the current account summary 
-def show_summary(app=AiApp()):
+def show_summary(app=IbkrApp()):
     message = ""
     if app.isConnected():
         message = f'current portforlio for account{app.account} are showing below ... \n'
@@ -439,13 +440,13 @@ def show_summary(app=AiApp()):
     else:
         message = 'show account summary failed. No connection ...'
         print(message)
-    if AiApp.has_message_queue():
-        AiApp.message_q.put(message)
+    if IbkrApp.has_message_queue():
+        IbkrApp.message_q.put(message)
 
 
 
 def main():
-     app = AiApp()
+     app = IbkrApp()
 
 if __name__ == "__main__":
     main()

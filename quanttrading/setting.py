@@ -192,11 +192,23 @@ def initialize_settings_data():
                 'AMD', 
                 'AMZN', 
                 'GOOG', 
+                'IBM',
+                'JPM',
+                'KO',
+                'COIN'
             ],
             "DEFAULT_ASSET": "TSLA",
             "DEFAULT_CHART_INTERVAL": "1 Minite",
             "DEFAULT_Y_MARGIN": 3,
             "BAR_WIDTH": 0.3,
+            'ACCOUNT_COLUMNS': ['key', 'value', 'currency'],
+
+            'PORTFOLIO_COLUMNS': ['symbol', 'sectype', 'exchange', 'position', 'marketprice', 'marketvalue', 'averagecost', 'unrealizedpnl', 'realizedpnl'], 
+
+            'ACCOUNT_INFO_SHOW_LIST': ['UnrealizedPnL','RealizedPnL', "NetLiquidation","TotalCashValue", "BuyingPower","GrossPositionValue", "AvailableFunds"], 
+
+            'BUY_LMT_PLUS' : 0.05,
+            'SELL_LMT_PLUS' : -0.05,
         }
     
 

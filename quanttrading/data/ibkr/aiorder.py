@@ -67,7 +67,7 @@ def stop_lmt_order(action:str, stop_price="", limit_price="", quantity=10):
     if stop_price != "" and limit_price != "" and stop_price > 0 and limit_price >0  and quantity > 0:
         if action != 'BUY' and action != 'SELL':
              raise ValueError(f"invalid  action {action} in stop_lmt_order!")
-        order = Order()
+        order: Order = Order()
         order.Action = action
         order.OrderType = "STP LMT"
         order.AuxPrice = stop_price

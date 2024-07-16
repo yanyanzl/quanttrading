@@ -1,3 +1,15 @@
+ACCOUNT_COLUMNS:
+- key
+- value
+- currency
+ACCOUNT_INFO_SHOW_LIST:
+- UnrealizedPnL
+- RealizedPnL
+- NetLiquidation
+- TotalCashValue
+- BuyingPower
+- GrossPositionValue
+- AvailableFunds
 ASSET_LIST:
 - TSLA
 - AAPL
@@ -12,6 +24,7 @@ ASSET_LIST:
 - COIN
 AXIS_WIDTH: 1
 BAR_WIDTH: 0.3
+BUY_LMT_PLUS: 0.05
 CANDLE_WIDTH: 0.3
 DEFAULT_ASSET: TSLA
 DEFAULT_CHART_INTERVAL: 1 Minite
@@ -20,6 +33,17 @@ DOWN_COLOR: r
 MAX_NUM_CANDLE: 300
 NORMAL_FONT: Arial
 PEN_WIDTH: 1
+PORTFOLIO_COLUMNS:
+- symbol
+- sectype
+- exchange
+- position
+- marketprice
+- marketvalue
+- averagecost
+- unrealizedpnl
+- realizedpnl
+SELL_LMT_PLUS: -0.05
 UP_COLOR: g
 __version__: '1.0'
 database.database: database.db
