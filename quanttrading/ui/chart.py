@@ -29,7 +29,7 @@ import data.finlib as fb
 CURSOR_COLOR = 'g'
 BLACK_COLOR = 'm'
 NORMAL_FONT = 'Arial'
-MIN_BAR_COUNT = 100
+MIN_BAR_COUNT = Aiconfig.get("MIN_BAR_COUNT")
 CANDLE_PLOT_NAME = "Candle_Plot"
 VOLUME_PLOT_NAME = "Volume_Plot"
 
@@ -99,7 +99,6 @@ class Chart(QtWidgets.QWidget):
         index selected is changed
         """
         currentTicker = self._tickers.itemText(index_t)
-        print(f"items are {[self._tickers.itemText(i) for i in range(self._tickers.count())]}")
         logger.debug(f"_tickerIndexChanged : text changed is {currentTicker} and items are items are {[self._tickers.itemText(i) for i in range(self._tickers.count())]}")
 
         if currentTicker != self._assetName:
@@ -245,6 +244,7 @@ class ChartGraph(pg.PlotWidget):
         view: pg.ViewBox = plot.getViewBox()
         view.sigXRangeChanged.connect(self._update_y_range)
         view.setMouseEnabled(x=True, y=False)
+        view.setDefaultPadding(0.05)
 
         # Set right axis
         right_axis: pg.AxisItem = plot.getAxis("right")
@@ -259,7 +259,7 @@ class ChartGraph(pg.PlotWidget):
         self._plots[plot_name] = plot
         # print(f"chartGraph: addPlot: plot view pos is {plot.viewPos()}")
         # print(f"chartGraph: addPlot: plot view range is {plot.viewRect()}")
-        logger.debug(f"chartGraph: addPlot: plot viewbox range is {plot.getViewBox().viewRange()}")
+        logger.info(f"chartGraph: addPlot: plot viewbox range is {plot.getViewBox().viewRange()}")
         # Add plot onto the layout
         self._layout.nextRow()
         self._layout.addItem(plot)
@@ -286,11 +286,19 @@ class ChartGraph(pg.PlotWidget):
         """
         
         """
+        logger.debug("inside _initXRange ")
         if not self._dataManager.isEmpty():
             self._right_ix = self._dataManager.lastIndex()
-            self._bar_count = min(self._bar_count, self._dataManager.getTotalDataNum())
+            self._bar_count = min(self._bar_count, self._dataManager.getTotalDataNum(), self._right_ix)
 
             self._update_x_range()
+            self._update_y_range()
+            # for plot in self._plots.values():
+            #     logger.info(f"chartGraph :_initXRange: plot {plot.objectName()} is updating ...")
+            #     plot.update()
+            # for itemname, item in self._items.items():
+            #     logger.info(f"chartGraph :_initXRange: item {itemname} is updating ...")
+            #     item.update()
 
     def setAsset(self, assetName: str = None, 
                  chartInterval:ChartInterval = None,
@@ -307,6 +315,7 @@ class ChartGraph(pg.PlotWidget):
         if fb.Asset().is_valid(assetName):
 
             self.clearAll()
+            # logger.info(f"data is {self._dataManager.getData()}")
 
             logger.debug(f"Asset for the chart changed to {assetName} now!")
 
@@ -317,14 +326,26 @@ class ChartGraph(pg.PlotWidget):
             else:
                 self._dataManager.setAsset(assetName, chartInterval, chartPeriod)
 
-            # print(f"chart.setAsset() {self._dataManager.getData()}")
+            if self._chartCursor is not None:
+                self._chartCursor._dataManager = self._dataManager
+
             self._candlestickManager = CandlestickItems(self._dataManager)
+            self.add_item(self._candlestickManager, "CandlestickItems", plot_name=CANDLE_PLOT_NAME)
+            logger.info(f"ChartGraph:: setAsset:: set self._candlestickManager for first time {self._candlestickManager}")
+
             self._volumeManager = VolumeItem(self._dataManager)
+            self.add_item(self._volumeManager, "VolumeItems", plot_name=VOLUME_PLOT_NAME)
+            logger.info(f"ChartGraph:: setAsset::set self._volumeManager for the first time {self._volumeManager}")
 
-            self.add_item(self._candlestickManager, "CandlestickItems", plot_name=CANDLE_PLOT_NAME)  
-            self.add_item(self._volumeManager, "VolumeItems", plot_name=VOLUME_PLOT_NAME)          
+            if self._items is not None:
+                logger.debug(f"ChartGraph:: setAsset :: items are {self._items}")
+                logger.debug(f"ChartGraph:: setAsset :: items map are {self._item_plot_map}")
 
+            if self._candlestickManager is not None:
+                # logger.info(f"after new asset data :: the _candlestickManager.data is {self._candlestickManager._dataManager.getData()}")
+                logger.debug(f"after new asset data :: _candlestickManager._bar_picutures().len is {len(self._candlestickManager._bar_picutures)}")
             # set the visible range related parameters.
+
             self._initXRange()
             return True
         else:
@@ -347,7 +368,7 @@ class ChartGraph(pg.PlotWidget):
         """"""
         if not self._chartCursor:
             self._chartCursor = ChartCursor(
-                self, self._dataManager.getData(), self._plots, self._item_plot_map)
+                self, self._dataManager, self._plots, self._item_plot_map)
 
     def add_item(self, item: ChartBase, item_name: str,
                  plot_name: str) -> None:
@@ -379,9 +400,17 @@ class ChartGraph(pg.PlotWidget):
         Clear all data.
         """
         self._dataManager.clearAll()
+        self._candlestickManager = None
+        self._volumeManager = None
 
-        for item in self._items.values():
+        self._item_plot_map.clear()
+        logger.debug(f"ChartGraph:: ClearAll:: _item_plot_map are : {self._item_plot_map}")
+
+        for itemName, item in self._items.items():
             item.clearAll()
+            del item
+        self._items.clear()
+        logger.debug(f"ChartGraph:: ClearAll:: items are : {self._items}")
 
         if self._chartCursor is not None:
             self._chartCursor.clearAll()
@@ -423,11 +452,14 @@ class ChartGraph(pg.PlotWidget):
         """
         max_ix: int = self._right_ix
         min_ix: int = self._right_ix - self._bar_count
+        logger.debug(f"ChartGraph:: _update_x_range:: self._right_ix is {self._right_ix} and self._bar_count is {self._bar_count}, min_ix is {min_ix}")
 
         self._dataManager.setXMax(self._right_ix)        
         min_x = max(0, int(self._right_ix - self._bar_count))
         min_x = min(min_x, self._right_ix)
+
         self._dataManager.setXMin(min_x)
+        logger.debug(f"ChartGraph:: _update_x_range:: min_x is {self._dataManager.getXMin()} and max_x is {self._dataManager.getXMax()}")
 
         for plot in self._plots.values():
             logger.debug(f"chartGraph :_update_x_range: plot is {plot.objectName()} and min_ix, max_ix is {min_ix, max_ix}")
@@ -446,10 +478,13 @@ class ChartGraph(pg.PlotWidget):
         # print(f"view_range is {view_range}")
         max_ix: int = min(self._dataManager.getXMax(), int(view_range[0][1]))
 
+        logger.debug(f"ChartGraph:: _update_y_range:: min_x is {min_ix} and max_x is {max_ix}")
+
         # Update limit for y-axis
         for item, plot in self._item_plot_map.items():
             y_range: tuple = item.get_y_range(min_ix, max_ix)
             plot.setRange(yRange=y_range)
+            logger.debug(f"ChartGraph:: _update_y_range:: y_range is {y_range} item is {item.objectName()} plot is {plot.objectName()}")
 
     def paintEvent(self, event: QtGui.QPaintEvent) -> None:
         """
@@ -459,7 +494,7 @@ class ChartGraph(pg.PlotWidget):
         # Return a the view's visible range as a list: [[xmin, xmax], [ymin, ymax]]
         view_range: list = view.viewRange()
         self._right_ix = max(0, view_range[0][1])
-        # logger.debug(f"chartGraph :paintEvent: _right_ix is {self._right_ix}")
+        logger.debug(f"chartGraph ::paintEvent:: _right_ix is {self._right_ix} and view_range is {view_range}")
 
         super().paintEvent(event)
 
@@ -506,11 +541,11 @@ class ChartGraph(pg.PlotWidget):
                         if abs(dis) > 6:
                             # print(f"distance is {dis}")
                             dis /= 6
-                            # logger.info(f"distance is {int(dis)}")
+                            logger.info(f"ChartGraph:: mouseMoveEvent:: distance is {int(dis)}")
                             self._right_ix -= int(dis)
                             self._dragStartPoint = self.lastMousePos
                             self._update_x_range()
-                            # logger.info(f"righx is {self._right_ix}")
+                            logger.info(f"ChartGraph:: mouseMoveEvent:: self.righx is {self._right_ix}")
 
 
     def mousePressEvent(self, ev:QtGui.QMouseEvent):
@@ -544,7 +579,7 @@ class ChartGraph(pg.PlotWidget):
         """
         self._right_ix -= 1
         self._right_ix = max(self._right_ix, self._bar_count)
-
+        logger.debug("inside _on_key_left now...")
         self._update_x_range()
         self._chartCursor.move_left()
         self._chartCursor.update_info()
@@ -556,7 +591,7 @@ class ChartGraph(pg.PlotWidget):
         """
         self._right_ix += 1
         # self._right_ix = min(self._right_ix, self._dataManager.getXMax())
-
+        logger.debug("inside _on_key_right now...")
         self._update_x_range()
         self._chartCursor.move_right()
         self._chartCursor.update_info()
@@ -568,7 +603,7 @@ class ChartGraph(pg.PlotWidget):
         # candle_num = self._dataManager.getXMax() - self._dataManager.getXMin()
         self._bar_count *= 1.2
         self._bar_count = min(int(self._bar_count), self._dataManager.getTotalDataNum())
-
+        logger.debug("inside _on_key_down now...")
         self._update_x_range()
         self._chartCursor.update_info()
 
@@ -578,7 +613,7 @@ class ChartGraph(pg.PlotWidget):
         """
         self._bar_count /= 1.2
         self._bar_count = max(int(self._bar_count), self.MIN_BAR_COUNT)
-
+        logger.debug("inside _on_key_up now...")
         self._update_x_range()
         self._chartCursor.update_info()
 
@@ -587,7 +622,7 @@ class ChartGraph(pg.PlotWidget):
         Move chart to the most right.
         """
         self._right_ix = self._dataManager.lastIndex()
-
+        logger.debug("inside move_to_right now...")
         self._update_x_range()
         self._chartCursor.update_info()
 
@@ -669,6 +704,7 @@ class ChartCursor(QtCore.QObject):
         self._x_label.setZValue(2)
         self._x_label.setFont(NORMAL_FONT)
         # plot.addItem(self._x_label, ignoreBounds=True)
+        # add _x_label to first_plot(candle plot)
         list(self._plots.values())[0].addItem(self._x_label, ignoreBounds=True)
 
     def _init_info(self) -> None:
@@ -739,7 +775,9 @@ class ChartCursor(QtCore.QObject):
                 h_line.hide()
 
     def _update_label(self) -> None:
-        """"""
+        """
+        update teh label on the axis_x and axis_y
+        """
         bottom_plot: pg.PlotItem = list(self._plots.values())[-1]
         axis_width = bottom_plot.getAxis("right").width()
         axis_height = bottom_plot.getAxis("bottom").height()
@@ -757,13 +795,16 @@ class ChartCursor(QtCore.QObject):
                 label.setPos(bottom_right.x(), self._y)
             else:
                 label.hide()
-
-        # dt: datetime = self._data.iloc[self._x]
-        dt: datetime = self._dataManager.getDateTime(self._x)
+        
+        # set the x_label.
+        dt: datetime = self._dataManager.getDateTime(int(self._x))
+        minht, maxht = self._dataManager.getYRange()
+        minht += (maxht - minht) * self._dataManager._yMarginPercent
+        # logger.info(f"minht is {minht} and maxht is {maxht}, axis_height is {axis_height}")
         if dt:
             self._x_label.setText(dt.strftime("%Y-%m-%d %H:%M:%S"))
             self._x_label.show()
-            self._x_label.setPos(self._x, bottom_right.y())
+            self._x_label.setPos(self._x, minht)
             self._x_label.setAnchor((0, 0))
 
     def update_info(self) -> None:
@@ -773,6 +814,7 @@ class ChartCursor(QtCore.QObject):
         buf: dict = {}
 
         for item, plot in self._item_plot_map.items():
+            logger.debug(f"item is {item} and plot is {plot} and plotname is {plot.objectName()}")
             item_info_text: str = item.get_info_text(self._x)
             # print(f"item_info_text is {item_info_text}")
 
@@ -784,6 +826,8 @@ class ChartCursor(QtCore.QObject):
          
         for plot_name, plot in self._plots.items():
             plot_info_text: str = buf[plot]
+            logger.debug(f"plot_info_text is {plot_info_text}")
+
             # print(f"polot_info_text is {plot_info_text}")
             info: pg.TextItem = self._infos[plot_name]
             # print(f"info is {info}")
@@ -845,6 +889,7 @@ class ChartCursor(QtCore.QObject):
 
         for label in list(self._y_labels.values()) + [self._x_label]:
             label.hide()
+
 
 
 # Start Qt event loop unless running in interactive mode or using pyside.

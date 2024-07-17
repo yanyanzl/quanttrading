@@ -209,6 +209,7 @@ def initialize_settings_data():
 
             'BUY_LMT_PLUS' : 0.05,
             'SELL_LMT_PLUS' : -0.05,
+            "MIN_BAR_COUNT" : 100,
         }
     
 

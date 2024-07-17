@@ -17,16 +17,26 @@ logger = logging.getLogger(__name__)
 
 class DataManager():
 
+    MIN_BAR_COUNT = Aiconfig.get("MIN_BAR_COUNT")
+
     def __init__(self, assetName: str = None) -> None:
         self._data: DataFrame = None
         # self._data.reset_index(inplace=True)
-        self._xMax = 300  # the max visible data's index x
-        self._xMin = 0      # the min visible data's index x
+        self._initXRange()
         self._assetName: str = assetName
         self._chartInterval = Aiconfig.get("DEFAULT_CHART_INTERVAL")
         self._yMarginPercent:int = int(Aiconfig.get("DEFAULT_Y_MARGIN"))/100
         if assetName is not None:
             self.setAsset(assetName)
+
+    def _initXRange(self) -> None:
+        if self.isEmpty():
+            self._xMax = self.MIN_BAR_COUNT  # the max visible data's index x
+            self._xMin = 0      # the min visible data's index x
+        else:
+            self._xMax = self.lastIndex()
+            self._xMin = max(0, self._xMax - self.MIN_BAR_COUNT)
+
 
     def setAsset(self, assetName: str = None, 
                  chartInterval: ChartInterval = None,
@@ -71,14 +81,14 @@ class DataManager():
 
                 self._data = asset.getMarketData(chartInterval, period)
                 # print(f"self._data is {self._data}")
-
                 self._formatData()
-
+                self._initXRange()
+                
                 return True
             else:
                 return False
         except Exception as e:
-            print(f"DataManager: setAsset(): failed to setAsset for {assetName}, interval {chartInterval}, period: {period}")
+            logger.info(f"DataManager: setAsset(): failed to setAsset for {assetName}, interval {chartInterval}, period: {period}")
             return False
 
     def _formatData(self, data:DataFrame = None) -> DataFrame:
@@ -109,6 +119,10 @@ class DataManager():
         get the datetime value for index=index in datas (DataFrame)
         return a datetime object
         """
+        if index is None:
+            return None
+        index = int(index)
+
         if self._data is None or self._data.empty or index not in self._data.index:
             return None
         else:
@@ -222,8 +236,6 @@ class DataManager():
         if min_ix in self._data.index and max_ix in self._data.index:
             # print(self._data)
             data = self._data[min_ix:max_ix]
-            # print(data)
-            # data = self._data.iloc[min_ix, max_ix]
             min = data['Low'].min()
 
             max = data['High'].max()
@@ -291,6 +303,9 @@ class DataManager():
         """
         if not self.isEmpty():
             self._data.drop(self._data.index, inplace=True)
+        self.setXMax(0)
+        self.setXMin(0)
+
 
     def isEmpty(self) -> bool:
         """
@@ -345,6 +360,8 @@ class ChartBase(pg.GraphicsObject):
             pass
         else:
             barNum = self._dataManager.getTotalDataNum()
+        barNum = max(barNum, len(self._bar_picutures))
+
         self._bar_picutures = {n:None for n in range(barNum)}
 
     def generate_picture(self):
@@ -389,7 +406,27 @@ class ChartBase(pg.GraphicsObject):
         """
         self._item_picuture = None
         self._bar_picutures.clear()
+        logger.info(f"chartbase:clearAll:: self.bar_pictures is {self._bar_picutures}")
         self.update()
+
+    def setAsset(self, dataManager:DataManager) -> bool:
+            self._dataManager: DataManager = dataManager
+            self.picture = QtGui.QPicture()
+
+            self._bar_picutures: Dict[int, QtGui.QPicture] = {}
+            self._initBarPictures()
+
+            self._item_picuture: QtGui.QPicture = None
+            logger.info(f"ChartBase:: setAsset :: --init-- picture: {len(self._bar_picutures)}")
+            self._rect_area: Tuple[float, float] = None
+            # Force update during the next paint
+            self._to_update: bool = False
+
+            if not dataManager.isEmpty():
+                self.generate_picture()
+                logger.info(f"ChartBase:: setAsset :: --init-- picture: {self.picture}")
+                return True
+            return False
 
     @abstractmethod
     def get_y_range(self, min_ix: int = None, max_ix: int = None) -> Tuple[float, float]:
@@ -422,7 +459,7 @@ class ChartBase(pg.GraphicsObject):
         min_ix: int = int(rect.left())
         max_ix: int = int(rect.right())
         max_ix: int = min(max_ix, len(self._bar_picutures))
-
+        logger.debug(f"ChartBase::Paint:: min_ix = {min_ix} and max_ix = {max_ix}")
         rect_area: tuple = (min_ix, max_ix)
         if (
             self._to_update
@@ -554,6 +591,7 @@ class CandlestickItems(ChartBase):
         min_price, max_price = self._dataManager.getYRange(min_x, max_x)
         # min_x = min(min_x, max_x)
         # x_range = max_x - min_x
+        logger.debug(f"Candlestickitems:: boundingRect:: min_x is {min_x} and max_x is {max_x}, min_price is {min_price} and max price is {max_price}")
 
         rect: QtCore.QRectF = QtCore.QRectF(
             0,
@@ -562,6 +600,7 @@ class CandlestickItems(ChartBase):
             # x_range +10,
             max_price - min_price
         )
+        logger.debug(f"Candlestickitems:: boundingRect:: rect is {rect}")
         return rect
 
         """
@@ -623,6 +662,9 @@ class CandlestickItems(ChartBase):
 
         candle: Candlestick = Candlestick(self._dataManager, ix)
 
+        if candle is None or candle._index_x is None or candle.dateTime is None:
+            candle = Candlestick(self._dataManager, self._dataManager.lastIndex())
+
         if candle is not None and candle._index_x is not None and candle.dateTime is not None:
             # print(f"candle is {candle}")
             # print(f"candle.dateTime is {candle.dateTime}")
@@ -646,7 +688,7 @@ class CandlestickItems(ChartBase):
                 str(candle.close)
             ]
             text: str = "\n".join(words)
-        else:
+        else:            
             logger.info(f"no candle exist, index is {ix}")
             text: str = ""
 
