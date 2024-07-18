@@ -11,20 +11,28 @@ from datetime import datetime
 import os
 from event.engine import EventEngine
 from data.ibkr.ibkrgateway import IbkrGateway
+import asyncio, time
 
 setUpLogger(logging.INFO)
 
 logger = logging.getLogger(__name__)
 
-def gatewayTest():
+async def gatewayTest():
     engine = EventEngine(10)
     gw = IbkrGateway(engine, "IbkrGateway")
     gwSetting = {"IP":"127.0.0.1", "PORT":7497}
     gw.connect(gwSetting)
+    logger.info("connect completed!==================================================")
 
-    logger.info("connect completed!")
+    gw._app.reqHistoricalData(2, gw._app.currentContract,"","1 D", "1 min", "MIDPOINT",0,1,True, [] )
+    gw._app.reqTickByTickData(2,gw._app.currentContract, "BidAsk", 0, True)
+    await asyncio.sleep(20)
+    
+    gw._app.cancelTickByTickData(2)
+    gw.close()
 
-gatewayTest()
+    
+asyncio.run(gatewayTest())
 
 
 # print(f"equal {"abc" != "abcd"}")
@@ -57,28 +65,9 @@ def _getLogFileName() -> str:
     timestring = datetime.now().strftime("%Y-%m-%d-%H")
     return os.path.dirname(os.path.abspath(__file__)) + '/log/' + 'quanttrading'+timestring+'.log'
 
-def getLogger(name:str) -> logging.Logger:
-    logger = logging.getLogger(name)
-    # create file handler which logs even debug messages
-    fh = logging.FileHandler(_getLogFileName())
-    # create console handler with a higher log level
-    ch = logging.StreamHandler()
-    # ch.setLevel(logging.ERROR)
-    # create formatter and add it to the handlers
-    # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    # fh.setFormatter(formatter)
-    # ch.setFormatter(formatter)
-    # add the handlers to the logger
 
-    # logger.addHandler(fh)
-    # logger.addHandler(ch)
-    logger.info('Started')
-    return logger
-
-setUpLogger(logging.INFO)
-# getLogger(__name__)
-logger = logging.getLogger(__name__)
-logger.info("this is the correct one!")
+# logger = logging.getLogger(__name__)
+# logger.info("this is the correct one!")
 
 def intTofloat():
     y = volumeToPicture(25678900, 3)

@@ -300,6 +300,7 @@ class IbkrGateway(BaseGateway):
 
         self._app = IbkrApp()
         self._app_thread: StoppableThread = None
+        self._gatewaySetting: dict[str,str|int] = {}
 
     def connect(self, setting: dict) -> None:
         """
@@ -325,9 +326,11 @@ class IbkrGateway(BaseGateway):
         localTWSport = setting.get("PORT", 7497)
         # clientId:int - A number used to identify this client connection. 
         # All orders placed/modified from this client will be associated with this client identifier.
-        localClientId = setting.get("PORT", random.randint(1,100))
+        localClientId = setting.get("ClIENTID", random.randint(1,100))
 
         logger.info(f"program is starting ... ip:port:id is {localTWSIP}:{localTWSport}:{localClientId}")
+        self._gatewaySetting.update({'IP':localTWSIP, 'PORT':localTWSport, 'CLIENTID':localClientId})
+        
         self._app.connect(localTWSIP, localTWSport, localClientId)
         # self._app.connect('192.168.1.146', 7497, 1)
         
@@ -356,7 +359,12 @@ class IbkrGateway(BaseGateway):
         #Sleep interval to allow time for response data from server
         time.sleep(2) 
 
-        # The IBApi.EClient.reqAccountUpdates function creates a subscription to the TWS through which account and portfolio information is delivered. This information is the exact same as the one displayed within the TWS’ Account Window. Just as with the TWS’ Account Window, unless there is a position change this information is updated at a fixed interval of three minutes.
+        # The IBApi.EClient.reqAccountUpdates function creates a subscription 
+        # to the TWS through which account and portfolio information is 
+        # delivered. This information is the exact same as the one displayed
+        #  within the TWS’ Account Window. Just as with the TWS’ Account 
+        # Window, unless there is a position change this information is
+        #  updated at a fixed interval of three minutes.
         self._app.reqAccountUpdates(True, self._app.account)
         self._app.set_current_Contract(stock_contract("AAPL"))
 
@@ -365,7 +373,10 @@ class IbkrGateway(BaseGateway):
         """
         Close gateway connection.
         """
-        # Once the subscription to account updates is no longer needed, it can be cancelled by invoking the IBApi.EClient.reqAccountUpdates method while specifying the susbcription flag to be False.
+        # Once the subscription to account updates is no longer needed,
+        #  it can be cancelled by invoking the 
+        # IBApi.EClient.reqAccountUpdates method while specifying 
+        # the susbcription flag to be False.
         self._app.reqAccountUpdates(False, self._app.account)
         time.sleep(1) 
         logger.info("Exiting Program...")

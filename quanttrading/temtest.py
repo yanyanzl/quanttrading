@@ -6,6 +6,8 @@ import time
 from ui.chartitems import DataManager
 
 
+# with open("./log/restats", "wb") as f:
+#     f.write(b"hello world")
 
 def testLoc():
     data = data1
@@ -15,7 +17,6 @@ def testLoc():
     # print(f"data.iat[0,0] is {data.iat[0,0]}")
     # print(f"data.iat[0,1] is {data.iat[0,1]}")
     # print(f"data['Open'].values[0] is {data['Open'].values[0]}")
-
 
     data1 = Asset("AAPL").fetch_his_price(period=1)
     data1 = data1.reset_index()
@@ -30,7 +31,7 @@ def testLoc():
     max = data['High'].max()
     print(f"min is {min} \n max is {max}")
 
-def testConcat():
+def testConcat(data1):
     dm = DataManager(data1)
     data2 = data1[3:4]
     data3 = data1[5:10]

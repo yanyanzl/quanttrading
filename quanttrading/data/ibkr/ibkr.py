@@ -4,6 +4,7 @@ Copyright (C) Steven Jiang. All rights reserved. This code is subject to the ter
 """
 
 from ibapi.client import EClient
+from ibapi.common import BarData, TagValueList, TickerId
 from ibapi.wrapper import EWrapper
 from ibapi.reader import EReader
 
@@ -81,9 +82,10 @@ class IbkrApp(AiWrapper, AiClient):
     """
     # message queue is used to process real time messages generated
     # by the programm. it could help the user to monitor the progress
-    message_q = queue.Queue()
+    message_q: queue.Queue = None
     # data queue is used to transfer data
-    data_q = queue.Queue()
+    data_q: queue.Queue = None
+
     def __init__(self):
         AiWrapper.__init__(self)
         AiClient.__init__(self, wrapper=self)
@@ -125,10 +127,86 @@ class IbkrApp(AiWrapper, AiClient):
             if IbkrApp.has_message_queue():
                 IbkrApp.message_q.put(message)
 
+    def reqHistoricalData(self, reqId: int, contract: Contract,
+                          endDateTime: str, durationStr: str,
+                          barSizeSetting: str, whatToShow: str,
+                          useRTH: int, formatDate: int,
+                          keepUpToDate: bool, chartOptions: list):
+        """
+        contract: Contract, The IBApi.Contract object you are working with.
+        endDateTime: String, The request’s end date and time. 
+        This should be formatted as “YYYYMMDD HH:mm:ss TMZ” or 
+        an empty string indicates current present moment). 
+        durationStr: S/D/W/M/Y. Example '1 D'
+        barSizeSetting: 1/5/10/15/30 secs, 1 min, 2/3/5/10/15/20/30 mins,
+          1 hour, 2/3/4/8 hours, 1 day, 1W, 1M"
+            example '1 hour' or '1 min'
+        whatToShow: These values are used to request different data 
+        such as TRADES, MIDPOINT, BID_ASK, ASK, BID data and more.
+        example: 'Trades
+        formatDate: 1	String Time Zone Date	“20231019 16:11:48 America/New_York”
+            2	Epoch Date	1697746308
+            3	Day & Time Date	“1019 16:11:48 America/New_York”
+        useRTH  0 = Includes data outside of RTH. 1 = RTH data only
+        """
+        return super().reqHistoricalData(reqId, contract, endDateTime, durationStr, barSizeSetting, whatToShow, useRTH, formatDate, keepUpToDate, chartOptions)
+
+    def historicalData(self, reqId, bar):
+        """
+        # after reqHistoricalData, this function is used to receive the data.
+        The historical data will be delivered via the 
+        EWrapper.historicalData method in the form of 
+        candlesticks. The time zone of returned bars 
+        is the time zone chosen in TWS on the login screen.
+        """
+        message = f"historicalData:: data received: {bar.date} : {bar.close=}"
+        self._processMessage(message)
+        # print(f'Time: {bar.date} Close: {bar.close}')
+        self.data.append([bar.date, bar.close])
+
+    def historicalDataUpdate(self, reqId: TickerId, bar: BarData):
+        """
+        Receives bars in real time if keepUpToDate is set as True
+        in reqHistoricalData. Similar to realTimeBars function,
+        except returned data is a composite of historical data
+        and real time data that is equivalent to TWS chart 
+        functionality to keep charts up to date. Returned bars 
+        are successfully updated using real time data.
+        """
+        message = f"historicalDataUpdate:: data received: {bar.date} : {bar.close=}"
+        self._processMessage(message)
+        return super().historicalDataUpdate(reqId, bar)
+
+    def historicalDataEnd(self, reqId: TickerId, start: str, end: str):
+        """
+        Marks the ending of the historical bars reception.
+        """
+        message = f"HistoricalDataEnd., {reqId=}, from : {start=} to: {end=}"
+        self._processMessage(message)
+        return super().historicalDataEnd(reqId, start, end)
+
     def reqTickByTickData(self, reqId:int, contract:Contract,tickType:str,numberOfTicks:int,ignoreSize:bool):
+         """
+         tickType: String. tick-by-tick data type: “Last”, “AllLast”, “BidAsk” or “MidPoint”.
+         numberOfTicks: int. If a non-zero value is entered, 
+         then historical tick data is first returned via one of the 
+         ignoreSize: bool. Omit updates that reflect only changes in size,
+         and not price. Applicable to Bid_Ask data requests.
+         """
          super().reqTickByTickData(reqId, contract, tickType, numberOfTicks, ignoreSize)
          self.tick_bidask_reqId = reqId
-    
+
+    def tickByTickBidAsk(self, reqId: int, time: int, bidPrice: float, askPrice: float, bidSize: Decimal, askSize: Decimal, tickAttribBidAsk: TickAttribBidAsk):
+        """
+        # tickByTickBidAsk function to receive the data when tickType is BidAsk
+        """
+        super().tickByTickBidAsk(reqId, time, bidPrice, askPrice, bidSize, askSize, tickAttribBidAsk)
+        
+        message = f'BidAsk. ReqId: {reqId}, Time: {datetime.fromtimestamp(time).strftime("%Y%m%d-%H:%M:%S")}, BidPrice: {floatMaxString(bidPrice)}, AskPrice: {floatMaxString(askPrice)}, BidSize: {decimalMaxString(bidSize)}, AskSize: {decimalMaxString(askSize)}, BidPastLow: {tickAttribBidAsk.bidPastLow}, AskPastHigh: {tickAttribBidAsk.askPastHigh}'
+        self.ask_price = askPrice
+        self.bid_price = bidPrice
+        self._processMessage(message)
+
     def cancelTickByTickData(self, reqId:int):
         super().cancelTickByTickData(reqId)
         self.tick_bidask_reqId = -1
@@ -154,6 +232,13 @@ class IbkrApp(AiWrapper, AiClient):
         self. market_reqId = -1
         message = f'cancelMktData... ReqId:, {reqId}'
         self._processMessage(message)
+
+    def marketDataType(self, reqId: TickerId, marketDataType: TickerId):
+        message = f"MarketDataType. {reqId=}, Type: {marketDataType}"
+        self._processMessage(message)
+        return super().marketDataType(reqId, marketDataType)
+
+
 
     # overide the account Summary method. to get all the account summary information
     def accountSummary(self, reqId: int, account: str, tag: str, value: str,currency: str):
@@ -216,8 +301,11 @@ class IbkrApp(AiWrapper, AiClient):
         message = f'AccountDownloadEnd. Account:, {accountName}'
         self._processMessage(message)
 
-    # after reqMktData, this function is used to receive the data.
+    
     def tickPrice(self, reqId, tickType, price, attrib):
+            """
+            # after reqMktData, this function is used to receive the data.
+            """
             super().tickPrice(reqId,tickType,price,attrib)
             # for i in range(91):
             #     print(TickTypeEnum.to_str(i), i)
@@ -231,11 +319,6 @@ class IbkrApp(AiWrapper, AiClient):
                 elif tickType == "ASK":
                     self.ask_price = price
             self._processMessage(message)
-
-    # after reqHistoricalData, this function is used to receive the data.
-    def historicalData(self, reqId, bar):
-            # print(f'Time: {bar.date} Close: {bar.close}')
-            self.data.append([bar.date, bar.close])
 
     # To fire an order, we simply create a contract object with the asset details and an order object with the order details. Then call app.placeOrder to submit the order.
     # The IB API requires an order id associated with all orders and it needs to be a unique positive integer. It also needs to be larger than the last order id used. Fortunately, there is a built in function which will tell you the next available order id.
@@ -258,15 +341,7 @@ class IbkrApp(AiWrapper, AiClient):
         self.lastOrderId = orderId
         self._processMessage(message)
 
-    # tickByTickBidAsk function to receive the data.
-    def tickByTickBidAsk(self, reqId: int, time: int, bidPrice: float, askPrice: float, bidSize: Decimal, askSize: Decimal, tickAttribBidAsk: TickAttribBidAsk):
-        super().tickByTickBidAsk(reqId, time, bidPrice, askPrice, bidSize, askSize, tickAttribBidAsk)
-        
-        message = f'BidAsk. ReqId: {reqId}, Time: {datetime.fromtimestamp(time).strftime("%Y%m%d-%H:%M:%S")}, BidPrice: {floatMaxString(bidPrice)}, AskPrice: {floatMaxString(askPrice)}, BidSize: {decimalMaxString(bidSize)}, AskSize: {decimalMaxString(askSize)}, BidPastLow: {tickAttribBidAsk.bidPastLow}, AskPastHigh: {tickAttribBidAsk.askPastHigh}'
-        self.ask_price = askPrice
-        self.bid_price = bidPrice
-        
-        self._processMessage(message)
+
 
     def realtimeBar(self,reqId:TickerId,time:int,open_:float,high:float,low:float,close:float,volume:Decimal,wap:Decimal, count:int):
         super().realtimeBar(reqId, time, open_,high,low, close, volume, wap,count)
