@@ -5,11 +5,12 @@ Event-driven framework.
 from collections import defaultdict
 from queue import Empty, Queue
 from threading import Thread
+import logging
 from time import sleep
 from typing import Any, Callable, List
 
 EVENT_TIMER = "eTimer"
-
+logger = logging.getLogger(__name__)
 
 class Event:
     """
@@ -59,11 +60,15 @@ class EventEngine:
         """
         Get event from queue and then process it.
         """
+        logger.info(f"engine _run ...self.active{self._active=} {'££££££' * 10} ")
         while self._active:
             try:
+                logger.debug(f"enter get_queue ... {'££££££' * 10} ")
                 event: Event = self._queue.get(block=True, timeout=1)
+                logger.debug(f"event is {event} _run ... {'££££££' * 10} ")
                 self._process(event)
             except Empty:
+                logger.debug(f"event is empty _run ... {'££££££' * 20} ")
                 pass
 
     def _process(self, event: Event) -> None:
@@ -74,6 +79,8 @@ class EventEngine:
         Then distribute event to those general handlers which listens
         to all types.
         """
+        logger.debug(f"{'******' * 5}")
+        logger.debug(f"_handlers are {self._handlers} and {event.type=}")
         if event.type in self._handlers:
             [handler(event) for handler in self._handlers[event.type]]
 
@@ -93,6 +100,7 @@ class EventEngine:
         """
         Start event engine to process events and generate timer events.
         """
+        logger.info(f"engine started ... {"******" * 20} ")
         self._active = True
         self._thread.start()
         # self._timer.start()
@@ -111,16 +119,18 @@ class EventEngine:
         """
         self._queue.put(event)
 
-    def register(self, type: str, handler: HandlerType) -> None:
+    def register(self, type: str, handler: Callable) -> None:
         """
         Register a new handler function for a specific event type. Every
         function can only be registered once for each event type.
         """
+        logger.info(f"registering now ...........................")
+        logger.info(f"{handler=}")
         handler_list: list = self._handlers[type]
         if handler not in handler_list:
             handler_list.append(handler)
 
-    def unregister(self, type: str, handler: HandlerType) -> None:
+    def unregister(self, type: str, handler: Callable) -> None:
         """
         Unregister an existing handler function from event engine.
         """
@@ -132,7 +142,7 @@ class EventEngine:
         if not handler_list:
             self._handlers.pop(type)
 
-    def register_general(self, handler: HandlerType) -> None:
+    def register_general(self, handler: Callable) -> None:
         """
         Register a new handler function for all event types. Every
         function can only be registered once for each event type.
@@ -140,7 +150,7 @@ class EventEngine:
         if handler not in self._general_handlers:
             self._general_handlers.append(handler)
 
-    def unregister_general(self, handler: HandlerType) -> None:
+    def unregister_general(self, handler: Callable) -> None:
         """
         Unregister an existing general handler function.
         """

@@ -3,19 +3,23 @@ from constant import ChartInterval
 import yfinance as yf
 import requests_cache
 from data.finlib import Asset
-from constant import ChartInterval, ChartPeriod
+from constant import ChartInterval, ChartPeriod, EVENT_HISDATA, EVENT_TICK_LAST_DATA
 from utility import volumeToPicture, setUpLogger
 
 import logging
 from datetime import datetime
 import os
-from event.engine import EventEngine
+from event.engine import EventEngine, Event
 from data.ibkr.ibkrgateway import IbkrGateway
 import asyncio, time
 
 setUpLogger(logging.INFO)
 
 logger = logging.getLogger(__name__)
+
+def eventTest(event:Event):
+    logger.info(f"this is successful now=============================")
+    logger.info(f"{event.type=}, and {event.data=}")
 
 async def gatewayTest():
     engine = EventEngine(10)
@@ -24,11 +28,19 @@ async def gatewayTest():
     gw.connect(gwSetting)
     logger.info("connect completed!==================================================")
 
+    eventEngine = EventEngine()
+    eventEngine.start()
+    eventEngine.register(EVENT_HISDATA, eventTest)
+    eventEngine.register(EVENT_TICK_LAST_DATA, eventTest)
+
+    gw._app._eventEngine = eventEngine
     gw._app.reqHistoricalData(2, gw._app.currentContract,"","1 D", "1 min", "MIDPOINT",0,1,True, [] )
-    gw._app.reqTickByTickData(2,gw._app.currentContract, "BidAsk", 0, True)
+    gw._app.reqTickByTickData(2,gw._app.currentContract, "AllLast", 0, True)
+
     await asyncio.sleep(20)
-    
+
     gw._app.cancelTickByTickData(2)
+    eventEngine.stop()
     gw.close()
 
     

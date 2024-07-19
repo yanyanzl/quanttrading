@@ -9,6 +9,12 @@ from ui.chartitems import DataManager
 # with open("./log/restats", "wb") as f:
 #     f.write(b"hello world")
 
+reqId = {"last":1, "bidask":-1}
+
+for key, value in reqId.items():
+    print(f"{key=} and {value=}")
+
+
 def testLoc():
     data = data1
     # print(f"data.iloc[0]['Open'] is {data.iloc[0]['Open']}")

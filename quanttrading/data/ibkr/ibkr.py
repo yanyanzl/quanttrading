@@ -3,8 +3,9 @@ Copyright (C) Steven Jiang. All rights reserved. This code is subject to the ter
  and conditions of the MIT Non-Commercial License, as applicable.
 """
 
+from decimal import Decimal
 from ibapi.client import EClient
-from ibapi.common import BarData, TagValueList, TickerId
+from ibapi.common import BarData, TagValueList, TickAttribLast, TickerId
 from ibapi.wrapper import EWrapper
 from ibapi.reader import EReader
 
@@ -15,11 +16,29 @@ from datetime import datetime
 import pandas
 
 from ibapi.common import * # @UnusedWildImport
+from ibapi.common import BarData
 from ibapi.utils import * # @UnusedWildImport
 from .aiorder import *
 from setting import Aiconfig
 import logging
 from .aitools import *
+from event.engine import EventEngine, Event
+
+from constant import (
+    EVENT_TICK,
+    EVENT_ORDER,
+    EVENT_TRADE,
+    EVENT_POSITION,
+    EVENT_ACCOUNT,
+    EVENT_CONTRACT,
+    EVENT_LOG,
+    EVENT_QUOTE, 
+    EVENT_HISDATA,
+    EVENT_REALTIME_DATA,
+    EVENT_TICK_LAST_DATA,
+    EVENT_TICK_BIDASK_DATA,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +104,10 @@ class IbkrApp(AiWrapper, AiClient):
     message_q: queue.Queue = None
     # data queue is used to transfer data
     data_q: queue.Queue = None
+    # now we assume that only one eventEngine shared by all app.
+    # we have to change this class variable to instance one
+    # if we need more  one eventEngine for each IbkrApp.
+    _eventEngine: EventEngine = None
 
     def __init__(self):
         AiWrapper.__init__(self)
@@ -102,9 +125,11 @@ class IbkrApp(AiWrapper, AiClient):
         self.lastOrderId = 0
         self.currentContract = Contract()
         self.previous_contract = Contract()
-        self.tick_bidask_reqId = -1
+        self.tick_reqId:dict[str,int] = {}
         self.realtime_bar_reqId = -1
         self.market_reqId = -1
+        self._tickAlllast:float = None
+        self._tickBidAsk: float = None
     
     @staticmethod
     def has_message_queue():
@@ -126,6 +151,26 @@ class IbkrApp(AiWrapper, AiClient):
             logger.info(message)
             if IbkrApp.has_message_queue():
                 IbkrApp.message_q.put(message)
+
+    def _processData(self, dataType:str, data) ->None:
+        """
+        after receiving data from the gateway/exchange. process them
+        mainly add it the a queue for data in a eventEngine.
+        so the registered handler(callable/function) in the engine
+        will process the data. engine select the handler by the dataType. 
+        EVENT_TICK, EVENT_ORDER, EVENT_TRADE, EVENT_POSITION, 
+        EVENT_ACCOUNT, EVENT_CONTRACT, EVENT_LOG, EVENT_QUOTE
+        """
+        if dataType is not None:
+            if self._eventEngine is not None:
+                event = Event(dataType, data)
+                logger.info(f"IbkrApp:: _processData::{'===' * 10}" + 
+                            f"put {event=} in the queue now")
+                self._eventEngine.put(event)
+            else:
+                logger.info("IbkrApp:: _processData::" + 
+                            "failed to find the eventEngine")
+
 
     def reqHistoricalData(self, reqId: int, contract: Contract,
                           endDateTime: str, durationStr: str,
@@ -151,7 +196,7 @@ class IbkrApp(AiWrapper, AiClient):
         """
         return super().reqHistoricalData(reqId, contract, endDateTime, durationStr, barSizeSetting, whatToShow, useRTH, formatDate, keepUpToDate, chartOptions)
 
-    def historicalData(self, reqId, bar):
+    def historicalData(self, reqId, bar:BarData):
         """
         # after reqHistoricalData, this function is used to receive the data.
         The historical data will be delivered via the 
@@ -161,8 +206,8 @@ class IbkrApp(AiWrapper, AiClient):
         """
         message = f"historicalData:: data received: {bar.date} : {bar.close=}"
         self._processMessage(message)
-        # print(f'Time: {bar.date} Close: {bar.close}')
-        self.data.append([bar.date, bar.close])
+        # self.data.append([bar.date, bar.close])
+        self._processData(EVENT_HISDATA, bar)
 
     def historicalDataUpdate(self, reqId: TickerId, bar: BarData):
         """
@@ -175,7 +220,9 @@ class IbkrApp(AiWrapper, AiClient):
         """
         message = f"historicalDataUpdate:: data received: {bar.date} : {bar.close=}"
         self._processMessage(message)
-        return super().historicalDataUpdate(reqId, bar)
+        super().historicalDataUpdate(reqId, bar)
+        self._processData(EVENT_HISDATA, bar)
+        return None
 
     def historicalDataEnd(self, reqId: TickerId, start: str, end: str):
         """
@@ -194,7 +241,7 @@ class IbkrApp(AiWrapper, AiClient):
          and not price. Applicable to Bid_Ask data requests.
          """
          super().reqTickByTickData(reqId, contract, tickType, numberOfTicks, ignoreSize)
-         self.tick_bidask_reqId = reqId
+         self.tick_reqId[tickType] = reqId
 
     def tickByTickBidAsk(self, reqId: int, time: int, bidPrice: float, askPrice: float, bidSize: Decimal, askSize: Decimal, tickAttribBidAsk: TickAttribBidAsk):
         """
@@ -206,17 +253,74 @@ class IbkrApp(AiWrapper, AiClient):
         self.ask_price = askPrice
         self.bid_price = bidPrice
         self._processMessage(message)
+    
+    def tickByTickAllLast(self, reqId: TickerId, tickType: TickerId, time: TickerId, price: float, size: Decimal, tickAttribLast: TickAttribLast, exchange: str, specialConditions: str):
+        """
+        tickByTickAllLast function to receive the data when tickType is Last/AllLast
+        reqId: int. unique identifier of the request.
+        tickType: int. 0: “Last” or 1: “AllLast”.
+        time: long. tick-by-tick real-time tick timestamp.
+        price: double. tick-by-tick real-time tick last price.
+        size: decimal. tick-by-tick real-time tick last size.
+        tickAttribLast: TickAttribLast. tick-by-tick real-time last tick attribs (0 past limit,1 unreported).
+        exchange: String. tick-by-tick real-time tick exchange.
+        specialConditions: String. tick-by-tick real-time tick special conditions. 
+        Returns “Last” or “AllLast” tick-by-tick real-time tick.
+        """
+        super().tickByTickAllLast(reqId, tickType, time, price, size, tickAttribLast, exchange, specialConditions)
+
+        message = f'tickByTickAllLast:: ReqId: {reqId}, Time: {datetime.fromtimestamp(time).strftime("%Y%m%d-%H:%M:%S")}, tickAttribLast: {tickAttribLast=}, {exchange=} {specialConditions=}'
+        message += f"\n tickType is : {tickType}, price is: {price=} and {size=}"
+        self._tickAlllast = price
+        self._processMessage(message)
+
+        self._processData(EVENT_TICK_LAST_DATA, price)
+
+        return None
+    
+    def _setBarData(self, tickType: str, data, time: TickerId, bar: BarData) -> BarData:
+        """
+        setting the specified bar data as in the tickType
+        """
+        if tickType == "OPEN":
+            bar.open = data
+        elif tickType == "CLOSE":
+            bar.close = data
+        elif tickType == "HIGH":
+            bar.high = data
+        elif tickType == "LOW":
+            bar.low == data
+        elif tickType == "VOLUME":
+            bar.volume == data
+        return bar
 
     def cancelTickByTickData(self, reqId:int):
         super().cancelTickByTickData(reqId)
-        self.tick_bidask_reqId = -1
+
+        for key, value in self.tick_reqId.items():
+            if value == reqId:
+                self.tick_reqId[key] = -1
+
         message = f'cancelTickByTickData... ReqId:, {reqId}'
         self._processMessage(message)
 
     def reqRealTimeBars(self,reqId:TickerId, contract:Contract, barSize:int,whatToShow:str,useRTH:bool,realTimeBarsOptions:TagValueList):
         super().reqRealTimeBars(reqId,contract,barSize,whatToShow,useRTH,realTimeBarsOptions)
         self.realtime_bar_reqId = reqId
-    
+
+    def realtimeBar(self, reqId: TickerId, time: int, open_: float, high: float, low: float, close: float, volume: Decimal, wap: Decimal, count: int) -> None:
+        super().realtimeBar(reqId,time, open_, high, low, close, volume, wap, count)
+        bar: BarData = BarData()
+        bar.open = open_
+        bar.close = close
+        bar.high = high
+        bar.low = low
+        bar.volume = volume
+        bar.date = time
+        bar.wap = wap
+        bar.barCount = count
+        self._processData(EVENT_REALTIME_DATA, bar)
+
     def cancelRealTimeBars(self,reqId:TickerId):
         super().cancelRealTimeBars(reqId)
         self.realtime_bar_reqId = -1
@@ -224,9 +328,44 @@ class IbkrApp(AiWrapper, AiClient):
         self._processMessage(message)
 
     def reqMktData(self, reqId:TickerId,contract:Contract, genericTickList:str, snapshot:bool,regulatorySnapshot:bool, mktDataOptions:TagValueList):
+        """
+        Call this function to request market data. The market data will be returned by the tickPrice and tickSize events.
+        reqId: TickerId - The ticker id. Must be a unique value. When the
+            market data returns, it will be identified by this tag. This is also used when canceling the market data.
+        contract:Contract - This structure contains a description of the
+            Contractt for which market data is being requested.
+        genericTickList:str - A commma delimited list of generic tick types.
+            Tick types can be found in the Generic Tick Types page. Prefixing w/ 'mdoff' indicates that top mkt data shouldn't tick.
+            You can specify the news source by postfixing w/ ':<source>.
+            Example: "mdoff,292:FLY+BRF"
+        snapshot:bool - Check to return a single snapshot of Market data and
+            have the market data subscription cancel. Do not enter any genericTicklist values if you use snapshots.
+        regulatorySnapshot: bool - With the US Value Snapshot Bundle for stocks,
+            regulatory snapshots are available for 0.01 USD each.
+        mktDataOptions:TagValueList - For internal use only.
+            Use default value XYZ.
+        """
         super().reqMktData(reqId, contract, genericTickList,snapshot, regulatorySnapshot,mktDataOptions)
         self.market_reqId = reqId
-    
+
+    def tickPrice(self, reqId, tickType, price, attrib):
+            """
+            # after reqMktData, this function is used to receive the data.
+            """
+            super().tickPrice(reqId,tickType,price,attrib)
+            # for i in range(91):
+            #     print(TickTypeEnum.to_str(i), i)
+            tickType = TickTypeEnum.toStr(tickType)
+            message = f"reqID is , {reqId}, tickType is : {tickType}, price is: {price}, attrib is: {attrib}"
+            if price > 0:
+                if tickType == "LAST":
+                    self.last_price = price
+                elif tickType == "BID":
+                    self.bid_price = price
+                elif tickType == "ASK":
+                    self.ask_price = price
+            self._processMessage(message)
+
     def cancelMktData(self,reqId:TickerId):
         super().cancelMktData(reqId)
         self. market_reqId = -1
@@ -237,8 +376,6 @@ class IbkrApp(AiWrapper, AiClient):
         message = f"MarketDataType. {reqId=}, Type: {marketDataType}"
         self._processMessage(message)
         return super().marketDataType(reqId, marketDataType)
-
-
 
     # overide the account Summary method. to get all the account summary information
     def accountSummary(self, reqId: int, account: str, tag: str, value: str,currency: str):
@@ -259,7 +396,6 @@ class IbkrApp(AiWrapper, AiClient):
 
     # Receiving Account Updates
     # Resulting account and portfolio information will be delivered via the IBApi.EWrapper.updateAccountValue, IBApi.EWrapper.updatePortfolio, IBApi.EWrapper.updateAccountTime and IBApi.EWrapper.accountDownloadEnd
-        
     # Receives the subscribed account’s information. Only one account can be subscribed at a time. After the initial callback to updateAccountValue, callbacks only occur for values which have changed. This occurs at the time of a position change, or every 3 minutes at most. This frequency cannot be adjusted.
     def updateAccountValue(self, key: str, val: str, currency: str,accountName: str):
         # print("UpdateAccountValue. Key:", key, "Value:", val, "Currency:", currency, "AccountName:", accountName)
@@ -274,9 +410,7 @@ class IbkrApp(AiWrapper, AiClient):
             self.account_info = pandas.concat([self.account_info,pandas.DataFrame([[key, val, currency]],
                    columns=Aiconfig.get('ACCOUNT_COLUMNS'))], ignore_index=True)
 
-
     # Receives the subscribed account’s portfolio. This function will receive only the portfolio of the subscribed account. After the initial callback to updatePortfolio, callbacks only occur for positions which have changed.
-
     def updatePortfolio(self, contract: Contract, position: Decimal, marketPrice: float, marketValue: float, averageCost: float, unrealizedPNL: float, realizedPNL: float, accountName: str):
          # print("UpdatePortfolio.", "Symbol:", contract.symbol, "SecType:", contract.secType, "Exchange:",contract.exchange, "Position:", position, "MarketPrice:", marketPrice,"MarketValue:", marketValue, "AverageCost:", averageCost, "UnrealizedPNL:", unrealizedPNL, "RealizedPNL:", realizedPNL, "AccountName:", accountName)
         #   to save those portfolio positions information to a dataset.
@@ -301,25 +435,6 @@ class IbkrApp(AiWrapper, AiClient):
         message = f'AccountDownloadEnd. Account:, {accountName}'
         self._processMessage(message)
 
-    
-    def tickPrice(self, reqId, tickType, price, attrib):
-            """
-            # after reqMktData, this function is used to receive the data.
-            """
-            super().tickPrice(reqId,tickType,price,attrib)
-            # for i in range(91):
-            #     print(TickTypeEnum.to_str(i), i)
-            tickType = TickTypeEnum.toStr(tickType)
-            message = f"reqID is , {reqId}, tickType is : {tickType}, price is: {price}, attrib is: {attrib}"
-            if price > 0:
-                if tickType == "LAST":
-                    self.last_price = price
-                elif tickType == "BID":
-                    self.bid_price = price
-                elif tickType == "ASK":
-                    self.ask_price = price
-            self._processMessage(message)
-
     # To fire an order, we simply create a contract object with the asset details and an order object with the order details. Then call app.placeOrder to submit the order.
     # The IB API requires an order id associated with all orders and it needs to be a unique positive integer. It also needs to be larger than the last order id used. Fortunately, there is a built in function which will tell you the next available order id.
     def nextValidId(self, orderId: int):
@@ -341,8 +456,6 @@ class IbkrApp(AiWrapper, AiClient):
         self.lastOrderId = orderId
         self._processMessage(message)
 
-
-
     def realtimeBar(self,reqId:TickerId,time:int,open_:float,high:float,low:float,close:float,volume:Decimal,wap:Decimal, count:int):
         super().realtimeBar(reqId, time, open_,high,low, close, volume, wap,count)
         message = f'Realtime Bar... ReqId:, {reqId}, time: {time}, open: {open_}, high: {high}, low: {low}, close: {close}, volume:{volume}, wap: {wap}, count: {count}'
@@ -357,10 +470,14 @@ class IbkrApp(AiWrapper, AiClient):
             
             message = f"closing all data for contract.symbol: {contract.symbol}"
 
-            if self.tick_bidask_reqId > 0:
-                 self.cancelTickByTickData(self.tick_bidask_reqId)
+            if self.tick_reqId is not None and len(self.tick_reqId) > 0:
+                 for tickid in self.tick_reqId.values():
+                     if tickid > 0:
+                        self.cancelTickByTickData(tickid)
+
             if self.realtime_bar_reqId > 0:
                  self.cancelRealTimeBars(self.realtime_bar_reqId)
+
             if self.market_reqId > 0:
                  self.cancelMktData(self.market_reqId)
         else:

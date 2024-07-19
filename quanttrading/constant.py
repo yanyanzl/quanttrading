@@ -76,6 +76,7 @@ class ChartPeriod(Enum):
 """
 Event type string used in the trading platform.
 """
+
 EVENT_TICK = "eTick."
 EVENT_TRADE = "eTrade."
 EVENT_ORDER = "eOrder."
@@ -84,7 +85,11 @@ EVENT_ACCOUNT = "eAccount."
 EVENT_QUOTE = "eQuote."
 EVENT_CONTRACT = "eContract."
 EVENT_LOG = "eLog"
-
+EVENT_TIMER = "eTimer"
+EVENT_HISDATA = "eHisotryData"
+EVENT_REALTIME_DATA = "eRealtimeData"
+EVENT_TICK_LAST_DATA = "eTickLastData"
+EVENT_TICK_BIDASK_DATA = "eTickBidAskData"
 
 class Direction(Enum):
     """
