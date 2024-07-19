@@ -67,7 +67,8 @@ def _getLogFileName() -> str:
     timestring = datetime.now().strftime("%Y-%m-%d-%H")
     return os.path.dirname(os.path.abspath(__file__)) + '/log/' + 'quanttrading'+timestring+'.log'
 
-
+def timeToStr(time) -> str:
+    return datetime.fromtimestamp(time).strftime("%Y%m%d-%H:%M:%S")
 
 def printD(*args, **kwargs):
     print(f"==>" + f"***"*20)

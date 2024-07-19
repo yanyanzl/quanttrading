@@ -87,9 +87,12 @@ EVENT_CONTRACT = "eContract."
 EVENT_LOG = "eLog"
 EVENT_TIMER = "eTimer"
 EVENT_HISDATA = "eHisotryData"
+EVENT_HISDATA_UPDATE = "eHistoryDataUpdate"
 EVENT_REALTIME_DATA = "eRealtimeData"
 EVENT_TICK_LAST_DATA = "eTickLastData"
 EVENT_TICK_BIDASK_DATA = "eTickBidAskData"
+EVENT_PORTFOLIO = "ePortfolio"
+EVENT_ORDER_STATUS = "eOrderStatus"
 
 class Direction(Enum):
     """

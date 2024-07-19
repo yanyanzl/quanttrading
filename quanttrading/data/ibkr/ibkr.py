@@ -23,7 +23,7 @@ from setting import Aiconfig
 import logging
 from .aitools import *
 from event.engine import EventEngine, Event
-
+from utility import timeToStr
 from constant import (
     EVENT_TICK,
     EVENT_ORDER,
@@ -34,9 +34,12 @@ from constant import (
     EVENT_LOG,
     EVENT_QUOTE, 
     EVENT_HISDATA,
+    EVENT_HISDATA_UPDATE,
     EVENT_REALTIME_DATA,
     EVENT_TICK_LAST_DATA,
     EVENT_TICK_BIDASK_DATA,
+    EVENT_PORTFOLIO,
+    EVENT_ORDER_STATUS,
 )
 
 
@@ -59,27 +62,24 @@ class AiWrapper(EWrapper):
     # The API treats many items as errors even though they are not.
     def error(self, reqId, errorCode, errorMsg="", advancedOrderRejectJson=""):
         super().error(reqId, errorCode, errorMsg, advancedOrderRejectJson)
-        display_message(f'error message : {errorMsg}')
+        # display_message(f'error message : {errorMsg}')
         if errorCode == 202:
-            display_message(f'order canceled - Reason , {errorMsg}') 
-        # else:
-        #     print(f'errorcode {errorCode}, error message: {errorMsg}')
+            logger.info(f'order canceled - Reason , {errorMsg}') 
+        else:
+            logger.info(f'errorcode {errorCode}, error message: {errorMsg}')
 
     # This function is fired when an order is filled or reqExcutions() called.
     def execDetails(self, reqId: int, contract: Contract, execution: Execution):
          super().execDetails(reqId,contract, execution)
-
-         print('Order Executed: ', reqId, contract.symbol, contract.secType, contract.currency, execution.execId, execution.orderId, execution.shares, execution.lastLiquidity)    
+         logger.info('Order Executed: ', reqId, contract.symbol, contract.secType, contract.currency, execution.execId, execution.orderId, execution.shares, execution.lastLiquidity)    
 
     def marketDataType(self, reqId: TickerId, marketDataType: int):
         super().marketDataType(reqId, marketDataType)
 
-        print("MarketDataType. ReqId:", reqId, "Type:", marketDataType)
-
     def openOrderEnd(self):
-            super().openOrderEnd()
-            print("OpenOrderEnd")
-            # logging.debug("Received %d openOrders", len(self.permId2ord))     
+        super().openOrderEnd()
+        # print("OpenOrderEnd")
+        logger.debug("openOrderEnd ... ") 
 
 class AiClient(EClient):
     """
@@ -123,13 +123,20 @@ class IbkrApp(AiWrapper, AiClient):
         self.portfolio = pandas.DataFrame()
         # this is used for the cancel of the last order.
         self.lastOrderId = 0
+        self.orders: list[Order] = []
+        # order = Order()
+        # order.orderId
+
+       # design to support multiple contract data req and receive.
         self.currentContract = Contract()
         self.previous_contract = Contract()
         self.tick_reqId:dict[str,int] = {}
         self.realtime_bar_reqId = -1
         self.market_reqId = -1
-        self._tickAlllast:float = None
-        self._tickBidAsk: float = None
+
+        self._tickAlllast:BarData = BarData()
+
+        self._tickBidAsk: BarData = BarData()
     
     @staticmethod
     def has_message_queue():
@@ -164,8 +171,8 @@ class IbkrApp(AiWrapper, AiClient):
         if dataType is not None:
             if self._eventEngine is not None:
                 event = Event(dataType, data)
-                logger.info(f"IbkrApp:: _processData::{'===' * 10}" + 
-                            f"put {event=} in the queue now")
+                logger.debug(f"IbkrApp:: _processData::{'===' * 10}" + 
+                            f"put {dataType=} in the queue now")
                 self._eventEngine.put(event)
             else:
                 logger.info("IbkrApp:: _processData::" + 
@@ -211,7 +218,7 @@ class IbkrApp(AiWrapper, AiClient):
 
     def historicalDataUpdate(self, reqId: TickerId, bar: BarData):
         """
-        Receives bars in real time if keepUpToDate is set as True
+        Receives bars in real time (every 5 seconds.) if keepUpToDate is set as True
         in reqHistoricalData. Similar to realTimeBars function,
         except returned data is a composite of historical data
         and real time data that is equivalent to TWS chart 
@@ -221,7 +228,8 @@ class IbkrApp(AiWrapper, AiClient):
         message = f"historicalDataUpdate:: data received: {bar.date} : {bar.close=}"
         self._processMessage(message)
         super().historicalDataUpdate(reqId, bar)
-        self._processData(EVENT_HISDATA, bar)
+
+        self._processData(EVENT_HISDATA_UPDATE, bar)
         return None
 
     def historicalDataEnd(self, reqId: TickerId, start: str, end: str):
@@ -235,7 +243,7 @@ class IbkrApp(AiWrapper, AiClient):
     def reqTickByTickData(self, reqId:int, contract:Contract,tickType:str,numberOfTicks:int,ignoreSize:bool):
          """
          tickType: String. tick-by-tick data type: “Last”, “AllLast”, “BidAsk” or “MidPoint”.
-         numberOfTicks: int. If a non-zero value is entered, 
+         numberOfTicks: int. If a non-zero value is entered,
          then historical tick data is first returned via one of the 
          ignoreSize: bool. Omit updates that reflect only changes in size,
          and not price. Applicable to Bid_Ask data requests.
@@ -253,10 +261,14 @@ class IbkrApp(AiWrapper, AiClient):
         self.ask_price = askPrice
         self.bid_price = bidPrice
         self._processMessage(message)
+
+        # Bardata include time for the tick data.
+        self._processData(EVENT_TICK_BIDASK_DATA, self._tickBidAsk)
     
     def tickByTickAllLast(self, reqId: TickerId, tickType: TickerId, time: TickerId, price: float, size: Decimal, tickAttribLast: TickAttribLast, exchange: str, specialConditions: str):
         """
         tickByTickAllLast function to receive the data when tickType is Last/AllLast
+        use this price to update the last candlestick in the candle chart.
         reqId: int. unique identifier of the request.
         tickType: int. 0: “Last” or 1: “AllLast”.
         time: long. tick-by-tick real-time tick timestamp.
@@ -268,13 +280,17 @@ class IbkrApp(AiWrapper, AiClient):
         Returns “Last” or “AllLast” tick-by-tick real-time tick.
         """
         super().tickByTickAllLast(reqId, tickType, time, price, size, tickAttribLast, exchange, specialConditions)
-
+        
         message = f'tickByTickAllLast:: ReqId: {reqId}, Time: {datetime.fromtimestamp(time).strftime("%Y%m%d-%H:%M:%S")}, tickAttribLast: {tickAttribLast=}, {exchange=} {specialConditions=}'
         message += f"\n tickType is : {tickType}, price is: {price=} and {size=}"
-        self._tickAlllast = price
-        self._processMessage(message)
 
-        self._processData(EVENT_TICK_LAST_DATA, price)
+        self._tickAlllast.close = self._tickAlllast.open = price
+        self._tickAlllast.volume = size
+        self._tickAlllast.date = timeToStr(time)
+
+        self._processMessage(message)
+        # Bardata include time for the tick data.
+        self._processData(EVENT_TICK_LAST_DATA, self._tickAlllast)
 
         return None
     
@@ -305,11 +321,35 @@ class IbkrApp(AiWrapper, AiClient):
         self._processMessage(message)
 
     def reqRealTimeBars(self,reqId:TickerId, contract:Contract, barSize:int,whatToShow:str,useRTH:bool,realTimeBarsOptions:TagValueList):
+        """
+        Call the reqRealTimeBars() function to start receiving real time bar results through the realtimeBar() EWrapper function.
+
+        reqId:TickerId - The id for the request. Must be a unique value. When the
+            data is received, it will be identified by this id. This is also used when canceling the request.
+        contract:Contract - This object contains a description of the contract
+            for which real time bars are being requested
+        barSize:int - Currently only 5 second bars are supported, if any other
+            value is used, an exception will be thrown.
+        whatToShow:str - Determines the nature of the data extracted. Valid
+            values include: TRADES BID ASK MIDPOINT
+        useRTH:bool - Regular Trading Hours only. Valid values include:
+            0 = all data available during the time span requested is returned,
+                including time intervals when the market in question was outside of regular trading hours.
+            1 = only data within the regular trading hours for the product
+                requested is returned, even if the time span falls partially or completely outside.
+        realTimeBarOptions:TagValueList - For internal use only. Use default value XYZ.
+        """
         super().reqRealTimeBars(reqId,contract,barSize,whatToShow,useRTH,realTimeBarsOptions)
         self.realtime_bar_reqId = reqId
 
     def realtimeBar(self, reqId: TickerId, time: int, open_: float, high: float, low: float, close: float, volume: Decimal, wap: Decimal, count: int) -> None:
+        """
+        Updates the real time 5 seconds bars
+        """
         super().realtimeBar(reqId,time, open_, high, low, close, volume, wap, count)
+        message = f'Realtime Bar... ReqId:, {reqId}, time: {time}, open: {open_}, high: {high}, low: {low}, close: {close}, volume:{volume}, wap: {wap}, count: {count}'
+        self._processMessage(message)
+
         bar: BarData = BarData()
         bar.open = open_
         bar.close = close
@@ -410,9 +450,14 @@ class IbkrApp(AiWrapper, AiClient):
             self.account_info = pandas.concat([self.account_info,pandas.DataFrame([[key, val, currency]],
                    columns=Aiconfig.get('ACCOUNT_COLUMNS'))], ignore_index=True)
 
-    # Receives the subscribed account’s portfolio. This function will receive only the portfolio of the subscribed account. After the initial callback to updatePortfolio, callbacks only occur for positions which have changed.
     def updatePortfolio(self, contract: Contract, position: Decimal, marketPrice: float, marketValue: float, averageCost: float, unrealizedPNL: float, realizedPNL: float, accountName: str):
-         # print("UpdatePortfolio.", "Symbol:", contract.symbol, "SecType:", contract.secType, "Exchange:",contract.exchange, "Position:", position, "MarketPrice:", marketPrice,"MarketValue:", marketValue, "AverageCost:", averageCost, "UnrealizedPNL:", unrealizedPNL, "RealizedPNL:", realizedPNL, "AccountName:", accountName)
+        """
+        # Receives the subscribed account’s portfolio. This function 
+        # will receive only the portfolio of the subscribed account. 
+        # After the initial callback to updatePortfolio, 
+        # callbacks only occur for positions which have changed.
+        """
+        # print("UpdatePortfolio.", "Symbol:", contract.symbol, "SecType:", contract.secType, "Exchange:",contract.exchange, "Position:", position, "MarketPrice:", marketPrice,"MarketValue:", marketValue, "AverageCost:", averageCost, "UnrealizedPNL:", unrealizedPNL, "RealizedPNL:", realizedPNL, "AccountName:", accountName)
         #   to save those portfolio positions information to a dataset.
         for _ in self.portfolio.index:
             # psoppcprint(f"portforlio {_}, symbol is {self.portfolio.iloc[_]['symbol']}")
@@ -424,42 +469,56 @@ class IbkrApp(AiWrapper, AiClient):
 
         self.portfolio = pandas.concat([self.portfolio, pandas.DataFrame([[contract.symbol,contract.secType, contract.exchange,position,marketPrice,marketValue,averageCost, unrealizedPNL,realizedPNL]],
                    columns=Aiconfig.get('PORTFOLIO_COLUMNS') )], ignore_index=True)
+        self._processData(EVENT_PORTFOLIO, self.portfolio)
 
-    # Receives the last time on which the account was updated.
     def updateAccountTime(self, timeStamp: str):
+        """
+        Receives the last time on which the account was updated.
+        """
         message = f'UpdateAccountTime. Time:, {timeStamp}'
         self._processMessage(message)
 
-    # Notifies when all the account’s information has finished.
     def accountDownloadEnd(self, accountName: str):
+        """
+        # Notifies when all the account’s information has finished.
+        """
         message = f'AccountDownloadEnd. Account:, {accountName}'
         self._processMessage(message)
 
-    # To fire an order, we simply create a contract object with the asset details and an order object with the order details. Then call app.placeOrder to submit the order.
-    # The IB API requires an order id associated with all orders and it needs to be a unique positive integer. It also needs to be larger than the last order id used. Fortunately, there is a built in function which will tell you the next available order id.
     def nextValidId(self, orderId: int):
+        """ 
+        # To fire an order, we simply create a contract object with the
+        #  asset details and an order object with the order details.
+        #  Then call app.placeOrder to submit the order.
+        # The IB API requires an order id associated with all orders 
+        # and it needs to be a unique positive integer. It also needs
+        #  to be larger than the last order id used. Fortunately, 
+        # there is a built in function which will tell you the 
+        # next available order id.
+        """
         super().nextValidId(orderId)
         self.nextorderId = orderId
         message = f'The next valid order id is:  {self.nextorderId}'
         self._processMessage(message)
 
-    # order status, will be called after place/cancel order
+
     def orderStatus(self, orderId, status, filled, remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice):
+        """ order status, will be called after place/cancel order """
+
         super().orderStatus(orderId, status, filled, remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice)
         message = f'orderStatus - orderid: {orderId}, status: {status}, filled: {filled}, remaining: {remaining}, lastFillPrice: {lastFillPrice}, avgFullPrice: {avgFillPrice}, mktCapPrice: {mktCapPrice}'
         self._processMessage(message)
 
-    # will be called after place order
+
     def openOrder(self, orderId, contract, order, orderState):
+        """ show the open order. will be called after place order """
+
         super().openOrder(orderId, contract, order, orderState)
         message = f'openOrder id: {orderId}, {contract.symbol}, {contract.secType}, @  {contract.exchange} , {order.action}, {order.orderType}, {order.totalQuantity}, at price , {order.lmtPrice}, {orderState.status}'
         self.lastOrderId = orderId
         self._processMessage(message)
 
-    def realtimeBar(self,reqId:TickerId,time:int,open_:float,high:float,low:float,close:float,volume:Decimal,wap:Decimal, count:int):
-        super().realtimeBar(reqId, time, open_,high,low, close, volume, wap,count)
-        message = f'Realtime Bar... ReqId:, {reqId}, time: {time}, open: {open_}, high: {high}, low: {low}, close: {close}, volume:{volume}, wap: {wap}, count: {count}'
-        self._processMessage(message)
+
 
     def close_contract_data(self, contract:Contract=None):
         message = ""
@@ -486,7 +545,6 @@ class IbkrApp(AiWrapper, AiClient):
 
         self._processMessage(message)            
 
-    
     def close_previous_contract(self):
         if self.previous_contract and self.currentContract and self.currentContract.symbol != self.previous_contract.symbol:
             self.close_contract_data(self.previous_contract)
@@ -511,6 +569,10 @@ class IbkrApp(AiWrapper, AiClient):
         self._processMessage(message)
 
     def disconnect(self):
+        """
+        disconnect the app from the server. 
+        cancel all contracts related data request.
+        """
         self.close_contract_data()
         super().disconnect()
 
@@ -525,14 +587,11 @@ def place_lmt_order(app=IbkrApp(), action:str="", tif:str="DAY", increamental=Ai
     price = 0
     if action != 'BUY' and action != 'SELL':
              message = f"invalid  action {action} in place_lmt_order!"
-             if IbkrApp.has_message_queue():
-                  IbkrApp.message_q.put(message)
+             app._processMessage(message)
              raise ValueError(message)
     try:
         message = f'ask price {app.ask_price}, bid price {app.bid_price}, last price {app.last_price}'
-        print(message)
-        if IbkrApp.has_message_queue():
-            IbkrApp.message_q.put(message) 
+        app._processMessage(message)
         # print("before get order price")
         price = float(_get_order_price_by_type(app, priceTickType))
         # print("after get order price")
@@ -542,11 +601,10 @@ def place_lmt_order(app=IbkrApp(), action:str="", tif:str="DAY", increamental=Ai
             # print("after building order")
             #Place order
             message = f'placing limit order now ...\n orderid {app.nextorderId}, action: {action}, symbol {app.currentContract.symbol}, quantity: {quantity}, tif: {tif} at price: {order.lmtPrice}'
-            print(message)
-            if IbkrApp.has_message_queue():
-               IbkrApp.message_q.put(message) 
+            app._processMessage(message)
             
             # print("id:" , app.nextorderId, "contract", app.currentContract, "order is ", order)
+            order.orderId = app.nextorderId
             app.placeOrder(app.nextorderId, app.currentContract, order)
             # print("after place oder...")
             # orderId used, now get a new one for next time
@@ -555,15 +613,11 @@ def place_lmt_order(app=IbkrApp(), action:str="", tif:str="DAY", increamental=Ai
 
         else:
             message = f'place order failed.:  symbol is {app.currentContract.symbol}, action is {action}'
-            print(message)
-            if IbkrApp.has_message_queue():
-                IbkrApp.message_q.put(message) 
+            app._processMessage(message)
 
     except Exception as ex:
         message = f"place order failed.: for price {price}, priceTickType: {priceTickType}, symbol is {app.currentContract.symbol}, action is {action}"
-        print(message, ex.args)
-        if IbkrApp.has_message_queue():
-            IbkrApp.message_q.put(message) 
+        app._processMessage(message)
 
 def _get_order_price_by_type(app=IbkrApp(),priceTickType="LAST"): 
      """
