@@ -108,7 +108,7 @@ class MainEngine:
         Init all engines.
         """
         self.add_engine(LogEngine)
-        self.add_engine(OmsEngine)
+        self.add_engine(OrderManagement)
         # self.add_engine(EmailEngine)
 
     def write_log(self, msg: str, source: str = "") -> None:
@@ -337,14 +337,14 @@ class LogEngine(BaseEngine):
         self.logger.log(log.level, log.msg)
 
 
-class OmsEngine(BaseEngine):
+class OrderManagement(BaseEngine):
     """
     Provides order management system function.
     """
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
         """"""
-        super(OmsEngine, self).__init__(main_engine, event_engine, "oms")
+        super(OrderManagement, self).__init__(main_engine, event_engine, "oms")
 
         self.ticks: Dict[str, TickData] = {}
         self.orders: Dict[str, OrderData] = {}

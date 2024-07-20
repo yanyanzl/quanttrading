@@ -330,7 +330,7 @@ class IbkrGateway(BaseGateway):
 
         logger.info(f"program is starting ... ip:port:id is {localTWSIP}:{localTWSport}:{localClientId}")
         self._gatewaySetting.update({'IP':localTWSIP, 'PORT':localTWSport, 'CLIENTID':localClientId})
-        
+
         self._app.connect(localTWSIP, localTWSport, localClientId)
         # self._app.connect('192.168.1.146', 7497, 1)
         
@@ -380,8 +380,10 @@ class IbkrGateway(BaseGateway):
         self._app.reqAccountUpdates(False, self._app.account)
         time.sleep(1) 
         logger.info("Exiting Program...")
+
+        # self.event_engine.stop()
         self._app.disconnect()
-        self._app_thread.stop()      
+        self._app_thread.stop()
 
     def subscribe(self, req: SubscribeRequest) -> None:
         """

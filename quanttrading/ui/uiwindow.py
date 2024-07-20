@@ -33,7 +33,7 @@ from .widget import (
     AboutDialog,
     GlobalDialog
 )
-from engine import MainEngine, BaseApp
+from ordermanagement import MainEngine, BaseApp
 from event.engine import EventEngine
 from utility import get_icon_path, TRADER_DIR
 from constant import _
@@ -121,7 +121,7 @@ class MainWindow(QtWidgets.QMainWindow):
         bar.setNativeMenuBar(False)     # for mac and linux
 
         # System menu
-        sys_menu: QtWidgets.QMenu = bar.addMenu(_("系统"))
+        sys_menu: QtWidgets.QMenu = bar.addMenu(_("System"))
 
         gateway_names: list = self.main_engine.get_all_gateway_names()
         for name in gateway_names:

@@ -3,7 +3,24 @@ from constant import ChartInterval
 import yfinance as yf
 import requests_cache
 from data.finlib import Asset
-from constant import ChartInterval, ChartPeriod, EVENT_HISDATA, EVENT_TICK_LAST_DATA, EVENT_TICK_BIDASK_DATA
+from constant import ChartInterval, ChartPeriod
+from constant import (
+    EVENT_TICK,
+    EVENT_ORDER,
+    EVENT_TRADE,
+    EVENT_POSITION,
+    EVENT_ACCOUNT,
+    EVENT_CONTRACT,
+    EVENT_LOG,
+    EVENT_QUOTE, 
+    EVENT_HISDATA,
+    EVENT_HISDATA_UPDATE,
+    EVENT_REALTIME_DATA,
+    EVENT_TICK_LAST_DATA,
+    EVENT_TICK_BIDASK_DATA,
+    EVENT_PORTFOLIO,
+    EVENT_ORDER_STATUS,
+)
 from utility import volumeToPicture, setUpLogger
 
 import logging
@@ -31,8 +48,14 @@ async def gatewayTest():
     eventEngine = EventEngine()
     eventEngine.start()
     eventEngine.register(EVENT_HISDATA, eventTest)
+    eventEngine.register(EVENT_HISDATA_UPDATE, eventTest)
+    eventEngine.register(EVENT_REALTIME_DATA, eventTest)
     eventEngine.register(EVENT_TICK_LAST_DATA, eventTest)
     eventEngine.register(EVENT_TICK_BIDASK_DATA, eventTest)
+    eventEngine.register(EVENT_PORTFOLIO, eventTest)
+    eventEngine.register(EVENT_ORDER_STATUS, eventTest)
+    eventEngine.register(EVENT_ACCOUNT, eventTest)    
+    eventEngine.register_general(eventTest)
 
     gw._app._eventEngine = eventEngine
     gw._app.reqHistoricalData(2, gw._app.currentContract,"","1 D", "1 min", "MIDPOINT",0,1,True, [] )

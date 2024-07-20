@@ -5,9 +5,11 @@ import asyncio
 import time
 from event.engine import EventEngine
 
-from engine import MainEngine
+from ordermanagement import MainEngine
 from ui import MainWindow, create_qapp
-from utility import current_task, printD, setUpLogger
+from utility import current_task, setUpLogger
+from setting import Aiconfig
+
 import logging
 import tracemalloc, os
 from profiletools import displayTopMemory, cProfile, displayTopProfile
@@ -20,7 +22,7 @@ async def main():
     with cProfile.Profile() as pr:
         tracemalloc.start()
     # =================Testing block for optimization======================
-
+        loglevel = Aiconfig.get("log.level")
         setUpLogger(logging.INFO)
         logger = logging.getLogger(__name__)
         # logger.warning("this is the warning in uitest...")

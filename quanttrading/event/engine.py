@@ -66,6 +66,7 @@ class EventEngine:
                 logger.debug(f"enter get_queue ... {'££££££' * 10} ")
                 event: Event = self._queue.get(block=True, timeout=1)
                 logger.debug(f"event is {event} _run ... {'££££££' * 10} ")
+
                 self._process(event)
             except Empty:
                 logger.debug(f"event is empty _run ... {'££££££' * 20} ")
@@ -79,13 +80,16 @@ class EventEngine:
         Then distribute event to those general handlers which listens
         to all types.
         """
-        logger.debug(f"{'******' * 5}")
+        logger.debug(f"EventEngine._process:: {'******' * 5} ")
         logger.debug(f"_handlers are {self._handlers} and {event.type=}")
         if event.type in self._handlers:
             [handler(event) for handler in self._handlers[event.type]]
 
         if self._general_handlers:
             [handler(event) for handler in self._general_handlers]
+        
+        # Indicate that a formerly enqueued task is complete.
+        self._queue.task_done()
 
     def _run_timer(self) -> None:
         """
@@ -144,8 +148,10 @@ class EventEngine:
 
     def register_general(self, handler: Callable) -> None:
         """
-        Register a new handler function for all event types. Every
-        function can only be registered once for each event type.
+        Register a new handler function for all event types.
+        only one general handler is required to handle all 
+        unhandled data in the queue.
+        so the queue will not be blocked. 
         """
         if handler not in self._general_handlers:
             self._general_handlers.append(handler)

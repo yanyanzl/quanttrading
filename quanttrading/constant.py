@@ -93,6 +93,7 @@ EVENT_TICK_LAST_DATA = "eTickLastData"
 EVENT_TICK_BIDASK_DATA = "eTickBidAskData"
 EVENT_PORTFOLIO = "ePortfolio"
 EVENT_ORDER_STATUS = "eOrderStatus"
+EVENT_OPEN_ORDER = "eOpenOrder"
 
 class Direction(Enum):
     """

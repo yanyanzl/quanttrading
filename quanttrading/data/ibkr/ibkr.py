@@ -40,6 +40,7 @@ from constant import (
     EVENT_TICK_BIDASK_DATA,
     EVENT_PORTFOLIO,
     EVENT_ORDER_STATUS,
+    EVENT_OPEN_ORDER
 )
 
 
@@ -434,6 +435,8 @@ class IbkrApp(AiWrapper, AiClient):
         message = f'AccountSummaryEnd. ReqId:, {reqId}'
         self._processMessage(message)
 
+        self._processData(EVENT_ACCOUNT, self.account_info)
+
     # Receiving Account Updates
     # Resulting account and portfolio information will be delivered via the IBApi.EWrapper.updateAccountValue, IBApi.EWrapper.updatePortfolio, IBApi.EWrapper.updateAccountTime and IBApi.EWrapper.accountDownloadEnd
     # Receives the subscribed account’s information. Only one account can be subscribed at a time. After the initial callback to updateAccountValue, callbacks only occur for values which have changed. This occurs at the time of a position change, or every 3 minutes at most. This frequency cannot be adjusted.
@@ -449,6 +452,8 @@ class IbkrApp(AiWrapper, AiClient):
                                                            
             self.account_info = pandas.concat([self.account_info,pandas.DataFrame([[key, val, currency]],
                    columns=Aiconfig.get('ACCOUNT_COLUMNS'))], ignore_index=True)
+            # trigger EVENT_ACCOUNT
+            self._processData(EVENT_ACCOUNT, self.account_info)
 
     def updatePortfolio(self, contract: Contract, position: Decimal, marketPrice: float, marketValue: float, averageCost: float, unrealizedPNL: float, realizedPNL: float, accountName: str):
         """
@@ -501,13 +506,14 @@ class IbkrApp(AiWrapper, AiClient):
         message = f'The next valid order id is:  {self.nextorderId}'
         self._processMessage(message)
 
-
     def orderStatus(self, orderId, status, filled, remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice):
         """ order status, will be called after place/cancel order """
 
         super().orderStatus(orderId, status, filled, remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice)
         message = f'orderStatus - orderid: {orderId}, status: {status}, filled: {filled}, remaining: {remaining}, lastFillPrice: {lastFillPrice}, avgFullPrice: {avgFillPrice}, mktCapPrice: {mktCapPrice}'
         self._processMessage(message)
+        
+        self._processData(EVENT_ORDER_STATUS, orderId)
 
 
     def openOrder(self, orderId, contract, order, orderState):
@@ -517,6 +523,8 @@ class IbkrApp(AiWrapper, AiClient):
         message = f'openOrder id: {orderId}, {contract.symbol}, {contract.secType}, @  {contract.exchange} , {order.action}, {order.orderType}, {order.totalQuantity}, at price , {order.lmtPrice}, {orderState.status}'
         self.lastOrderId = orderId
         self._processMessage(message)
+
+        self._processData(EVENT_OPEN_ORDER, orderId)
 
 
 

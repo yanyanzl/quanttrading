@@ -14,7 +14,7 @@ import importlib_metadata
 
 from .uiapp import QtCore, QtGui, QtWidgets
 from constant import Direction, Exchange, Offset, OrderType, _
-from engine import MainEngine, Event, EventEngine
+from ordermanagement import MainEngine, Event, EventEngine
 
 from constant import (
     EVENT_QUOTE,
@@ -263,11 +263,11 @@ class BaseMonitor(QtWidgets.QTableWidget):
         """
         self.menu: QtWidgets.QMenu = QtWidgets.QMenu(self)
 
-        resize_action: QtGui.QAction = QtWidgets.QAction(_("调整列宽"), self)
+        resize_action: QtGui.QAction = QtWidgets.QAction(_("resize column"), self)
         resize_action.triggered.connect(self.resize_columns)
         self.menu.addAction(resize_action)
 
-        save_action: QtGui.QAction = QtWidgets.QAction(_("保存数据"), self)
+        save_action: QtGui.QAction = QtWidgets.QAction(_("Save Data"), self)
         save_action.triggered.connect(self.save_csv)
         self.menu.addAction(save_action)
 
