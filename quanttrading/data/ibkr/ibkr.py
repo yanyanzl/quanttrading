@@ -20,7 +20,7 @@ from ibapi.common import BarData
 from ibapi.utils import * # @UnusedWildImport
 from .aiorder import *
 from setting import Aiconfig
-from datatypes import TickData
+from datatypes import TickData, CandleData
 import logging
 from .aitools import *
 from event.engine import EventEngine, Event
@@ -242,7 +242,38 @@ class IbkrApp(AiWrapper, AiClient):
         """
         message = f"historicalData:: data received: {bar.date} : {bar.close=}"
         self._processMessage(message)
-        self._processData(EVENT_HISDATA, bar)
+
+        candle = self._wrapCandlebyBar(bar, reqId)
+        self._processData(EVENT_HISDATA, candle)
+
+    def _setBarData(self, tickType: str, data, time: TickerId, bar: BarData) -> BarData:
+        """
+        setting the specified bar data as in the tickType
+        """
+        if tickType == "OPEN":
+            bar.open = data
+        elif tickType == "CLOSE":
+            bar.close = data
+        elif tickType == "HIGH":
+            bar.high = data
+        elif tickType == "LOW":
+            bar.low == data
+        elif tickType == "VOLUME":
+            bar.volume == data
+        return bar
+
+    def _wrapCandlebyBar(self, bar: BarData, reqId: TickerId) -> CandleData:
+        """
+        """
+        candle = CandleData(self._gateway)
+        candle.open_price = bar.open
+        candle.close_price = bar.close
+        candle.high_price = bar.high
+        candle.low_price = bar.low
+        candle.barcount = bar.barCount
+        candle.wap = bar.wap
+        candle.volume = bar.volume
+        candle.symbol = self.getSymbolByReqId(reqId)
 
     def historicalDataUpdate(self, reqId: TickerId, bar: BarData):
         """
@@ -257,7 +288,8 @@ class IbkrApp(AiWrapper, AiClient):
         self._processMessage(message)
         super().historicalDataUpdate(reqId, bar)
 
-        self._processData(EVENT_HISDATA_UPDATE, bar)
+        candle = self._wrapCandlebyBar(bar, reqId)
+        self._processData(EVENT_HISDATA_UPDATE, candle)
         return None
 
     def historicalDataEnd(self, reqId: TickerId, start: str, end: str):
@@ -332,22 +364,6 @@ class IbkrApp(AiWrapper, AiClient):
                 return contract.symbol
         return None
 
-    def _setBarData(self, tickType: str, data, time: TickerId, bar: BarData) -> BarData:
-        """
-        setting the specified bar data as in the tickType
-        """
-        if tickType == "OPEN":
-            bar.open = data
-        elif tickType == "CLOSE":
-            bar.close = data
-        elif tickType == "HIGH":
-            bar.high = data
-        elif tickType == "LOW":
-            bar.low == data
-        elif tickType == "VOLUME":
-            bar.volume == data
-        return bar
-
     def cancelTickByTickData(self, reqId:int):
         super().cancelTickByTickData(reqId)
 
@@ -409,16 +425,17 @@ class IbkrApp(AiWrapper, AiClient):
         message = f'Realtime Bar... ReqId:, {reqId}, time: {time}, open: {open_}, high: {high}, low: {low}, close: {close}, volume:{volume}, wap: {wap}, count: {count}'
         self._processMessage(message)
 
-        bar: BarData = BarData()
-        bar.open = open_
-        bar.close = close
-        bar.high = high
-        bar.low = low
-        bar.volume = volume
-        bar.date = time
-        bar.wap = wap
-        bar.barCount = count
-        self._processData(EVENT_REALTIME_DATA, bar)
+        candle: CandleData = CandleData()
+        candle.symbol = self.getSymbolByReqId(reqId)
+        candle.open_price = open_
+        candle.close_price = close
+        candle.high_price = high
+        candle.low_price = low
+        candle.volume = volume
+        candle.datetime = datetime.fromtimestamp(time)
+        candle.wap = wap
+        candle.barcount = count
+        self._processData(EVENT_REALTIME_DATA, candle)
 
     def cancelRealTimeBars(self,reqId:TickerId):
         super().cancelRealTimeBars(reqId)
@@ -497,7 +514,6 @@ class IbkrApp(AiWrapper, AiClient):
              self.account_info = pandas.concat([self.account_info,pandas.DataFrame([[tag, value, currency]],
                    columns=Aiconfig.get('ACCOUNT_COLUMNS'))])
  
-
     # overide the account Summary end method. 
     # Notifies when all the accounts’ information has ben received.
     def accountSummaryEnd(self, reqId: int):

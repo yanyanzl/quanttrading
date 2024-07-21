@@ -185,6 +185,30 @@ class TickData(BaseData):
         """"""
         self.vt_symbol: str = f"{self.symbol}.{self.exchange.value}"
 
+@dataclass
+class CandleData(BaseData):
+    """
+    Candlestick bar data of a certain trading period.
+    """
+
+    symbol: str
+    exchange: Exchange
+    datetime: datetime
+
+    interval: Interval = None
+    volume: float = 0
+    turnover: float = 0
+    open_interest: float = 0
+    open_price: float = 0
+    high_price: float = 0
+    low_price: float = 0
+    close_price: float = 0
+    wap: float = 0
+    barcount = 0
+
+    def __post_init__(self) -> None:
+        """"""
+        self.vt_symbol: str = f"{self.symbol}.{self.exchange.value}"
 
 @dataclass
 class BarData(BaseData):

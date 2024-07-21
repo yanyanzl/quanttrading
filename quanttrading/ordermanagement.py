@@ -384,7 +384,10 @@ class OrderManagement(BaseManagement):
         """"""
         super(OrderManagement, self).__init__(main_engine, event_engine, "oms")
 
-        self._hisData: Dict[str, DataFrame]
+        # used to save the historical data bars for symbols
+        # symbol name to data dict
+        self._hisData: Dict[str, DataFrame] = {}
+
         self.ticks: Dict[str, TickData] = {}
         self.orders: Dict[str, OrderData] = {}
         self.trades: Dict[str, TradeData] = {}
@@ -435,7 +438,7 @@ class OrderManagement(BaseManagement):
         self.event_engine.register(EVENT_CONTRACT, self.process_contract_event)
         self.event_engine.register(EVENT_QUOTE, self.process_quote_event)
 
-        self.event_engine.register(EVENT_HISDATA, self.eventTest)
+        self.event_engine.register(EVENT_HISDATA, self.processHisData)
         self.event_engine.register(EVENT_HISDATA_UPDATE, self.eventTest)
         self.event_engine.register(EVENT_REALTIME_DATA, self.eventTest)
         self.event_engine.register(EVENT_TICK_LAST_DATA, self.eventTest)
