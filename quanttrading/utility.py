@@ -21,7 +21,7 @@ from Crypto import Random
 import numpy as np
 import talib
 import asyncio
-from data.gateway.object import BarData, TickData
+from datatypes import BarData, TickData
 from constant import Exchange, Interval
 # from locale import _
 

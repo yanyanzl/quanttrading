@@ -20,6 +20,7 @@ from ibapi.common import BarData
 from ibapi.utils import * # @UnusedWildImport
 from .aiorder import *
 from setting import Aiconfig
+from datatypes import TickData
 import logging
 from .aitools import *
 from event.engine import EventEngine, Event
@@ -110,11 +111,14 @@ class IbkrApp(AiWrapper, AiClient):
     # if we need more  one eventEngine for each IbkrApp.
     _eventEngine: EventEngine = None
 
-    def __init__(self):
+    def __init__(self, eventEngine: EventEngine = None, IbkrAppName:str = "IbkrClient", gwName:str = "IbkrGateway"):
         AiWrapper.__init__(self)
         AiClient.__init__(self, wrapper=self)
-        self.data = [] #Initialize variable to store data
-        self.account = "" 
+        self._eventEngine = eventEngine
+        self._gateway = gwName
+        self._name = IbkrAppName
+        
+        self.account = ""
         #  account_info;` columns: key, value, currency`
         self.account_info = pandas.DataFrame()
         # self.mkt_price = ""
@@ -124,20 +128,28 @@ class IbkrApp(AiWrapper, AiClient):
         self.portfolio = pandas.DataFrame()
         # this is used for the cancel of the last order.
         self.lastOrderId = 0
-        self.orders: list[Order] = []
-        # order = Order()
-        # order.orderId
 
        # design to support multiple contract data req and receive.
         self.currentContract = Contract()
         self.previous_contract = Contract()
-        self.tick_reqId:dict[str,int] = {}
-        self.realtime_bar_reqId = -1
-        self.market_reqId = -1
 
-        self._tickAlllast:BarData = BarData()
+        self._tickDataReqIds:dict[str,TickerId] = {}
+        self._realtimeBarReqIds:list[TickerId] = []
+        self._marketReqIds:list[TickerId] = []
+        self._hisDataReqIds:list[TickerId] = []
 
-        self._tickBidAsk: BarData = BarData()
+        # all active contracts with this client.
+        self._activeContracts: list[Contract] = []
+
+        # all active orders with this client
+        self._activeOrders: list[Order] = []
+
+        # map reqId to Contract.
+        self._reqIdMapToContract: dict[int, Contract] = {}
+
+        self._tickAlllast: TickData = TickData()
+
+        self._tickBidAsk: TickData = TickData()
     
     @staticmethod
     def has_message_queue():
@@ -151,6 +163,15 @@ class IbkrApp(AiWrapper, AiClient):
               return True
          return False
 
+    def setEventEngine(self, eventEngine:EventEngine) -> bool:
+        """
+        set the eventengine
+        """
+        if eventEngine is not None and isinstance(eventEngine, EventEngine):
+            self._eventEngine = eventEngine
+            return True
+        return False
+    
     def _processMessage(self, message:str) -> None:
         """
         internal method which used to process Message
@@ -202,7 +223,14 @@ class IbkrApp(AiWrapper, AiClient):
             3	Day & Time Date	“1019 16:11:48 America/New_York”
         useRTH  0 = Includes data outside of RTH. 1 = RTH data only
         """
-        return super().reqHistoricalData(reqId, contract, endDateTime, durationStr, barSizeSetting, whatToShow, useRTH, formatDate, keepUpToDate, chartOptions)
+        super().reqHistoricalData(reqId, contract, endDateTime, durationStr, barSizeSetting, whatToShow, useRTH, formatDate, keepUpToDate, chartOptions)
+       
+        self._hisDataReqIds.append(reqId)
+        self._reqIdMapToContract[reqId] = contract
+        
+        if contract not in self._activeContracts:
+            self._activeContracts.append(contract)
+        return None
 
     def historicalData(self, reqId, bar:BarData):
         """
@@ -214,7 +242,6 @@ class IbkrApp(AiWrapper, AiClient):
         """
         message = f"historicalData:: data received: {bar.date} : {bar.close=}"
         self._processMessage(message)
-        # self.data.append([bar.date, bar.close])
         self._processData(EVENT_HISDATA, bar)
 
     def historicalDataUpdate(self, reqId: TickerId, bar: BarData):
@@ -242,15 +269,19 @@ class IbkrApp(AiWrapper, AiClient):
         return super().historicalDataEnd(reqId, start, end)
 
     def reqTickByTickData(self, reqId:int, contract:Contract,tickType:str,numberOfTicks:int,ignoreSize:bool):
-         """
-         tickType: String. tick-by-tick data type: “Last”, “AllLast”, “BidAsk” or “MidPoint”.
-         numberOfTicks: int. If a non-zero value is entered,
-         then historical tick data is first returned via one of the 
-         ignoreSize: bool. Omit updates that reflect only changes in size,
-         and not price. Applicable to Bid_Ask data requests.
-         """
-         super().reqTickByTickData(reqId, contract, tickType, numberOfTicks, ignoreSize)
-         self.tick_reqId[tickType] = reqId
+        """
+        tickType: String. tick-by-tick data type: “Last”, “AllLast”, “BidAsk” or “MidPoint”.
+        numberOfTicks: int. If a non-zero value is entered,
+        then historical tick data is first returned via one of the 
+        ignoreSize: bool. Omit updates that reflect only changes in size,
+        and not price. Applicable to Bid_Ask data requests.
+        """
+        super().reqTickByTickData(reqId, contract, tickType, numberOfTicks, ignoreSize)
+        self._tickDataReqIds[tickType] = reqId
+        self._reqIdMapToContract[reqId] = contract
+
+        if contract not in self._activeContracts:
+            self._activeContracts.append(contract)
 
     def tickByTickBidAsk(self, reqId: int, time: int, bidPrice: float, askPrice: float, bidSize: Decimal, askSize: Decimal, tickAttribBidAsk: TickAttribBidAsk):
         """
@@ -259,12 +290,11 @@ class IbkrApp(AiWrapper, AiClient):
         super().tickByTickBidAsk(reqId, time, bidPrice, askPrice, bidSize, askSize, tickAttribBidAsk)
         
         message = f'BidAsk. ReqId: {reqId}, Time: {datetime.fromtimestamp(time).strftime("%Y%m%d-%H:%M:%S")}, BidPrice: {floatMaxString(bidPrice)}, AskPrice: {floatMaxString(askPrice)}, BidSize: {decimalMaxString(bidSize)}, AskSize: {decimalMaxString(askSize)}, BidPastLow: {tickAttribBidAsk.bidPastLow}, AskPastHigh: {tickAttribBidAsk.askPastHigh}'
-        self.ask_price = askPrice
-        self.bid_price = bidPrice
         self._processMessage(message)
 
-        # Bardata include time for the tick data.
-        self._processData(EVENT_TICK_BIDASK_DATA, self._tickBidAsk)
+        # tickData include time for the tick data.
+        tickData = TickData(self._gateway, self.getSymbolByReqId(reqId), datetime = datetime.fromtimestamp(time), bid_price_1 = bidPrice, ask_price_1= askPrice, bid_volume_1= bidSize, ask_volume_1= askSize, )
+        self._processData(EVENT_TICK_BIDASK_DATA, tickData)
     
     def tickByTickAllLast(self, reqId: TickerId, tickType: TickerId, time: TickerId, price: float, size: Decimal, tickAttribLast: TickAttribLast, exchange: str, specialConditions: str):
         """
@@ -285,16 +315,23 @@ class IbkrApp(AiWrapper, AiClient):
         message = f'tickByTickAllLast:: ReqId: {reqId}, Time: {datetime.fromtimestamp(time).strftime("%Y%m%d-%H:%M:%S")}, tickAttribLast: {tickAttribLast=}, {exchange=} {specialConditions=}'
         message += f"\n tickType is : {tickType}, price is: {price=} and {size=}"
 
-        self._tickAlllast.close = self._tickAlllast.open = price
-        self._tickAlllast.volume = size
-        self._tickAlllast.date = timeToStr(time)
+        tickData = TickData(self._gateway, self.getSymbolByReqId(reqId), exchange, datetime.fromtimestamp(time), last_price=price, last_volume=size)
 
         self._processMessage(message)
-        # Bardata include time for the tick data.
-        self._processData(EVENT_TICK_LAST_DATA, self._tickAlllast)
+        # TickData include time for the tick data. 
+        self._processData(EVENT_TICK_LAST_DATA, tickData)
 
         return None
     
+    def getSymbolByReqId(self, reqId: TickerId) -> str:
+        """
+        """
+        if reqId is not None and isinstance(reqId, (int, TickerId)):
+            contract = self._reqIdMapToContract.get(reqId, None)
+            if contract is not None:
+                return contract.symbol
+        return None
+
     def _setBarData(self, tickType: str, data, time: TickerId, bar: BarData) -> BarData:
         """
         setting the specified bar data as in the tickType
@@ -314,9 +351,9 @@ class IbkrApp(AiWrapper, AiClient):
     def cancelTickByTickData(self, reqId:int):
         super().cancelTickByTickData(reqId)
 
-        for key, value in self.tick_reqId.items():
+        for key, value in self._tickDataReqIds.items():
             if value == reqId:
-                self.tick_reqId[key] = -1
+                self._tickDataReqIds[key] = -1
 
         message = f'cancelTickByTickData... ReqId:, {reqId}'
         self._processMessage(message)
@@ -341,7 +378,28 @@ class IbkrApp(AiWrapper, AiClient):
         realTimeBarOptions:TagValueList - For internal use only. Use default value XYZ.
         """
         super().reqRealTimeBars(reqId,contract,barSize,whatToShow,useRTH,realTimeBarsOptions)
-        self.realtime_bar_reqId = reqId
+        self._realtimeBarReqIds.append(reqId)
+
+        self._registerReqIdContract(reqId, contract)
+
+
+    def _registerReqIdContract(self, reqId:TickerId, contract:Contract) -> bool:
+        """
+        
+        """
+        self._reqIdMapToContract[reqId] = contract
+        if contract not in self._activeContracts:
+            self._activeContracts.append(contract)
+
+        return True
+    
+    def _unregisterReqIdContract(self, reqId:TickerId, contract:Contract) -> bool:
+        """"""
+        self._reqIdMapToContract.pop(reqId, None)
+        if contract in self._activeContracts:
+            self._activeContracts.remove(contract)
+        return True        
+
 
     def realtimeBar(self, reqId: TickerId, time: int, open_: float, high: float, low: float, close: float, volume: Decimal, wap: Decimal, count: int) -> None:
         """
@@ -364,7 +422,10 @@ class IbkrApp(AiWrapper, AiClient):
 
     def cancelRealTimeBars(self,reqId:TickerId):
         super().cancelRealTimeBars(reqId)
-        self.realtime_bar_reqId = -1
+
+        self._realtimeBarReqIds.remove[reqId]
+        self._reqIdMapToContract.pop(reqId,None)
+
         message = f'cancelRealTimeBars... ReqId:, {reqId}'
         self._processMessage(message)
 
@@ -387,7 +448,9 @@ class IbkrApp(AiWrapper, AiClient):
             Use default value XYZ.
         """
         super().reqMktData(reqId, contract, genericTickList,snapshot, regulatorySnapshot,mktDataOptions)
-        self.market_reqId = reqId
+        self._marketReqIds.append(reqId)
+
+        self._registerReqIdContract(reqId, contract)
 
     def tickPrice(self, reqId, tickType, price, attrib):
             """
@@ -408,9 +471,15 @@ class IbkrApp(AiWrapper, AiClient):
             self._processMessage(message)
 
     def cancelMktData(self,reqId:TickerId):
-        super().cancelMktData(reqId)
-        self. market_reqId = -1
-        message = f'cancelMktData... ReqId:, {reqId}'
+        message = ""
+        if reqId is not None and isinstance(reqId, (int, TickerId)) and reqId in self._marketReqIds:
+            super().cancelMktData(reqId)
+            self._marketReqIds.remove(reqId)
+            self._reqIdMapToContract.pop(reqId,None)
+
+            message = f'cancelMktData... ReqId:, {reqId}'
+        else:
+            message = f'failed to cancelMktData... {reqId=}'
         self._processMessage(message)
 
     def marketDataType(self, reqId: TickerId, marketDataType: TickerId):
@@ -526,32 +595,47 @@ class IbkrApp(AiWrapper, AiClient):
 
         self._processData(EVENT_OPEN_ORDER, orderId)
 
-
-
     def close_contract_data(self, contract:Contract=None):
+        """
+        cancel all data requests to the server for the contract.
+        remove the contract from the activecontract list. 
+        if no contract specified. cancle for all contracts. 
+        """
         message = ""
         if self.isConnected():
-
             if not contract:
-                   contract = self.currentContract
+                   contracts = self._activeContracts
+            elif contract in self._activeContracts:
+                contracts = [contract]
+            else:
+                return
             
-            message = f"closing all data for contract.symbol: {contract.symbol}"
+            symbols = [ct.symbol for ct in contracts]
+            message = f"closing all data for contract.symbol: {symbols}"
+            for ct in contracts:
+                self._activeContracts.remove(ct, None)
 
-            if self.tick_reqId is not None and len(self.tick_reqId) > 0:
-                 for tickid in self.tick_reqId.values():
+            if self._tickDataReqIds is not None and len(self._tickDataReqIds) > 0:
+                 for tickid in self._tickDataReqIds.values():
                      if tickid > 0:
                         self.cancelTickByTickData(tickid)
 
-            if self.realtime_bar_reqId > 0:
-                 self.cancelRealTimeBars(self.realtime_bar_reqId)
+            if self._realtimeBarReqIds is not None and len(self._realtimeBarReqIds) > 0:
+                 for reqId in self._realtimeBarReqIds:
+                    self.cancelRealTimeBars(reqId)
 
-            if self.market_reqId > 0:
-                 self.cancelMktData(self.market_reqId)
+            if self._marketReqIds is not None and len(self._marketReqIds) > 0:
+                 for reqId in self._marketReqIds:
+                    self.cancelMktData(reqId)
+
+            if self._hisDataReqIds is not None and len(self._hisDataReqIds) > 0:
+                 for reqId in self._hisDataReqIds:
+                    self.cancelHistoricalData(reqId)
         else:
             message = "not connected to server yet ..."
             logging.warning(message)
 
-        self._processMessage(message)            
+        self._processMessage(message)        
 
     def close_previous_contract(self):
         if self.previous_contract and self.currentContract and self.currentContract.symbol != self.previous_contract.symbol:

@@ -10,13 +10,24 @@ from .uiapp import QtGui, QtCore, QtWidgets
 from setting import Aiconfig
 from datetime import datetime
 from data.finlib import Asset
-from constant import ChartInterval, ChartPeriod
+from constant import (
+    ChartInterval, 
+    ChartPeriod,
+)
+
 import logging
 
 logger = logging.getLogger(__name__)
 
 class DataManager():
-
+    """
+    Provides chart data management system function.
+    all chart related data will be requested by gateway(app)
+    and received by gateway(app). then gateway will sent
+    those data wrapped in an Event to eventengine.
+    ChartDataManagement will retrieve the data from 
+    the eventengine, process those data and update the chart
+    """
     MIN_BAR_COUNT = Aiconfig.get("MIN_BAR_COUNT")
 
     def __init__(self, assetName: str = None) -> None:
@@ -26,8 +37,11 @@ class DataManager():
         self._assetName: str = assetName
         self._chartInterval = Aiconfig.get("DEFAULT_CHART_INTERVAL")
         self._yMarginPercent:int = int(Aiconfig.get("DEFAULT_Y_MARGIN"))/100
+
         if assetName is not None:
             self.setAsset(assetName)
+
+        self.register_event()
 
     def _initXRange(self) -> None:
         if self.isEmpty():

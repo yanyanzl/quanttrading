@@ -14,7 +14,7 @@ from constant import (
     EVENT_LOG,
     EVENT_QUOTE,
 )
-from .object import (
+from datatypes import (
     TickData,
     OrderData,
     TradeData,

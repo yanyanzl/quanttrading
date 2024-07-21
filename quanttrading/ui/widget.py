@@ -25,7 +25,7 @@ from constant import (
     EVENT_ACCOUNT,
     EVENT_LOG
 )
-from data.gateway.object import (
+from datatypes import (
     OrderRequest,
     SubscribeRequest,
     CancelRequest,

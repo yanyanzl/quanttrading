@@ -1,7 +1,7 @@
 from copy import copy
 from typing import Dict, List, Set, TYPE_CHECKING
 
-from data.gateway.object import (
+from datatypes import (
     ContractData,
     OrderData,
     TradeData,
@@ -11,7 +11,7 @@ from data.gateway.object import (
 from constant import Direction, Offset, Exchange
 
 if TYPE_CHECKING:
-    from engine import MainEngine
+    from ordermanagement import MainEngine
 
 
 class OffsetConverter:

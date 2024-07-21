@@ -58,8 +58,9 @@ async def gatewayTest():
     eventEngine.register_general(eventTest)
 
     gw._app._eventEngine = eventEngine
+    
     gw._app.reqHistoricalData(2, gw._app.currentContract,"","1 D", "1 min", "MIDPOINT",0,1,True, [] )
-    gw._app.reqTickByTickData(2,gw._app.currentContract, "AllLast", 0, True)
+    # gw._app.reqTickByTickData(2,gw._app.currentContract, "AllLast", 0, True)
 
     await asyncio.sleep(20)
 

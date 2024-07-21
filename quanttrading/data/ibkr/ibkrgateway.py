@@ -11,7 +11,6 @@ from ibapi.utils import * # @UnusedWildImport
 from ibapi.order import *
 
 import pandas
-import threading
 import time
 import random
 import queue
@@ -36,7 +35,7 @@ from constant import (
     EVENT_LOG,
     EVENT_QUOTE,
 )
-from data.gateway.object import (
+from datatypes import (
     TickData,
     OrderData,
     TradeData,

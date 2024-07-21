@@ -1,5 +1,7 @@
 """
 Basic data structure used for general trading function in the trading platform.
+define all types of data object in this module
+
 """
 
 from dataclasses import dataclass, field
@@ -8,6 +10,10 @@ from logging import INFO
 from abc import ABC
 from pathlib import Path
 from typing import Type, TYPE_CHECKING
+import sys
+# import types
+from typing import Union, List, Optional, Any as PythonAny
+from decimal import Decimal
 
 from constant import Direction, Exchange, Interval, Offset, Status, Product, OptionType, OrderType
 
@@ -15,7 +21,86 @@ ACTIVE_STATUSES = set([Status.SUBMITTING, Status.NOTTRADED, Status.PARTTRADED])
 
 
 if TYPE_CHECKING:
-    from ...engine import BaseEngine
+    from .ordermanagement import BaseManagement
+
+if sys.version_info.minor >= 8:
+    from typing import TypedDict, Literal, Dict
+else:
+    from typing import Dict
+    from typing_extensions import Literal
+    TypedDict = Dict
+
+if sys.version_info.minor >= 11:
+    from typing import NotRequired
+else:
+    from typing_extensions import NotRequired
+
+
+OrderSide = Literal['buy', 'sell']
+# OrderType = Literal['limit', 'market']
+PositionSide = Literal['long', 'short']
+Any = PythonAny
+
+IndexType = Union[str, int]
+Num = Union[None, str, float, int, Decimal]
+Str = Optional[str]
+Strings = Optional[List[str]]
+Int = Optional[int]
+Bool = Optional[bool]
+MarketType = Literal['spot', 'margin', 'swap', 'future', 'option']
+SubType = Literal['linear', 'inverse']
+
+
+class FeeInterface(TypedDict):
+    currency: Str
+    cost: Num
+    rate: NotRequired[Num]
+
+
+Fee = Optional[FeeInterface]
+
+
+class Balance(TypedDict):
+    free: Num
+    used: Num
+    total: Num
+    debt: NotRequired[Num]
+
+class BalanceAccount(TypedDict):
+    free: Str
+    used: Str
+    total: Str
+
+class Account(TypedDict):
+    id: Str
+    type: Str
+    code: Str
+    info: Dict[str, Any]
+
+class Ticker(TypedDict):
+    info: Dict[str, Any]
+    symbol: Str
+    timestamp: Int
+    datetime: Str
+    high: Num
+    low: Num
+    bid: Num
+    bidVolume: Num
+    ask: Num
+    askVolume: Num
+    vwap: Num
+    open: Num
+    close: Num
+    last: Num
+    previousClose: Num
+    change: Num
+    percentage: Num
+    average: Num
+    quoteVolume: Num
+    baseVolume: Num
+
+
+Tickers = Dict[str, Ticker]
 
 
 class BaseApp(ABC):
@@ -27,7 +112,7 @@ class BaseApp(ABC):
     app_module: str = ""                        # App module string used in import_module
     app_path: Path = ""                         # Absolute path of app folder
     display_name: str = ""                      # Name for display on the menu.
-    engine_class: Type["BaseEngine"] = None     # App engine class
+    engine_class: Type["BaseManagement"] = None     # App management class
     widget_name: str = ""                       # Class name of app widget
     icon_name: str = ""                         # Icon file name of app widget
 
@@ -38,7 +123,6 @@ class BaseData:
     Any data object needs a gateway_name as source
     and should inherit base data.
     """
-
     gateway_name: str
 
     extra: dict = field(default=None, init=False)
@@ -137,7 +221,7 @@ class OrderData(BaseData):
     exchange: Exchange
     orderid: str
 
-    type: OrderType = OrderType.LIMIT
+    type: OrderType = OrderType
     direction: Direction = None
     offset: Offset = Offset.NONE
     price: float = 0

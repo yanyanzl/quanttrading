@@ -1,3 +1,11 @@
+"""
+this is the main order management system for the whole platform.
+the MainEngine is the main entry/control point of the system.
+it's a processing class. build the while processing architecture.
+setup the gateway (application connect to gateway), 
+
+
+"""
 import logging
 from logging import Logger
 import smtplib
@@ -8,10 +16,11 @@ from datetime import datetime
 from email.message import EmailMessage
 from queue import Empty, Queue
 from threading import Thread
+from pandas import DataFrame
 from typing import Any, Type, Dict, List, Optional
 
 from event.engine import Event, EventEngine
-from data.gateway.object import BaseApp
+
 from constant import (
     EVENT_TICK,
     EVENT_ORDER,
@@ -20,10 +29,19 @@ from constant import (
     EVENT_ACCOUNT,
     EVENT_CONTRACT,
     EVENT_LOG,
-    EVENT_QUOTE
+    EVENT_QUOTE,
+    EVENT_HISDATA,
+    EVENT_HISDATA_UPDATE,
+    EVENT_OPEN_ORDER,
+    EVENT_ORDER_STATUS,
+    EVENT_PORTFOLIO,
+    EVENT_REALTIME_DATA,
+    EVENT_TICK_BIDASK_DATA,
+    EVENT_TICK_LAST_DATA,
 )
 from data.gateway.gateway import BaseGateway
-from data.gateway.object import (
+from datatypes import (
+    BaseApp,
     CancelRequest,
     LogData,
     OrderRequest,
@@ -45,6 +63,7 @@ from utility import get_folder_path, TRADER_DIR
 from converter import OffsetConverter
 from constant import _
 
+logger = logging.getLogger(__name__)
 
 class MainEngine:
     """
@@ -53,31 +72,56 @@ class MainEngine:
 
     def __init__(self, event_engine: EventEngine = None) -> None:
         """"""
+        # all events are processed in this event_engine.
+        # log, data communication between modules
         if event_engine:
             self.event_engine: EventEngine = event_engine
         else:
             self.event_engine = EventEngine()
         self.event_engine.start()
 
+        # the programme could have multiple gateways
+        # which connect to different provider. like IBKR for stocks
+        # and Coinbase for bitcoin 
         self.gateways: Dict[str, BaseGateway] = {}
-        self.engines: Dict[str, BaseEngine] = {}
-        self.apps: Dict[str, BaseApp] = {}
+
+        # there are the list of the supported exchanges by 
+        # those connected gateways. one gateway to multiple 
+        # exchanges.
         self.exchanges: List[Exchange] = []
 
-        os.chdir(TRADER_DIR)    # Change working directory
-        self.init_engines()     # Initialize function engines
+        # log, email, Order management functions. 
+        # normally one order management for the whole MainEngine.
+        self.managementUnits: Dict[str, BaseManagement] = {}
 
-    def add_engine(self, engine_class: Any) -> "BaseEngine":
+        # not used now. 
+        self.apps: Dict[str, BaseApp] = {}
+        # not used for now.
+        os.chdir(TRADER_DIR)    # Change working directory
+
+        self.initManagements()     # Initialize function managementUnits
+
+    def initManagements(self) -> None:
         """
-        Add function engine.
+        Init all management functions.
         """
-        engine: BaseEngine = engine_class(self, self.event_engine)
-        self.engines[engine.engine_name] = engine
-        return engine
+        self.addManagement(LogManagement)
+        self.addManagement(OrderManagement)
+        # self.addManagement(EmailManagement)
+
+    def addManagement(self, managementClass: Any) -> "BaseManagement":
+        """
+        Add management functions.
+        """
+        management: BaseManagement = managementClass(self, self.event_engine)
+        self.managementUnits[management.management_name] = management
+        return management
 
     def add_gateway(self, gateway_class: Type[BaseGateway], gateway_name: str = "") -> BaseGateway:
         """
-        Add gateway.
+        Add gateway. like IBKR, Coinbase, Binance, Trading212, TradingView etc
+        after the mainengine initialized. it needs to add a gateway to start 
+        the connection and communication with the gateway.
         """
         # Use default name if gateway_name not passed
         if not gateway_name:
@@ -86,30 +130,22 @@ class MainEngine:
         gateway: BaseGateway = gateway_class(self.event_engine, gateway_name)
         self.gateways[gateway_name] = gateway
 
-        # Add gateway supported exchanges into engine
+        # Add gateway supported exchanges
         for exchange in gateway.exchanges:
             if exchange not in self.exchanges:
                 self.exchanges.append(exchange)
 
         return gateway
 
-    def add_app(self, app_class: Type[BaseApp]) -> "BaseEngine":
+    def add_app(self, app_class: Type[BaseApp]) -> "BaseManagement":
         """
         Add app.
         """
         app: BaseApp = app_class()
         self.apps[app.app_name] = app
 
-        engine: BaseEngine = self.add_engine(app.engine_class)
+        engine: BaseManagement = self.addManagement(app.engine_class)
         return engine
-
-    def init_engines(self) -> None:
-        """
-        Init all engines.
-        """
-        self.add_engine(LogEngine)
-        self.add_engine(OrderManagement)
-        # self.add_engine(EmailEngine)
 
     def write_log(self, msg: str, source: str = "") -> None:
         """
@@ -128,13 +164,13 @@ class MainEngine:
             self.write_log(_("找不到底层接口：{}").format(gateway_name))
         return gateway
 
-    def get_engine(self, engine_name: str) -> "BaseEngine":
+    def getManagement(self, management_name: str) -> "BaseManagement":
         """
         Return engine object by name.
         """
-        engine: BaseEngine = self.engines.get(engine_name, None)
+        engine: BaseManagement = self.managementUnits.get(management_name, None)
         if not engine:
-            self.write_log(_("找不到引擎：{}").format(engine_name))
+            self.write_log(_("can't find management module：{}").format(management_name))
         return engine
 
     def get_default_setting(self, gateway_name: str) -> Optional[Dict[str, Any]]:
@@ -234,49 +270,50 @@ class MainEngine:
         # Stop event engine first to prevent new timer event.
         self.event_engine.stop()
 
-        for engine in self.engines.values():
+        for engine in self.managementUnits.values():
             engine.close()
 
         for gateway in self.gateways.values():
             gateway.close()
 
 
-class BaseEngine(ABC):
+class BaseManagement(ABC):
     """
-    Abstract class for implementing a function engine.
+    Abstract class for implementing a management function
+    in order management system .
     """
 
     def __init__(
         self,
         main_engine: MainEngine,
         event_engine: EventEngine,
-        engine_name: str,
+        management_name: str,
     ) -> None:
         """"""
         self.main_engine: MainEngine = main_engine
         self.event_engine: EventEngine = event_engine
-        self.engine_name: str = engine_name
+        self.management_name: str = management_name
 
     def close(self) -> None:
         """"""
         pass
 
 
-class LogEngine(BaseEngine):
+class LogManagement(BaseManagement):
     """
     Processes log event and output with logging module.
     """
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
         """"""
-        super(LogEngine, self).__init__(main_engine, event_engine, "log")
+        super(LogManagement, self).__init__(main_engine, event_engine, "log")
 
         if not SETTINGS["log.active"]:
             return
 
         self.level: int = SETTINGS["log.level"]
 
-        self.logger: Logger = logging.getLogger("veighna")
+        self.logger: Logger = logging.getLogger("Quanttrading")
         self.logger.setLevel(self.level)
 
         self.formatter: logging.Formatter = logging.Formatter(
@@ -337,15 +374,17 @@ class LogEngine(BaseEngine):
         self.logger.log(log.level, log.msg)
 
 
-class OrderManagement(BaseEngine):
+class OrderManagement(BaseManagement):
     """
     Provides order management system function.
+    all order related data are processed, kept here.
     """
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
         """"""
         super(OrderManagement, self).__init__(main_engine, event_engine, "oms")
 
+        self._hisData: Dict[str, DataFrame]
         self.ticks: Dict[str, TickData] = {}
         self.orders: Dict[str, OrderData] = {}
         self.trades: Dict[str, TradeData] = {}
@@ -395,6 +434,28 @@ class OrderManagement(BaseEngine):
         self.event_engine.register(EVENT_ACCOUNT, self.process_account_event)
         self.event_engine.register(EVENT_CONTRACT, self.process_contract_event)
         self.event_engine.register(EVENT_QUOTE, self.process_quote_event)
+
+        self.event_engine.register(EVENT_HISDATA, self.eventTest)
+        self.event_engine.register(EVENT_HISDATA_UPDATE, self.eventTest)
+        self.event_engine.register(EVENT_REALTIME_DATA, self.eventTest)
+        self.event_engine.register(EVENT_TICK_LAST_DATA, self.eventTest)
+        self.event_engine.register(EVENT_TICK_BIDASK_DATA, self.eventTest)
+        self.event_engine.register(EVENT_PORTFOLIO, self.eventTest)
+        self.event_engine.register(EVENT_ORDER_STATUS, self.eventTest)
+        self.event_engine.register(EVENT_ACCOUNT, self.eventTest)    
+        self.event_engine.register_general(self.eventTest)
+
+    def eventTest(self, event:Event):
+        # logger.info(f"this is successful now=============================")
+        logger.info(f"{event.type=}, and {event.data=}")
+
+    def processHisData(self, event:Event) -> bool:
+        """
+        process the historical data for a 
+        """
+        logger.info(f"processing HisData................ \n {event.type=} and {event.data}")
+        # self
+        return True
 
     def process_tick_event(self, event: Event) -> None:
         """"""
@@ -610,8 +671,9 @@ class OrderManagement(BaseEngine):
         """
         return self.offset_converters.get(gateway_name, None)
 
+# class DataManagement(BaseManagement):
 
-class EmailEngine(BaseEngine):
+class EmailManagement(BaseManagement):
     """
     Provides email sending function.
     rewrite it to asyc instead of seperate thread.
@@ -619,7 +681,7 @@ class EmailEngine(BaseEngine):
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
         """"""
-        super(EmailEngine, self).__init__(main_engine, event_engine, "email")
+        super(EmailManagement, self).__init__(main_engine, event_engine, "email")
 
         self.thread: Thread = Thread(target=self.run)
         self.queue: Queue = Queue()
