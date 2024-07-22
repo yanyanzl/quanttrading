@@ -9,13 +9,11 @@ from functools import partial
 from importlib import import_module
 from typing import Callable, Dict, List, Tuple
 import sys
-# import pyqtgraph as pg
 
 from pathlib import Path  # if you haven't already done so
 file = Path(__file__).resolve()
 sys.path.append(str(file.parents[1]))
 
-# from .chartitems import Asset, CandlestickItems, DataManager
 from .chart import Chart, ChartGraph
 from .uiapp import QtCore, QtGui, QtWidgets
 from .widget import (
@@ -145,7 +143,7 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
         # App menu
-        app_menu: QtWidgets.QMenu = bar.addMenu(_("功能"))
+        app_menu: QtWidgets.QMenu = bar.addMenu(_("Function"))
 
         all_apps: List[BaseApp] = self.main_engine.get_all_apps()
         for app in all_apps:
@@ -342,7 +340,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def open_forum(self) -> None:
         """
         """
-        webbrowser.open("https://eagoo.co.uk")
+        webbrowser.open("https://eagloo.co.uk")
 
     def edit_global_setting(self) -> None:
         """

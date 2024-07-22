@@ -9,6 +9,7 @@ from pandas import DataFrame, Timestamp, concat
 from .uiapp import QtGui, QtCore, QtWidgets
 from setting import Aiconfig
 from datetime import datetime
+from ordermanagement import MainEngine
 from data.finlib import Asset
 from constant import (
     ChartInterval, 
@@ -30,9 +31,10 @@ class DataManager():
     """
     MIN_BAR_COUNT = Aiconfig.get("MIN_BAR_COUNT")
 
-    def __init__(self, assetName: str = None) -> None:
+    def __init__(self, assetName: str = None, mainEngine: MainEngine=None) -> None:
         self._data: DataFrame = None
         # self._data.reset_index(inplace=True)
+        self._mainEngine = mainEngine
         self._initXRange()
         self._assetName: str = assetName
         self._chartInterval = Aiconfig.get("DEFAULT_CHART_INTERVAL")
@@ -41,7 +43,7 @@ class DataManager():
         if assetName is not None:
             self.setAsset(assetName)
 
-        self.register_event()
+        # self.register_event()
 
     def _initXRange(self) -> None:
         if self.isEmpty():
@@ -59,7 +61,11 @@ class DataManager():
         """
         set the asset to the name given. 
         this will change all the data hold by the Datamanager
-        the interval will be not be changed.
+        interval for the chart candles:
+        1m,2m,5m,15m,30m,1h,1d,5d,1wk Intraday data cannot extend last 60 days
+        the interval will be same as last asset if not given.
+        the period for the chart candles.
+        Valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd, max Either Use period parameter or use start and end
         """
         try:
 
@@ -89,7 +95,7 @@ class DataManager():
 
             if isinstance(assetName, str):
                 self._assetName = assetName
-
+                # if 
                 asset = Asset(assetName)
                 logger.debug(f"DataManager:: setAsset() :: assetName is {assetName}")
 
@@ -104,6 +110,16 @@ class DataManager():
         except Exception as e:
             logger.info(f"DataManager: setAsset(): failed to setAsset for {assetName}, interval {chartInterval}, period: {period}")
             return False
+
+    def _getHisData(self, assetName:str, interval:str, period:str = None, mainEngine:MainEngine=None) -> DataFrame:
+        """ internal method used to get historical data from server.
+        if mainEngine is provided. get historical data from it.
+        otherwise, get it from default provider. now it's yahoo
+        """
+        if mainEngine is not None:
+            # from datatypes import CandleData
+            return mainEngine.getHisData(assetName)
+        
 
     def _formatData(self, data:DataFrame = None) -> DataFrame:
         if not data and self.isEmpty():

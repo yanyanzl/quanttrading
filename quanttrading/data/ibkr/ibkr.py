@@ -2,7 +2,7 @@
 Copyright (C) Steven Jiang. All rights reserved. This code is subject to the terms
  and conditions of the MIT Non-Commercial License, as applicable.
 """
-
+import shelve
 from decimal import Decimal
 from ibapi.client import EClient
 from ibapi.common import BarData, TagValueList, TickAttribLast, TickerId
@@ -20,11 +20,11 @@ from ibapi.common import BarData
 from ibapi.utils import * # @UnusedWildImport
 from .aiorder import *
 from setting import Aiconfig
-from datatypes import TickData, CandleData
+from datatypes import TickData, CandleData, Account
 import logging
 from .aitools import *
 from event.engine import EventEngine, Event
-from utility import timeToStr
+from utility import timeToStr, get_file_path
 from constant import (
     EVENT_TICK,
     EVENT_ORDER,
@@ -111,15 +111,19 @@ class IbkrApp(AiWrapper, AiClient):
     # if we need more  one eventEngine for each IbkrApp.
     _eventEngine: EventEngine = None
 
+    data_filename: str = "ib_contract_data.db"
+    data_filepath: str = str(get_file_path(data_filename))
+
     def __init__(self, eventEngine: EventEngine = None, IbkrAppName:str = "IbkrClient", gwName:str = "IbkrGateway"):
         AiWrapper.__init__(self)
         AiClient.__init__(self, wrapper=self)
         self._eventEngine = eventEngine
         self._gateway = gwName
         self._name = IbkrAppName
+        self.status: bool = False
         
-        self.account = ""
-        #  account_info;` columns: key, value, currency`
+        self.account: Account = Account()
+        #  account_info;` columns: reqid, account, key, value, currency`
         self.account_info = pandas.DataFrame()
         # self.mkt_price = ""
         self.last_price = ""
@@ -129,10 +133,12 @@ class IbkrApp(AiWrapper, AiClient):
         # this is used for the cancel of the last order.
         self.lastOrderId = 0
 
+
        # design to support multiple contract data req and receive.
         self.currentContract = Contract()
         self.previous_contract = Contract()
 
+        self._accountReqId = -1
         self._tickDataReqIds:dict[str,TickerId] = {}
         self._realtimeBarReqIds:list[TickerId] = []
         self._marketReqIds:list[TickerId] = []
@@ -147,9 +153,9 @@ class IbkrApp(AiWrapper, AiClient):
         # map reqId to Contract.
         self._reqIdMapToContract: dict[int, Contract] = {}
 
-        self._tickAlllast: TickData = TickData()
+        self._tickAlllast: TickData = None
 
-        self._tickBidAsk: TickData = TickData()
+        self._tickBidAsk: TickData = None
     
     @staticmethod
     def has_message_queue():
@@ -325,7 +331,7 @@ class IbkrApp(AiWrapper, AiClient):
         self._processMessage(message)
 
         # tickData include time for the tick data.
-        tickData = TickData(self._gateway, self.getSymbolByReqId(reqId), datetime = datetime.fromtimestamp(time), bid_price_1 = bidPrice, ask_price_1= askPrice, bid_volume_1= bidSize, ask_volume_1= askSize, )
+        tickData = TickData(self._gateway, self.getSymbolByReqId(reqId), datetime = datetime.fromtimestamp(time), name=EVENT_TICK_BIDASK_DATA, bid_price_1 = bidPrice, ask_price_1= askPrice, bid_volume_1= bidSize, ask_volume_1= askSize, )
         self._processData(EVENT_TICK_BIDASK_DATA, tickData)
     
     def tickByTickAllLast(self, reqId: TickerId, tickType: TickerId, time: TickerId, price: float, size: Decimal, tickAttribLast: TickAttribLast, exchange: str, specialConditions: str):
@@ -347,7 +353,7 @@ class IbkrApp(AiWrapper, AiClient):
         message = f'tickByTickAllLast:: ReqId: {reqId}, Time: {datetime.fromtimestamp(time).strftime("%Y%m%d-%H:%M:%S")}, tickAttribLast: {tickAttribLast=}, {exchange=} {specialConditions=}'
         message += f"\n tickType is : {tickType}, price is: {price=} and {size=}"
 
-        tickData = TickData(self._gateway, self.getSymbolByReqId(reqId), exchange, datetime.fromtimestamp(time), last_price=price, last_volume=size)
+        tickData = TickData(self._gateway, self.getSymbolByReqId(reqId), exchange, datetime.fromtimestamp(time), name=EVENT_TICK_LAST_DATA, last_price=price, last_volume=size)
 
         self._processMessage(message)
         # TickData include time for the tick data. 
@@ -509,36 +515,40 @@ class IbkrApp(AiWrapper, AiClient):
         # print("AccountSummary. ReqId:", reqId, "Account:", account,"Tag: ", tag, "Value:", value, "Currency:", currency)
         super().accountSummary(reqId,account, tag, value, currency)
 
-        self.account = account
+        self._accountReqId = reqId
         if tag != None and tag != "":
-             self.account_info = pandas.concat([self.account_info,pandas.DataFrame([[tag, value, currency]],
-                   columns=Aiconfig.get('ACCOUNT_COLUMNS'))])
- 
-    # overide the account Summary end method. 
-    # Notifies when all the accounts’ information has ben received.
+            self.account.update(id=account, reqId=reqId)
+            self.account.get('accountValue').update({tag:[value, currency]})
+            # self.account_info = pandas.concat([self.account_info,pandas.DataFrame([[reqId, account, tag, value, currency]],
+            #        columns=Aiconfig.get('ACCOUNT_COLUMNS'))])
+
     def accountSummaryEnd(self, reqId: int):
+        """
+        # overide the account Summary end method. 
+        # Notifies when all the accounts’ information has ben received.
+        """
         message = f'AccountSummaryEnd. ReqId:, {reqId}'
         self._processMessage(message)
 
-        self._processData(EVENT_ACCOUNT, self.account_info)
+        self._processData(EVENT_ACCOUNT, self.account)
 
-    # Receiving Account Updates
-    # Resulting account and portfolio information will be delivered via the IBApi.EWrapper.updateAccountValue, IBApi.EWrapper.updatePortfolio, IBApi.EWrapper.updateAccountTime and IBApi.EWrapper.accountDownloadEnd
-    # Receives the subscribed account’s information. Only one account can be subscribed at a time. After the initial callback to updateAccountValue, callbacks only occur for values which have changed. This occurs at the time of a position change, or every 3 minutes at most. This frequency cannot be adjusted.
     def updateAccountValue(self, key: str, val: str, currency: str,accountName: str):
-        # print("UpdateAccountValue. Key:", key, "Value:", val, "Currency:", currency, "AccountName:", accountName)
+        """
+        # Receiving Account Updates
+        # Resulting account and portfolio information will be delivered via the IBApi.EWrapper.updateAccountValue, IBApi.EWrapper.updatePortfolio, IBApi.EWrapper.updateAccountTime and IBApi.EWrapper.accountDownloadEnd
+        # Receives the subscribed account’s information. Only one account can be subscribed at a time. After the initial callback to updateAccountValue, callbacks only occur for values which have changed. This occurs at the time of a position change, or every 3 minutes at most. This frequency cannot be adjusted.
+        """
         if key != None and key != "":
-            # print(f"key is {key}. {val}")
-
-            # if exist in the data list already. drop it firstly.
-            if not self.account_info.loc[self.account_info['key'] == key].empty:
-                # print("not empty. drop .... --- ")
-                self.account_info = self.account_info.drop(index=self.account_info.loc[self.account_info['key'] == key].index)
+            self.account.get('accountValue').update({key:[val, currency]})
+            # # if exist in the data list already. drop it firstly.
+            # if not self.account_info.loc[self.account_info['key'] == key].empty:
+            #     # print("not empty. drop .... --- ")
+            #     self.account_info = self.account_info.drop(index=self.account_info.loc[self.account_info['key'] == key].index)
                                                            
-            self.account_info = pandas.concat([self.account_info,pandas.DataFrame([[key, val, currency]],
-                   columns=Aiconfig.get('ACCOUNT_COLUMNS'))], ignore_index=True)
+            # self.account_info = pandas.concat([self.account_info,pandas.DataFrame([[self._accountReqId, self.account, key, val, currency]],
+            #        columns=Aiconfig.get('ACCOUNT_COLUMNS'))], ignore_index=True)
             # trigger EVENT_ACCOUNT
-            self._processData(EVENT_ACCOUNT, self.account_info)
+            self._processData(EVENT_ACCOUNT, self.account)
 
     def updatePortfolio(self, contract: Contract, position: Decimal, marketPrice: float, marketValue: float, averageCost: float, unrealizedPNL: float, realizedPNL: float, accountName: str):
         """
@@ -560,6 +570,7 @@ class IbkrApp(AiWrapper, AiClient):
         self.portfolio = pandas.concat([self.portfolio, pandas.DataFrame([[contract.symbol,contract.secType, contract.exchange,position,marketPrice,marketValue,averageCost, unrealizedPNL,realizedPNL]],
                    columns=Aiconfig.get('PORTFOLIO_COLUMNS') )], ignore_index=True)
         self._processData(EVENT_PORTFOLIO, self.portfolio)
+
 
     def updateAccountTime(self, timeStamp: str):
         """
@@ -656,7 +667,7 @@ class IbkrApp(AiWrapper, AiClient):
     def close_previous_contract(self):
         if self.previous_contract and self.currentContract and self.currentContract.symbol != self.previous_contract.symbol:
             self.close_contract_data(self.previous_contract)
-
+    
     def set_current_Contract(self, contract: Contract):
         """ change the current contract. all functions use contract will be affected.
         """
@@ -681,8 +692,41 @@ class IbkrApp(AiWrapper, AiClient):
         disconnect the app from the server. 
         cancel all contracts related data request.
         """
+        if not self.status:
+            return
+        
+        self.status = False
+        self.save_contract_data()
         self.close_contract_data()
         super().disconnect()
+
+    def connectAck(self) -> None:
+        """connect successful"""
+        self.status = True
+        logger.info("IB TWS connected successfully!")
+
+        self.load_contract_data()
+
+        self.data_ready = False
+
+    def connectionClosed(self) -> None:
+        """connection closed"""
+        self.status = False
+        logger.info("IB TWS connection closed")
+
+    def load_contract_data(self) -> None:
+        """load contract data from previously saved files."""
+        with shelve.open(self.data_filepath) as f:
+            self._activeContracts = f.get("ib_contracts", {})
+        # for contract in self.contracts.values():
+        #     self.gateway.on_contract(contract)
+
+        logger.info("local contract loaded successfully")
+
+    def save_contract_data(self) -> None:
+        """save contract locally to the temp db"""
+        with shelve.open(self.data_filepath) as f:
+            f["ib_contracts"] = self._activeContracts
 
 
 def place_lmt_order(app=IbkrApp(), action:str="", tif:str="DAY", increamental=Aiconfig.get('BUY_LMT_PLUS'), quantity=10, priceTickType="LAST"):

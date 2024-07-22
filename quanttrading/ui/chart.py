@@ -12,6 +12,7 @@ from PySide6.QtGui import Qt
 from typing import Dict, List
 from pandas import DataFrame
 from datetime import datetime
+from ordermanagement import MainEngine
 import logging
 # from abc import ABC
 import asyncio
@@ -44,9 +45,10 @@ class Chart(QtWidgets.QWidget):
     This is the QtWidget that use as the container of the chartGraph and 
     other widgets around it. like ticker combobox, interval spinner
     """
-    def __init__(self, chartName: str = None, assetName: str = None) -> None:
+    def __init__(self, chartName: str = None, assetName: str = None, mainEngine: MainEngine = None) -> None:
         super().__init__()
         self._name = chartName
+        self._mainEngine = mainEngine
 
         if assetName is None:
             assetName = Aiconfig.get("DEFAULT_ASSET")
@@ -72,6 +74,7 @@ class Chart(QtWidgets.QWidget):
 
         self._chartGraph = ChartGraph(self._assetName)
 
+        # ComboBox to select/change/add ticker
         self._tickers = Ticker(Aiconfig.get("ASSET_LIST"))
         
         # connect the events to functions/methods to handle them.
@@ -150,7 +153,10 @@ class ChartGraph(pg.PlotWidget):
     Chart(PlotWidget) --> central Item is layout (GraphicsLayout) --> PlotItem (added by Layout.additem())
     """
         
-    def __init__(self, assetName: str = None, parent: QtWidgets.QWidget = None, size=None, title=None, **kargs):
+    def __init__(self, assetName: str = None, 
+                 parent: QtWidgets.QWidget = None,
+                 mainEngine: MainEngine = None,
+                 size=None, title=None, **kargs):
         super().__init__(parent, **kargs)
 
         self._assetName = assetName

@@ -3,16 +3,82 @@ import pandas as pd
 from data.finlib import Asset
 from datetime import datetime
 import time
+from datatypes import Account
 from ui.chartitems import DataManager
+from utility import _idGenerator, TEMP_DIR, TRADER_DIR, get_file_path
+import shelve
+import asyncio
+
+async def check_connection() -> None:
+        """检查连接"""
+        i = 0
+        while True:
+            i += 1
+            await asyncio.sleep(10)
+            print(f"this is test round  {i=}")
+
+def testasync():
+    loop = asyncio.get_event_loop()
+    # future = loop.create_task(check_connection)
+    loop.run_until_complete(check_connection())
+
+testasync()
+
+def shelveTest():
+    print(f"{TEMP_DIR=} and {TRADER_DIR=}")
+    data_filename: str = "ib_contract_data"
+    data_filepath: str = str(get_file_path(data_filename))
 
 
-# with open("./log/restats", "wb") as f:
-#     f.write(b"hello world")
+    tag = "bond"
+    value = "99999"
+    currency = "USD"
+    account: Account = Account()
+    account.update(id=100,reqId=1000, accountValue={"stocks":["6666666","USD"]})
+    account.get('accountValue').update({tag:[value, currency]})
+    print(f"{account=}")
 
-reqId = {"last":1, "bidask":-1}
+    reqId = {"last":[1,2,3,4], "bidask":-1}
 
-for key, value in reqId.items():
-    print(f"{key=} and {value=}")
+    req = reqId.get("last1", None)
+    if req is None:
+        req = []
+        reqId["last1"] = req
+    req.append(6)
+
+    print(f"{data_filepath=}")
+    with shelve.open(data_filepath) as f:
+        f["account"] = account
+
+
+def generatorTest():
+    i = _idGenerator()
+    for k in range(20):
+        print(f"{next(i)=}")
+
+
+    # with open("./log/restats", "wb") as f:
+    #     f.write(b"hello world")
+
+    tag = "bond"
+    value = "99999"
+    currency = "USD"
+    account: Account = Account()
+    account.update(id=100,reqId=1000, accountValue={"stocks":["6666666","USD"]})
+    account.get('accountValue').update({tag:[value, currency]})
+    print(f"{account=}")
+
+    reqId = {"last":[1,2,3,4], "bidask":-1}
+
+    req = reqId.get("last1", None)
+    if req is None:
+        req = []
+        reqId["last1"] = req
+    req.append(6)
+
+    print(f"{reqId=}")
+    # for key, value in reqId.items():
+    #     print(f"{key=} and {value=}")
 
 
 def testLoc():

@@ -15,7 +15,7 @@ import sys
 from typing import Union, List, Optional, Any as PythonAny
 from decimal import Decimal
 
-from constant import Direction, Exchange, Interval, Offset, Status, Product, OptionType, OrderType
+from constant import Direction, Exchange, Offset, Status, Product, OptionType, OrderType
 
 ACTIVE_STATUSES = set([Status.SUBMITTING, Status.NOTTRADED, Status.PARTTRADED])
 
@@ -49,6 +49,7 @@ Int = Optional[int]
 Bool = Optional[bool]
 MarketType = Literal['spot', 'margin', 'swap', 'future', 'option']
 SubType = Literal['linear', 'inverse']
+Interval = Literal["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "1wk"]
 
 
 class FeeInterface(TypedDict):
@@ -73,8 +74,10 @@ class BalanceAccount(TypedDict):
 
 class Account(TypedDict):
     id: Str
-    type: Str
+    reqId: Str
     code: Str
+    accountValue: Dict[str, list[str,str]] = {}
+    # any information for the account.
     info: Dict[str, Any]
 
 class Ticker(TypedDict):
@@ -503,9 +506,12 @@ class HistoryRequest:
 
     symbol: str
     exchange: Exchange
-    start: datetime
+    start: datetime = None
     end: datetime = None
+    duration: str = ""
     interval: Interval = None
+    keepUpdate: bool = False
+    useRTH: bool = False
 
     def __post_init__(self) -> None:
         """"""

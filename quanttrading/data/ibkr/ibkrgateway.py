@@ -16,15 +16,17 @@ import random
 import queue
 from abc import ABC, abstractmethod
 from typing import Any
+import asyncio
 
 # from ibkr import *
 from .aiorder import *
 from .aicontract import *
 from .ibkr import IbkrApp
 from .aitools import StoppableThread
+from .aicontract import stock_contract
 
 from event.engine import Event, EventEngine
-
+from utility import _idGenerator
 from constant import (
     EVENT_TICK,
     EVENT_ORDER,
@@ -296,10 +298,12 @@ class IbkrGateway(BaseGateway):
     def __init__(self, event_engine: EventEngine, gateway_name: str) -> None:
         """"""
         super().__init__(event_engine, gateway_name)
-
+        self.reqIdGenerator = _idGenerator()
         self._app = IbkrApp()
         self._app_thread: StoppableThread = None
         self._gatewaySetting: dict[str,str|int] = {}
+        self._active: bool = False
+        self._check_connection_future = None
 
     def connect(self, setting: dict) -> None:
         """
@@ -316,6 +320,8 @@ class IbkrGateway(BaseGateway):
             * trades of account: on_trade
         * if any of query above is failed,  write log.
         """
+        self._active = True
+
         if setting is None:
             setting = {}
         
@@ -340,23 +346,12 @@ class IbkrGateway(BaseGateway):
         #Start the socket in a thread
         self._app_thread = StoppableThread(target=self._app.run, daemon=True)
         self._app_thread.start()
-        
-        #Check if the API is connected via orderid
-        while True:
-            if isinstance(self._app.nextorderId, int):
-                logger.info('IbkrGateway connected')
-                break
-            else:
-                logger.info('waiting for connection')
-                time.sleep(1)
-
-        time.sleep(1) #Sleep interval to allow time for connection to server
 
         # requre all the 
-        self._app.reqAccountSummary(9001, "All", AccountSummaryTags.AllTags)
+        # self._app.reqAccountSummary(9001, "All", AccountSummaryTags.AllTags)
 
         #Sleep interval to allow time for response data from server
-        time.sleep(2) 
+        # time.sleep(2) 
 
         # The IBApi.EClient.reqAccountUpdates function creates a subscription 
         # to the TWS through which account and portfolio information is 
@@ -364,9 +359,26 @@ class IbkrGateway(BaseGateway):
         #  within the TWS’ Account Window. Just as with the TWS’ Account 
         # Window, unless there is a position change this information is
         #  updated at a fixed interval of three minutes.
-        self._app.reqAccountUpdates(True, self._app.account)
-        self._app.set_current_Contract(stock_contract("AAPL"))
+        # self._app.reqAccountUpdates(True, self._app.account)
+        # self._app.set_current_Contract(stock_contract("AAPL"))
 
+        self._loop = asyncio.get_event_loop()
+        self._check_connection_future = self._loop.create_task(self.check_connection())
+
+    async def check_connection(self) -> None:
+        """check the connection every 10 seconds."""
+        while self._active:
+            await asyncio.sleep(10)
+            if self._app.isConnected():
+                return
+
+            if self._app.status:
+                self.close()
+
+            self._app.connect(self._gatewaySetting.get('IP'), self._gatewaySetting.get('PORT'), self._gatewaySetting.get('CLIENTID'))
+
+            self._app_thread = StoppableThread(target=self._app.run, daemon=True)
+            self._app_thread.start()
 
     def close(self) -> None:
         """
@@ -376,8 +388,10 @@ class IbkrGateway(BaseGateway):
         #  it can be cancelled by invoking the 
         # IBApi.EClient.reqAccountUpdates method while specifying 
         # the susbcription flag to be False.
-        self._app.reqAccountUpdates(False, self._app.account)
-        time.sleep(1) 
+        self._active = False
+
+        # self._app.reqAccountUpdates(False, self._app.account)
+        # time.sleep(1)
         logger.info("Exiting Program...")
 
         # self.event_engine.stop()
@@ -415,6 +429,27 @@ class IbkrGateway(BaseGateway):
         """
         pass
 
+    def query_history(self, req: HistoryRequest) -> list[BarData]:
+        super().query_history(req)
+        if self._app.isConnected():
+            # contract: Contract, The IBApi.Contract object you are working with.
+            # endDateTime: String, The request’s end date and time.
+            # This should be formatted as “YYYYMMDD HH:mm:ss TMZ” or an empty string indicates current present moment).
+            # durationStr: S/D/W/M/Y. Example '1 D'
+            # barSizeSetting: 1/5/10/15/30 secs, 1 min, 2/3/5/10/15/20/30 mins,
+            # 1 hour, 2/3/4/8 hours, 1 day, 1W, 1M"
+            #     example '1 hour' or '1 min'
+            # whatToShow: These values are used to request different data such as TRADES, MIDPOINT, BID_ASK, ASK, BID data and more.
+            # example: 'Trades
+            # formatDate: 1 String Time Zone Date “20231019 16:11:48 America/New_York”
+            #     2 Epoch Date 1697746308
+            #     3 Day & Time Date “1019 16:11:48 America/New_York”
+            # useRTH 0 = Includes data outside of RTH. 1 = RTH data only
+            self._app.reqHistoricalData(self.nextId, stock_contract(req.symbol,req.exchange), req.end, req.duration, req.interval, "Trades", req.useRTH, 1, req.keepUpdate, [])
+        else:
+            logger.info(f"Ibkrgateway is not connected to the server yet. please connect it first!")
+            return None
+
     def query_account(self) -> None:
         """
         Query account balance.
@@ -427,6 +462,9 @@ class IbkrGateway(BaseGateway):
         """
         pass
 
+    def nextId(self) -> int:
+        """"""
+        return next(self.reqIdGenerator)
 
 def main():
     engine = EventEngine(10)

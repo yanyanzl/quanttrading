@@ -56,7 +56,9 @@ from datatypes import (
     PositionData,
     AccountData,
     ContractData,
-    Exchange
+    Exchange,
+    CandleData,
+    Account
 )
 from setting import SETTINGS
 from utility import get_folder_path, TRADER_DIR
@@ -386,9 +388,18 @@ class OrderManagement(BaseManagement):
 
         # used to save the historical data bars for symbols
         # symbol name to data dict
-        self._hisData: Dict[str, DataFrame] = {}
+        self._hisData: Dict[str, list[CandleData]] = {}
 
-        self.ticks: Dict[str, TickData] = {}
+        # used to save the update of the historical data
+        #  bars. symbol name to data. 
+        self._hisDateUpdate: Dict[str, CandleData] = {}
+
+        # symbol map to tick data (last trade)
+        self._ticksLast: Dict[str, TickData] = {}
+
+        # symbol map to tick data (bid ask)
+        self._ticksBidAsk: Dict[str, TickData] = {}
+
         self.orders: Dict[str, OrderData] = {}
         self.trades: Dict[str, TradeData] = {}
         self.positions: Dict[str, PositionData] = {}
@@ -406,7 +417,10 @@ class OrderManagement(BaseManagement):
 
     def add_function(self) -> None:
         """Add query function to main engine."""
-        self.main_engine.get_tick = self.get_tick
+        self.main_engine.getTickLast = self.getTickLast
+        self.main_engine.getTickBidAsk = self.getTickBidAsk
+        self.main_engine.getHisData = self.getHisData
+        self.main_engine.getHisDataUpdate = self.getHisDataUpdate
         self.main_engine.get_order = self.get_order
         self.main_engine.get_trade = self.get_trade
         self.main_engine.get_position = self.get_position
@@ -439,10 +453,10 @@ class OrderManagement(BaseManagement):
         self.event_engine.register(EVENT_QUOTE, self.process_quote_event)
 
         self.event_engine.register(EVENT_HISDATA, self.processHisData)
-        self.event_engine.register(EVENT_HISDATA_UPDATE, self.eventTest)
-        self.event_engine.register(EVENT_REALTIME_DATA, self.eventTest)
-        self.event_engine.register(EVENT_TICK_LAST_DATA, self.eventTest)
-        self.event_engine.register(EVENT_TICK_BIDASK_DATA, self.eventTest)
+        self.event_engine.register(EVENT_HISDATA_UPDATE, self.processHisDataUpdate)
+        self.event_engine.register(EVENT_REALTIME_DATA, self.processHisDataUpdate)
+        self.event_engine.register(EVENT_TICK_LAST_DATA, self.process_tick_event)
+        self.event_engine.register(EVENT_TICK_BIDASK_DATA, self.process_tick_event)
         self.event_engine.register(EVENT_PORTFOLIO, self.eventTest)
         self.event_engine.register(EVENT_ORDER_STATUS, self.eventTest)
         self.event_engine.register(EVENT_ACCOUNT, self.eventTest)    
@@ -457,13 +471,33 @@ class OrderManagement(BaseManagement):
         process the historical data for a 
         """
         logger.info(f"processing HisData................ \n {event.type=} and {event.data}")
-        # self
+        candle: CandleData = event.data
+        candleList = self._hisData.get(candle.symbol, None)
+        if candleList is None:
+            candleList = []
+            self._hisData[candle.symbol] = candleList
+        candleList.append(candle)
+        
         return True
-
+    
+    def processHisDataUpdate(self, event:Event) -> bool:
+        """
+        process the historical data update every 5 seconds
+        same for realtime data.
+        """
+        logger.info(f"processing HisDataUpdate................ \n {event.type=} and {event.data}")
+        candle: CandleData = event.data
+        self._hisDateUpdate[candle.symbol] = candle
+        
+        return True
+    
     def process_tick_event(self, event: Event) -> None:
         """"""
         tick: TickData = event.data
-        self.ticks[tick.vt_symbol] = tick
+        if event.type == EVENT_TICK_LAST_DATA:
+            self._ticksLast[tick.symbol] = tick
+        elif event.type == EVENT_TICK_BIDASK_DATA:
+            self._ticksBidAsk[tick.symbol] = tick
 
     def process_order_event(self, event: Event) -> None:
         """"""
@@ -503,9 +537,12 @@ class OrderManagement(BaseManagement):
             converter.update_position(position)
 
     def process_account_event(self, event: Event) -> None:
-        """"""
-        account: AccountData = event.data
-        self.accounts[account.vt_accountid] = account
+        """
+        account information. saved in DataFrame object.
+        """
+        account: Account = event.data
+        # account: DataFrame = 
+        self.accounts[account.get('id')] = account
 
     def process_contract_event(self, event: Event) -> None:
         """"""
@@ -528,11 +565,27 @@ class OrderManagement(BaseManagement):
         elif quote.vt_quoteid in self.active_quotes:
             self.active_quotes.pop(quote.vt_quoteid)
 
-    def get_tick(self, vt_symbol: str) -> Optional[TickData]:
+    def getHisData(self, symbol: str) -> Optional[list[CandleData]]:
         """
-        Get latest market tick data by vt_symbol.
         """
-        return self.ticks.get(vt_symbol, None)
+        return self._hisData.get(symbol,None)
+    
+    def getHisDataUpdate(self, symbol: str) -> Optional[CandleData]:
+        """
+        """
+        return self._hisDateUpdate.get(symbol,None)
+    
+    def getTickLast(self, symbol: str) -> Optional[TickData]:
+        """
+        Get latest market tick data by symbol.
+        """
+        return self._ticksLast.get(symbol, None)
+    
+    def getTickBidAsk(self, symbol: str) -> Optional[TickData]:
+        """
+        Get latest market tick data by symbol.
+        """
+        return self._ticksBidAsk.get(symbol, None)
 
     def get_order(self, vt_orderid: str) -> Optional[OrderData]:
         """
@@ -574,7 +627,7 @@ class OrderManagement(BaseManagement):
         """
         Get all tick data.
         """
-        return list(self.ticks.values())
+        return list(self._ticksLast.values())
 
     def get_all_orders(self) -> List[OrderData]:
         """

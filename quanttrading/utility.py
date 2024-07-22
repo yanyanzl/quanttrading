@@ -63,11 +63,24 @@ def setUpLogger(loggingLevel) ->str:
     handlers = [fh, ch]
     logging.basicConfig(handlers=handlers, level=loggingLevel)
 
+def _idGenerator():
+    """ 
+    an Id generator could be used to generate
+    different ids.
+    """
+    num = 0
+    while num < 100000:
+        yield num
+        num += 1
+
 def _getLogFileName() -> str:
     timestring = datetime.now().strftime("%Y-%m-%d-%H")
     return os.path.dirname(os.path.abspath(__file__)) + '/log/' + 'quanttrading'+timestring+'.log'
 
 def timeToStr(time) -> str:
+    """
+    change timestamp to datetime format "%Y%m%d-%H:%M:%S"
+    """
     return datetime.fromtimestamp(time).strftime("%Y%m%d-%H:%M:%S")
 
 def printD(*args, **kwargs):
@@ -156,7 +169,7 @@ def _get_trader_dir(temp_name: str) -> Tuple[Path, Path]:
     cwd: Path = Path.cwd()
     temp_path: Path = cwd.joinpath(temp_name)
 
-    # If .vntrader folder exists in current working directory,
+    # If .qttrader folder exists in current working directory,
     # then use it as trader running path.
     if temp_path.exists():
         return cwd, temp_path
@@ -172,7 +185,7 @@ def _get_trader_dir(temp_name: str) -> Tuple[Path, Path]:
     return home_path, temp_path
 
 
-TRADER_DIR, TEMP_DIR = _get_trader_dir(".vntrader")
+TRADER_DIR, TEMP_DIR = _get_trader_dir(".qttrader")
 sys.path.append(str(TRADER_DIR))
 
 
