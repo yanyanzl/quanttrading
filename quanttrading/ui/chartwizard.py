@@ -5,22 +5,25 @@ from datetime import datetime, timedelta
 from tzlocal import get_localzone_name
 
 from event import EventEngine, Event
+from pandas import DataFrame
 
 from ordermanagement import MainEngine
 from ui import QtWidgets, QtCore
 # from event import EVENT_TICK
-from datatypes import ContractData, TickData, BarData, SubscribeRequest, Interval
+from datatypes import ContractData, TickData, BarData, SubscribeRequest, Interval, HistoryRequest
 from utility import BarGenerator, ZoneInfo
+from data.finlib import Asset
+
 from constant import (
     # Interval,
     Exchange,
     EVENT_TICK,
     EVENT_HISDATA,
+    EVENT_TICK_LAST_DATA,
     EVENT_TIMER
 )
 from .chart import Chart
 # from vnpy_spreadtrading.base import SpreadItem, EVENT_SPREAD_DATA
-
 # from ..engine import APP_NAME, EVENT_CHART_HISTORY, ChartWizardEngine
 
 class ChartWizardWidget(QtWidgets.QWidget):
@@ -70,9 +73,9 @@ class ChartWizardWidget(QtWidgets.QWidget):
 
         self.setLayout(vbox)
 
-    def create_chart(self) -> Chart:
+    def create_chart(self, symbol:str=None) -> Chart:
         """创建图表对象"""
-        chart: Chart = Chart("Real Time Chart", "TSLA")
+        chart: Chart = Chart("Real Time Chart", symbol)
         return chart
 
     def show(self) -> None:
@@ -90,11 +93,11 @@ class ChartWizardWidget(QtWidgets.QWidget):
     def new_chart(self) -> None:
         """创建新的图表"""
         # Filter invalid vt_symbol
-        vt_symbol: str = self.symbol_line.text()
-        if not vt_symbol:
+        symbol: str = self.symbol_line.text()
+        if not symbol:
             return
 
-        if vt_symbol in self.charts:
+        if symbol in self.charts:
             return
 
         # if "LOCAL" not in vt_symbol:
@@ -103,12 +106,12 @@ class ChartWizardWidget(QtWidgets.QWidget):
         #         return
 
         # Create new chart
-        self.bgs[vt_symbol] = BarGenerator(self.on_bar)
+        self.bgs[symbol] = BarGenerator(self.on_bar)
 
-        chart: Chart = self.create_chart()
-        self.charts[vt_symbol] = chart
+        chart: Chart = self.create_chart(symbol)
+        self.charts[symbol] = chart
 
-        self.tab.addTab(chart, vt_symbol)
+        self.tab.addTab(chart, symbol)
 
         # Query history data
         end: datetime = datetime.now(ZoneInfo(get_localzone_name()))
@@ -116,7 +119,7 @@ class ChartWizardWidget(QtWidgets.QWidget):
 
         exchange = Exchange.SMART
         self.query_history(
-            vt_symbol, 
+            symbol, 
             exchange, 
             "1m",
             start,
@@ -129,12 +132,18 @@ class ChartWizardWidget(QtWidgets.QWidget):
         self.signal_history.connect(self.process_history_event)
         self.signal_spread.connect(self.process_spread_event)
 
+        self.event_engine.register(EVENT_HISDATA, self.process_history_event)
+        # self.event_engine.register(EVENT_HISDATA_UPDATE, self.processHisDataUpdate)
+        # self.event_engine.register(EVENT_REALTIME_DATA, self.processHisDataUpdate)
+        # self.event_engine.register(EVENT_TICK_LAST_DATA, self.process_tick_event)
+        # self.event_engine.register(EVENT_TICK_BIDASK_DATA, self.process_tick_event)
+
         self.event_engine.register(EVENT_HISDATA, self.signal_history.emit)
-        self.event_engine.register(EVENT_TICK, self.signal_tick.emit)
+        self.event_engine.register(EVENT_TICK_LAST_DATA, self.signal_tick.emit)
         # self.event_engine.register(EVENT_SPREAD_DATA, self.signal_spread.emit)
 
     def process_tick_event(self, event: Event) -> None:
-        """处理Tick事件"""
+        """process Tick Data Event"""
         tick: TickData = event.data
         bg: Optional[BarGenerator] = self.bgs.get(tick.vt_symbol, None)
 
@@ -147,17 +156,20 @@ class ChartWizardWidget(QtWidgets.QWidget):
             chart.update_bar(bar)
 
     def process_history_event(self, event: Event) -> None:
-        """处理历史事件"""
-        history: List[BarData] = event.data
-        if not history:
+        """
+        process the history data (candlestick data) for a symbol
+        in a chart.
+        """
+        history: DataFrame = event.data
+        if not history or not isinstance(history, DataFrame) or history.empty:
             return
 
-        bar: BarData = history[0]
-        chart: Chart = self.charts[bar.vt_symbol]
+        symbol: str = history.at[history.first_valid_index(), 'Symbol']
+        chart: Chart = self.charts[symbol]
         chart.update_history(history)
 
         # Subscribe following data update
-        contract: Optional[ContractData] = self.main_engine.get_contract(bar.vt_symbol)
+        contract: Optional[ContractData] = self.main_engine.get_contract(symbol)
         if contract:
             req: SubscribeRequest = SubscribeRequest(
                 contract.symbol,
@@ -220,8 +232,7 @@ class ChartWizardWidget(QtWidgets.QWidget):
         end: datetime
     ) -> None:
         """"""
-        from datatypes import HistoryRequest
-        from data.finlib import Asset
+
         req: HistoryRequest = HistoryRequest(
             symbol=symbol,
             exchange=exchange,

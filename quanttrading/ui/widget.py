@@ -603,7 +603,7 @@ class ConnectDialog(QtWidgets.QDialog):
 
     def init_ui(self) -> None:
         """"""
-        self.setWindowTitle(_("连接{}").format(self.gateway_name))
+        self.setWindowTitle(_("Connect {}").format(self.gateway_name))
 
         # Default setting provides field name, field data type and field default value.
         default_setting: dict = self.main_engine.get_default_setting(
@@ -643,7 +643,7 @@ class ConnectDialog(QtWidgets.QDialog):
             form.addRow(f"{field_name} <{field_type.__name__}>", widget)
             self.widgets[field_name] = (widget, field_type)
 
-        button: QtWidgets.QPushButton = QtWidgets.QPushButton(_("连接"))
+        button: QtWidgets.QPushButton = QtWidgets.QPushButton(_("Connect"))
         button.clicked.connect(self.connect)
         form.addRow(button)
 

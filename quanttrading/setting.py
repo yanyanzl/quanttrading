@@ -152,7 +152,7 @@ def initialize_settings_data():
             "font.size": 12,
 
             "log.active": True,
-            "log.level": CRITICAL,
+            "log.level": INFO,
             "log.console": True,
             "log.file": True,
 
@@ -201,7 +201,7 @@ def initialize_settings_data():
             "DEFAULT_CHART_INTERVAL": "1 Minite",
             "DEFAULT_Y_MARGIN": 3,
             "BAR_WIDTH": 0.3,
-            'ACCOUNT_COLUMNS': ['key', 'value', 'currency'],
+            'ACCOUNT_COLUMNS': ['reqid', 'account', 'key', 'value', 'currency'],
 
             'PORTFOLIO_COLUMNS': ['symbol', 'sectype', 'exchange', 'position', 'marketprice', 'marketvalue', 'averagecost', 'unrealizedpnl', 'realizedpnl'], 
 

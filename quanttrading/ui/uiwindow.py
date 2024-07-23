@@ -125,7 +125,7 @@ class MainWindow(QtWidgets.QMainWindow):
             func: Callable = partial(self.connect, name)
             self.add_action(
                 sys_menu,
-                _("连接{}").format(name),
+                _("Connect {}").format(name),
                 # get_icon_path(__file__, "connect.ico"),
                 "connect.ico",
                 func

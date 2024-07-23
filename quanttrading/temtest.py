@@ -8,13 +8,57 @@ from ui.chartitems import DataManager
 from utility import _idGenerator, TEMP_DIR, TRADER_DIR, get_file_path
 import shelve
 import asyncio
+import yfinance as yf
+
+# tsla = yf.Ticker("TSLA")
+
+# df1 = tsla.history(period="1mo")
+# df1.reset_index(inplace=True)
+# print(f"{df1=}")
+
+# df2 = tsla.history(period="1d")
+# df2.reset_index(inplace=True)
+# df2.loc[0,'Open'] = 666
+# df2.loc[0,'Date'] = '2024-07-17 00:00:00-04:00'
+# print(f"{df2=}")
+
+# index = df1[df1['Date'] == df2.at[df2.first_valid_index(), 'Date']].index
+
+# # self._data[self._data['Date'] == bar.at[bar.first_valid_index(), 'Date']].index
+# print(f"{index=}")
+
+# df1 = pd.concat([df1,df2], ignore_index=True)
+# df1.drop_duplicates(subset='Date', keep= "last", inplace= True)
+# df1.sort_values(by=['Date'], inplace= True)
+# df1.reset_index(inplace=True, drop=True)
 
 
-_bar_picutures: dict[int, str] = {}
+# print(f"after drop_duplicates \n {df1=}")
 
-print(f"{_bar_picutures=}")
-print(f"{type(_bar_picutures)=}")
-print(f"{len(_bar_picutures)=}")
+
+# df3 = df1.merge(df2, how='right', on='Date')
+
+# print(f"df1 is \n {df1}")
+# print(f"df3 is \n {df3}")
+
+# print(f"df1[1:] is \n {df1['Date']}")
+# print(f"df1 is \n {df1[df1.columns]}")
+# print(f"{df1.columns}")
+# import numpy as np
+# df1[df1.columns] = np.where(df1['Date'] == df2.at[0,'Date'],df2.iloc[0][df2.columns], df1[df1.columns])
+
+
+# for index in df2.index:
+#     print(f"{df2.iloc[[index]]=}")
+#     df1.loc[df1['Date'] == df2.iloc[[index, 'Date']]]
+#     df1.value
+
+
+# _bar_picutures: dict[int, str] = {}
+
+# print(f"{_bar_picutures=}")
+# print(f"{type(_bar_picutures)=}")
+# print(f"{len(_bar_picutures)=}")
 
 
 async def check_connection() -> None:
@@ -28,9 +72,9 @@ async def check_connection() -> None:
 def testasync():
     loop = asyncio.get_event_loop()
     # future = loop.create_task(check_connection)
-    loop.run_until_complete(check_connection())
+    loop.run_until_complete(check_connection)
 
-# testasync()
+testasync()
 
 def shelveTest():
     print(f"{TEMP_DIR=} and {TRADER_DIR=}")

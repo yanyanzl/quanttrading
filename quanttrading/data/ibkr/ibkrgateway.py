@@ -402,22 +402,27 @@ class IbkrGateway(BaseGateway):
         #  updated at a fixed interval of three minutes.
         # self._app.reqAccountUpdates(True, self._app.account)
         # self._app.set_current_Contract(stock_contract("AAPL"))
-
+        logger.info("entered starting event loop  ")
         self._loop = asyncio.get_event_loop()
+        asyncio.run
         self._check_connection_future = self._loop.create_task(self.check_connection())
+        # await asyncio.gather(self._check_connection_future)
 
     async def check_connection(self) -> None:
         """check the connection every 10 seconds."""
+        logger.info("entered check_connection now ")
         while self._active:
+            logger.info("entered check_connection while_loop now ")
             await asyncio.sleep(10)
             if self._app.isConnected():
+                logger.info("ibkrgateway connected...")
                 return
 
             if self._app.status:
                 self.close()
 
             self._app.connect(self._gatewaySetting.get('IP'), self._gatewaySetting.get('PORT'), self._gatewaySetting.get('CLIENTID'))
-
+            logger.info(f"ibkrgateway: trying to connect to {self._gatewaySetting}......")
             self._app_thread = StoppableThread(target=self._app.run, daemon=True)
             self._app_thread.start()
 

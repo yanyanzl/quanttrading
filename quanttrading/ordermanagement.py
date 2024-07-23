@@ -163,7 +163,7 @@ class MainEngine:
         """
         gateway: BaseGateway = self.gateways.get(gateway_name, None)
         if not gateway:
-            self.write_log(_("找不到底层接口：{}").format(gateway_name))
+            self.write_log(_(f"Can't find {gateway_name=}"))
         return gateway
 
     def getManagement(self, management_name: str) -> "BaseManagement":
@@ -256,7 +256,7 @@ class MainEngine:
 
     def query_history(self, req: HistoryRequest, gateway_name: str) -> Optional[List[BarData]]:
         """
-        Query bar history data from a specific gateway.
+        send request to Query bar history data from a specific gateway.
         """
         gateway: BaseGateway = self.get_gateway(gateway_name)
         if gateway:
@@ -444,7 +444,7 @@ class OrderManagement(BaseManagement):
 
     def register_event(self) -> None:
         """"""
-        self.event_engine.register(EVENT_TICK, self.process_tick_event)
+        # self.event_engine.register(EVENT_TICK, self.process_tick_event)
         self.event_engine.register(EVENT_ORDER, self.process_order_event)
         self.event_engine.register(EVENT_TRADE, self.process_trade_event)
         self.event_engine.register(EVENT_POSITION, self.process_position_event)
@@ -452,14 +452,14 @@ class OrderManagement(BaseManagement):
         self.event_engine.register(EVENT_CONTRACT, self.process_contract_event)
         self.event_engine.register(EVENT_QUOTE, self.process_quote_event)
 
-        self.event_engine.register(EVENT_HISDATA, self.processHisData)
-        self.event_engine.register(EVENT_HISDATA_UPDATE, self.processHisDataUpdate)
-        self.event_engine.register(EVENT_REALTIME_DATA, self.processHisDataUpdate)
-        self.event_engine.register(EVENT_TICK_LAST_DATA, self.process_tick_event)
-        self.event_engine.register(EVENT_TICK_BIDASK_DATA, self.process_tick_event)
+        # self.event_engine.register(EVENT_HISDATA, self.processHisData)
+        # self.event_engine.register(EVENT_HISDATA_UPDATE, self.processHisDataUpdate)
+        # self.event_engine.register(EVENT_REALTIME_DATA, self.processHisDataUpdate)
+        # self.event_engine.register(EVENT_TICK_LAST_DATA, self.process_tick_event)
+        # self.event_engine.register(EVENT_TICK_BIDASK_DATA, self.process_tick_event)
         self.event_engine.register(EVENT_PORTFOLIO, self.eventTest)
         self.event_engine.register(EVENT_ORDER_STATUS, self.eventTest)
-        self.event_engine.register(EVENT_ACCOUNT, self.eventTest)    
+        # self.event_engine.register(EVENT_ACCOUNT, self.eventTest)
         self.event_engine.register_general(self.eventTest)
 
     def eventTest(self, event:Event):

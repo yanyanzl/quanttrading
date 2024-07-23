@@ -1,4 +1,6 @@
 ACCOUNT_COLUMNS:
+- reqid
+- account
 - key
 - value
 - currency
@@ -67,5 +69,5 @@ font.size: 12
 log.active: true
 log.console: true
 log.file: true
-log.level: 50
+log.level: 20
 palette: dark

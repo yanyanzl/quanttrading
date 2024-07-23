@@ -314,6 +314,11 @@ class ChartGraph(pg.PlotWidget):
     def setAsset(self, assetName: str = None, 
                  chartInterval:ChartInterval = None,
                  chartPeriod: ChartPeriod = None) -> bool:
+        return False
+        
+    def _setAsset(self, assetName: str = None, 
+                 chartInterval:ChartInterval = None,
+                 chartPeriod: ChartPeriod = None) -> bool:
         """
         set the current displaying asset in the chart to the new asset.
         """
@@ -430,23 +435,28 @@ class ChartGraph(pg.PlotWidget):
         """
         Update single bar data.
         """
-        """ 
-        self._manager.update_bar(barData)
+        
+        self._dataManager.update_bar(barData)
 
         for item in self._items.values():
-            item.update_bar(bar)
+            item.update_bar(barData)
 
         self._update_plot_limits()
 
-        if self._right_ix >= (self._manager.get_count() - self._bar_count / 2):
+        if self._right_ix >= (self._dataManager.getTotalDataNum() - self._bar_count / 2):
             self.move_to_right()
-        """
-        pass
 
     def update_history(self, barDatas:DataFrame =None) -> None:
+        """
+        Update a list of bar data.
+        """
+        self._dataManager.update_history(barDatas)
 
-        pass
+        for item in self._items.values():
+            item.update_history(barDatas)
 
+        self._update_plot_limits()
+        self.move_to_right()
 
     def _update_plot_limits(self) -> None:
         """

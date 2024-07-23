@@ -6,6 +6,7 @@ from abc import abstractmethod
 from typing import Tuple, List, Dict
 import pyqtgraph as pg
 from pandas import DataFrame, Timestamp, concat
+import pandas as pd
 from .uiapp import QtGui, QtCore, QtWidgets
 from setting import Aiconfig
 from datetime import datetime
@@ -31,10 +32,10 @@ class DataManager():
     """
     MIN_BAR_COUNT = Aiconfig.get("MIN_BAR_COUNT")
 
-    def __init__(self, assetName: str = None, mainEngine: MainEngine=None) -> None:
+    def __init__(self, assetName: str = None) -> None:
         self._data: DataFrame = None
         # self._data.reset_index(inplace=True)
-        self._mainEngine = mainEngine
+        # self._mainEngine = mainEngine
         self._initXRange()
         self._assetName: str = assetName
         self._chartInterval = Aiconfig.get("DEFAULT_CHART_INTERVAL")
@@ -111,15 +112,6 @@ class DataManager():
             logger.info(f"DataManager: setAsset(): failed to setAsset for {assetName}, interval {chartInterval}, period: {period}")
             return False
 
-    def _getHisData(self, assetName:str, interval:str, period:str = None, mainEngine:MainEngine=None) -> DataFrame:
-        """ internal method used to get historical data from server.
-        if mainEngine is provided. get historical data from it.
-        otherwise, get it from default provider. now it's yahoo
-        """
-        if mainEngine is not None:
-            # from datatypes import CandleData
-            return mainEngine.getHisData(assetName)
-        
 
     def _formatData(self, data:DataFrame = None) -> DataFrame:
         if not data and self.isEmpty():
@@ -173,7 +165,24 @@ class DataManager():
         return False
             
         pass
-        
+
+    def update_history(self, data: DataFrame) -> None:
+        """
+        Update a list of bar data.
+        """
+        self.update_bar(data)
+
+    def update_bar(self, bar: DataFrame) -> None:
+        """
+        Update one single bar data.
+        """
+        if isinstance(data, DataFrame) and not data.empty:
+            data = self._formatData(data)
+            self._data = pd.concat([self._data, data], ignore_index=True)
+            self._data.drop_duplicates(subset='Date', keep= "last", inplace= True)
+            self._data.sort_values(by=['Date'], inplace= True)
+            self._data.reset_index(inplace=True, drop=True)        
+
     def append(self, data: DataFrame) -> bool:
 
         if isinstance(data, DataFrame) and not data.empty:
@@ -198,6 +207,17 @@ class DataManager():
             #     self.data.drop()
             pass
 
+    def get_index(self, bar: DataFrame) -> int|None:
+        """ get index by a bar data (Dataframe). get the index by the datetime."""
+        if bar is not None and isinstance(bar, DataFrame) and not bar.empty:
+            try:
+
+                index = self._data[self._data['Date'] == bar.at[bar.first_valid_index(), 'Date']].index
+
+                return index
+            except Exception as e:
+                return None
+            
     def getByIndex(self, index:int) -> DataFrame:
         """
         get a record in the DataFrame by it's index
@@ -339,7 +359,6 @@ class DataManager():
         self.setXMax(0)
         self.setXMin(0)
 
-
     def isEmpty(self) -> bool:
         """
         return True if the _data is None or is empty
@@ -406,6 +425,29 @@ class ChartBase(pg.GraphicsObject):
         rather than re-drawing the shapes every time.
         """
         pass
+
+    def update_history(self, history: DataFrame) -> None:
+        """
+        Update a list of bar data.
+        """
+        self._bar_picutures.clear()
+
+        bars = self._dataManager.getTotalDataNum()
+        for ix in range(bars):
+            self._bar_picutures[ix] = None
+
+        self.update()
+
+    def update_bar(self, bar: DataFrame) -> None:
+        """
+        Update single bar data.
+        """
+        if bar is not None and isinstance(bar, DataFrame) and not bar.empty:
+            ix: int = self._dataManager.get_index(bar)
+
+            self._bar_picutures[ix] = None
+
+            self.update()
 
     def update(self):
         """
