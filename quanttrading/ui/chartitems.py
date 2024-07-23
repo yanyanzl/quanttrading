@@ -217,7 +217,7 @@ class DataManager():
 
     def setXMax(self, max) -> bool:
         
-        if isinstance(max, int) and max < len(self._data.index):
+        if self._data is not None and isinstance(max, int) and max < len(self._data.index):
             self._xMax = max
             return True
         else:
@@ -233,7 +233,7 @@ class DataManager():
         """
         the min visible data's index x
         """
-        if isinstance(min, int) and (0 <= min < len(self._data.index)):
+        if self._data is not None and isinstance(min, int) and (0 <= min < len(self._data.index)):
             self._xMin = min
             return True
         else:
@@ -323,9 +323,12 @@ class DataManager():
     def getTotalDataNum(self) -> int:
         """
         return the total rows (records) in the Dataframe.
+        return 0 if the data is empty now.
         """
         if not self.isEmpty():
             return len(self._data.index)
+        else:
+            return 0
 
     def clearAll(self) -> None:
         """
@@ -386,11 +389,14 @@ class ChartBase(pg.GraphicsObject):
 
     def _initBarPictures(self):
         barNum = 100
-        if not self._dataManager:
+        if not self._dataManager or self._dataManager.isEmpty():
             pass
         else:
-            barNum = self._dataManager.getTotalDataNum()
-        barNum = max(barNum, len(self._bar_picutures))
+            barNum = max(barNum, self._dataManager.getTotalDataNum())
+
+        if self._bar_picutures is not None and len(self._bar_picutures) > 0:
+            print(f"{self._bar_picutures=} and {len(self._bar_picutures)=}")
+            barNum = max(barNum, len(self._bar_picutures))
 
         self._bar_picutures = {n:None for n in range(barNum)}
 

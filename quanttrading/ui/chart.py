@@ -64,6 +64,7 @@ class Chart(QtWidgets.QWidget):
         self._interval:IntervalBox = None # to be defined. as subclass of QSpinbox
 
         self._initUI()
+        self._addFunctions()
     
     def _initUI(self) -> None:
         """ """
@@ -146,6 +147,10 @@ class Chart(QtWidgets.QWidget):
             logger.debug(f"Chart:_tickerEditFinished :: tickerText is invalid : {tickerText}")
         # initialize edited ticker. for the next editing.
         self._addedTicker = ""
+
+    def _addFunctions(self):
+        self.update_bar = self._chartGraph.update_bar
+        self.update_history = self._chartGraph.update_history
 
 class ChartGraph(pg.PlotWidget):
     """
@@ -437,6 +442,11 @@ class ChartGraph(pg.PlotWidget):
             self.move_to_right()
         """
         pass
+
+    def update_history(self, barDatas:DataFrame =None) -> None:
+
+        pass
+
 
     def _update_plot_limits(self) -> None:
         """

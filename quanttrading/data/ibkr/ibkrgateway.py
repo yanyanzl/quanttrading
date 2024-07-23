@@ -55,6 +55,38 @@ from datatypes import (
     BarData
 )
 
+# Exchanges mapping
+EXCHANGE_QT2IB: dict[Exchange, str] = {
+    Exchange.SMART: "SMART",
+    Exchange.NYMEX: "NYMEX",
+    Exchange.COMEX: "COMEX",
+    Exchange.GLOBEX: "GLOBEX",
+    Exchange.IDEALPRO: "IDEALPRO",
+    Exchange.CME: "CME",
+    Exchange.CBOT: "CBOT",
+    Exchange.CBOE: "CBOE",
+    Exchange.ICE: "ICE",
+    Exchange.SEHK: "SEHK",
+    Exchange.SSE: "SEHKNTL",
+    Exchange.SZSE: "SEHKSZSE",
+    Exchange.HKFE: "HKFE",
+    Exchange.CFE: "CFE",
+    Exchange.TSE: "TSE",
+    Exchange.NYSE: "NYSE",
+    Exchange.NASDAQ: "NASDAQ",
+    Exchange.AMEX: "AMEX",
+    Exchange.ARCA: "ARCA",
+    Exchange.EDGEA: "EDGEA",
+    Exchange.ISLAND: "ISLAND",
+    Exchange.BATS: "BATS",
+    Exchange.IEX: "IEX",
+    Exchange.IBKRATS: "IBKRATS",
+    Exchange.OTC: "PINK",
+    Exchange.SGX: "SGX",
+    Exchange.EUREX: "EUREX",
+}
+EXCHANGE_IB2QT: dict[str, Exchange] = {v: k for k, v in EXCHANGE_QT2IB.items()}
+
 class BaseGateway(ABC):
     """
     Abstract gateway class for creating gateways connection
@@ -294,7 +326,15 @@ class BaseGateway(ABC):
 
 
 class IbkrGateway(BaseGateway):
-    
+    default_name: str = "IB"
+    exchanges: list[str] = list(EXCHANGE_QT2IB.keys())
+    default_setting: dict = {
+        "TWS地址": "127.0.0.1",
+        "TWS端口": 7497,
+        "客户号": 1,
+        "交易账户": ""
+    }
+
     def __init__(self, event_engine: EventEngine, gateway_name: str) -> None:
         """"""
         super().__init__(event_engine, gateway_name)
@@ -304,6 +344,7 @@ class IbkrGateway(BaseGateway):
         self._gatewaySetting: dict[str,str|int] = {}
         self._active: bool = False
         self._check_connection_future = None
+
 
     def connect(self, setting: dict) -> None:
         """
@@ -388,6 +429,9 @@ class IbkrGateway(BaseGateway):
         #  it can be cancelled by invoking the 
         # IBApi.EClient.reqAccountUpdates method while specifying 
         # the susbcription flag to be False.
+        if not self._active:
+            return 
+        
         self._active = False
 
         # self._app.reqAccountUpdates(False, self._app.account)
@@ -395,8 +439,9 @@ class IbkrGateway(BaseGateway):
         logger.info("Exiting Program...")
 
         # self.event_engine.stop()
-        self._app.disconnect()
         self._app_thread.stop()
+        self._app.disconnect()
+
 
     def subscribe(self, req: SubscribeRequest) -> None:
         """

@@ -14,7 +14,8 @@ from pathlib import Path  # if you haven't already done so
 file = Path(__file__).resolve()
 sys.path.append(str(file.parents[1]))
 
-from .chart import Chart, ChartGraph
+from .chart import Chart
+from .chartwizard import ChartWizardWidget
 from .uiapp import QtCore, QtGui, QtWidgets
 from .widget import (
     BaseMonitor,
@@ -106,10 +107,8 @@ class MainWindow(QtWidgets.QMainWindow):
         initiate the chart graph
         """
         # to be changed: ***************
-        # self.chartWidget = Chart("AAPL", self)
-        self.chartWidget = Chart("Real Time Chart", "TSLA")
-        # self.chartWidget = ChartGraph("TSLA", self)
-        # self.chartWidget.addCandleItem()
+        # self.chartWidget = Chart("Real Time Chart", "TSLA")
+        self.chartWidget = ChartWizardWidget(self.main_engine,self.event_engine)
 
         self.setCentralWidget(self.chartWidget)
 

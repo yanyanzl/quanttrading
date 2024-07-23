@@ -230,16 +230,17 @@ class AssetBase(object):
             if chartInterval is not None and isinstance(chartInterval, ChartInterval):
                 if period is None:
                     period = ChartPeriod.M6
+            if chartInterval.value in ['1m', '2m','5m','15m']:
+                period = ChartPeriod.D5
 
-                self.his_price = yf.download(self.name, 
-                                             interval=chartInterval.value,
-                                              period=period.value,
-                                              rounding=True, 
-                                              session=csession
-                                              )
+            self.his_price = yf.download(self.name, 
+                                            interval=chartInterval.value,
+                                            period=period.value,
+                                            rounding=True, 
+                                            session=csession
+                                            )
 
-                return self.his_price
-            return None
+            return self.his_price
         except Exception as e:
             logger.warning(f"Asset: getMarketData(): can't get data for {self.name} for interval {chartInterval} and period: {period}")
             return None

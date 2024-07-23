@@ -9,6 +9,14 @@ from utility import _idGenerator, TEMP_DIR, TRADER_DIR, get_file_path
 import shelve
 import asyncio
 
+
+_bar_picutures: dict[int, str] = {}
+
+print(f"{_bar_picutures=}")
+print(f"{type(_bar_picutures)=}")
+print(f"{len(_bar_picutures)=}")
+
+
 async def check_connection() -> None:
         """检查连接"""
         i = 0
@@ -22,7 +30,7 @@ def testasync():
     # future = loop.create_task(check_connection)
     loop.run_until_complete(check_connection())
 
-testasync()
+# testasync()
 
 def shelveTest():
     print(f"{TEMP_DIR=} and {TRADER_DIR=}")

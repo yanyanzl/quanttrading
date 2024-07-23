@@ -120,6 +120,8 @@ class IbkrApp(AiWrapper, AiClient):
         self._eventEngine = eventEngine
         self._gateway = gwName
         self._name = IbkrAppName
+        
+        # app connected to server or not
         self.status: bool = False
         
         self.account: Account = Account()
