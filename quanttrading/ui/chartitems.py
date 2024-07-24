@@ -182,20 +182,20 @@ class DataManager():
         """
         Update one single bar data.
         """
-        logger.info(f"here in DataManager:: update_bar:: {len(data)}")
+        logger.debug(f"here in DataManager:: update_bar:: {len(data)}")
         if isinstance(data, DataFrame) and not data.empty:
             data = self._formatData(data)
             self._data = pd.concat([self._data, data], ignore_index=True)
             self._data.drop_duplicates(subset='Date', keep= "last", inplace= True)
 
-            logger.warning(f"DataManager:: update_bar ...... \n {len(self._data)}")
+            logger.debug(f"DataManager:: update_bar ...... \n {len(self._data)}")
 
             self._data.sort_values(by=['Date'], inplace= True)
             self._data.reset_index(inplace=True, drop=True)
             self._assetName = data.at[data.first_valid_index(),'Symbol']
 
             self._initXRange()
-            logger.warning(f"DataManager:: update_bar update finished.")
+            logger.debug(f"DataManager:: update_bar update finished.")
 
     def append(self, data: DataFrame) -> bool:
 
@@ -444,11 +444,11 @@ class ChartBase(pg.GraphicsObject):
         """
         Update a list of bar data.
         """
-        logger.info(f"in chartbase:: update_history:: now......")
+        logger.debug(f"in chartbase:: update_history:: now......")
         self._bar_picutures.clear()
 
         bars = self._dataManager.getTotalDataNum()
-        logger.info(f"in chartbase:: update_history:: {bars=} ......")
+        logger.debug(f"in chartbase:: update_history:: {bars=} ......")
         for ix in range(bars):
             self._bar_picutures[ix] = None
 
@@ -475,11 +475,11 @@ class ChartBase(pg.GraphicsObject):
         """
         only update the drawing for the changed part of the data
         """
-        logger.info(f"entered update ..............")
+        logger.debug(f"entered update ..............")
         if self.scene():
             self._to_update = True
             self.scene().update()
-        logger.info(f" update completed ..............")
+        logger.debug(f" update completed ..............")
 
     def update_all(self):
         """
@@ -508,7 +508,7 @@ class ChartBase(pg.GraphicsObject):
         """
         self._item_picuture = None
         self._bar_picutures.clear()
-        logger.info(f"chartbase:clearAll:: self.bar_pictures is {self._bar_picutures}")
+        logger.debug(f"chartbase:clearAll:: self.bar_pictures is {self._bar_picutures}")
         self.update()
 
     def setAsset(self, dataManager:DataManager) -> bool:
@@ -578,18 +578,18 @@ class ChartBase(pg.GraphicsObject):
         """
         Draw the picture of item in specific range.
         """
-        logger.info(f"entered into chartbase:: _drawItemPicture:: {min_ix} and {max_ix}")
+        logger.debug(f"entered into chartbase:: _drawItemPicture:: {min_ix} and {max_ix}")
 
         self._item_picuture = QtGui.QPicture()
         painter: QtGui.QPainter = QtGui.QPainter(self._item_picuture)
 
         for ix in range(min_ix, max_ix):
-            logger.info(f"chartbase:: _drawItemPicture:: enter for loop {len(self._bar_picutures)}")
+            # logger.info(f"chartbase:: _drawItemPicture:: enter for loop {len(self._bar_picutures)}")
             bar_picture: QtGui.QPicture = self._bar_picutures[ix]
             
             if bar_picture is None:
                 # bar:DataFrame  = self._dataManager.getByIndex(ix)
-                logger.info(f"chartbase:: _drawItemPicture:: before _drawBarPicture ")
+                # logger.info(f"chartbase:: _drawItemPicture:: before _drawBarPicture ")
                 bar_picture = self._drawBarPicture(ix)
                 self._bar_picutures[ix] = bar_picture
 
@@ -729,16 +729,14 @@ class CandlestickItems(ChartBase):
         """
         Draw picture for specific bar.
         """
-        logger.info(f"now in candlestickitems:: _drawBarpictures:: {index_x=}")
         # Create candle picture's object
         candle_picture: QtGui.QPicture = QtGui.QPicture()
         p: QtGui.QPainter = QtGui.QPainter(candle_picture)
 
         data = self._dataManager.getByIndex(index_x)
-        logger.info(f"candlestickitems:: _drawBarpictures:: {data=}")
+        logger.debug(f"candlestickitems:: _drawBarpictures:: {data=}")
         if data is not None and not data.empty:
             w = self._candle_width
-            logger.info(f"candlestickitems:: _drawBarpictures:: before painting.")
 
             if data.at[index_x, 'Open'] > data.at[index_x, 'Close']:
                 p.setBrush(self._down_brush)
@@ -824,7 +822,7 @@ class VolumeItem(ChartBase):
 
         # data = self._dataManager.getByIndex(ix)
         bar = Candlestick(self._dataManager, ix)
-        logger.info(f"entered VolumeItem:: _drawBarPicture:: {ix=} ......")
+        logger.debug(f"entered VolumeItem:: _drawBarPicture:: {ix=} ......")
         if bar is not None and bar.dateTime is not None:
 
             # Set painter color

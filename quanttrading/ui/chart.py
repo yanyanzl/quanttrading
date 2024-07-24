@@ -481,16 +481,16 @@ class ChartGraph(pg.PlotWidget):
         """
         Update a list of bar data.
         """
-        logger.info(f"ChartGraph:: update_history:: {len(barDatas)=}")
+        logger.debug(f"ChartGraph:: update_history:: {len(barDatas)=}")
         self._dataManager.update_history(barDatas)
 
         for item in self._items.values():
-            logger.info(f"ChartGraph:: update_history:: ... item {item=}")
+            logger.debug(f"ChartGraph:: update_history:: ... item {item=}")
             item.update_history(barDatas)
 
         self._update_plot_limits()
         self.move_to_right()
-        logger.info(f"leaving ChartGraph:: update_history now....")
+        logger.debug(f"leaving ChartGraph:: update_history now....")
 
     def _update_plot_limits(self) -> None:
         """
@@ -511,19 +511,19 @@ class ChartGraph(pg.PlotWidget):
         """
         Update the x-axis range of plots.
         """
-        max_ix: int = self._right_ix
-        min_ix: int = self._right_ix - self._bar_count
-        logger.info(f"ChartGraph:: _update_x_range:: self._right_ix is {self._right_ix} and self._bar_count is {self._bar_count}, min_ix is {min_ix}")
+        max_ix: int = int(self._right_ix)
+        min_ix: int = int(self._right_ix - self._bar_count)
+        logger.debug(f"ChartGraph:: _update_x_range:: self._right_ix is {self._right_ix} and self._bar_count is {self._bar_count}, min_ix is {min_ix}")
 
         self._dataManager.setXMax(self._right_ix)        
         min_x = max(0, int(self._right_ix - self._bar_count))
         min_x = min(min_x, self._right_ix)
 
         self._dataManager.setXMin(min_x)
-        logger.info(f"ChartGraph:: _update_x_range:: min_x is {self._dataManager.getXMin()} and max_x is {self._dataManager.getXMax()}")
+        logger.debug(f"ChartGraph:: _update_x_range:: min_x is {self._dataManager.getXMin()} and max_x is {self._dataManager.getXMax()}")
 
         for plot in self._plots.values():
-            logger.info(f"chartGraph :_update_x_range: plot is {plot.objectName()} and min_ix, max_ix is {min_ix, max_ix}")
+            logger.debug(f"chartGraph :_update_x_range: plot is {plot.objectName()} and min_ix, max_ix is {min_ix, max_ix}")
             plot.setRange(xRange=(min_ix, max_ix), padding=0)
 
     def _update_y_range(self) -> None:
@@ -683,12 +683,8 @@ class ChartGraph(pg.PlotWidget):
         Move chart to the most right.
         """
         self._right_ix = self._dataManager.lastIndex()
-        logger.info("inside move_to_right now...")
         self._update_x_range()
-        logger.info("inside move_to_right after update_x_range...")
         self._chartCursor.update_info()
-        logger.info("inside move_to_right after update_info... leaving move_to_right now")
-
 
 class ChartCursor(QtCore.QObject):
     """"""
@@ -875,7 +871,7 @@ class ChartCursor(QtCore.QObject):
         
         """
         buf: dict = {}
-        logger.info("entered chartCursor:: update_info:: ........")
+        logger.debug("entered chartCursor:: update_info:: ........")
         for item, plot in self._item_plot_map.items():
             logger.debug(f"item is {item} and plot is {plot} and plotname is {plot.objectName()}")
             item_info_text: str = item.get_info_text(self._x)
@@ -894,17 +890,12 @@ class ChartCursor(QtCore.QObject):
 
                 # print(f"polot_info_text is {plot_info_text}")
                 info: pg.TextItem = self._infos[plot_name]
-                logger.info("point 1 ..........")
                 # print(f"info is {info}")
                 info.setText(plot_info_text)
-                logger.info("point 2..........")
                 # print(f"info is {info}")
                 info.setOpacity(0.5)
-                logger.info("point 3 ..........")
                 info.show()
-                logger.info("point 4 ..........")
                 info.setPos(self._x, self._y)
-                logger.info("point 5 ..........")
 
     def move_right(self) -> None:
         """
