@@ -3,7 +3,7 @@ This is the module for chart displaying and interactive
 support real time data and data from files
 """
 from time import perf_counter, perf_counter_ns
-
+from typing import Type
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
 from PySide6 import QtWidgets
@@ -151,6 +151,9 @@ class Chart(QtWidgets.QWidget):
     def _addFunctions(self):
         self.update_bar = self._chartGraph.update_bar
         self.update_history = self._chartGraph.update_history
+        self.add_plot = self._chartGraph.add_plot
+        self.add_cursor = self._chartGraph.add_cursor
+        self.add_item = self._chartGraph.add_item
 
 class ChartGraph(pg.PlotWidget):
     """
@@ -166,7 +169,7 @@ class ChartGraph(pg.PlotWidget):
 
         self._assetName = assetName
         # self._chartInterval = Aiconfig.get("DEFAULT_CHART_INTERVAL")
-        self._dataManager: DataManager = None
+        # self._dataManager: DataManager = None
 
         self._plots: Dict[str, pg.PlotItem] = {}
         self._items: Dict[str, ChartBase] = {}
@@ -183,6 +186,7 @@ class ChartGraph(pg.PlotWidget):
         self._candlestickManager: CandlestickItems = None
         self._volumeManager: VolumeItem = None
         self._chartCursor: ChartCursor = None
+
         if self._assetName is None:
             self._assetName = Aiconfig.get("DEFAULT_ASSET")
 
@@ -196,8 +200,8 @@ class ChartGraph(pg.PlotWidget):
         self._init_ui()
 
         # postpone the initialize of the asset and drawing of chart picture
-        self.setAsset(self._assetName)
-        self._chartCursor = ChartCursor(self, self._dataManager, self._plots, self._item_plot_map)
+        # self.setAsset(self._assetName)
+        
 
     def _init_ui(self) -> None:
         """
@@ -213,9 +217,20 @@ class ChartGraph(pg.PlotWidget):
         # self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
 
         # create self._first_plot which is candle_plot
-        self.add_plot(CANDLE_PLOT_NAME)
-        # create volume_plot
-        self.add_plot(VOLUME_PLOT_NAME,maximum_height=200)
+        # self.add_plot(CANDLE_PLOT_NAME)
+        # # create volume_plot
+        # self.add_plot(VOLUME_PLOT_NAME, maximum_height=200)
+
+        # self._candlestickManager = CandlestickItems(self._dataManager)
+        # self.add_item(self._candlestickManager, "CandlestickItems", plot_name=CANDLE_PLOT_NAME)
+        # logger.info(f"ChartGraph:: setAsset:: set self._candlestickManager for first time {self._candlestickManager}")
+
+        # self._volumeManager = VolumeItem(self._dataManager)
+        # self.add_item(self._volumeManager, "VolumeItems", plot_name=VOLUME_PLOT_NAME)
+        # logger.info(f"ChartGraph:: setAsset::set self._volumeManager for the first time {self._volumeManager}")
+        # self._chartCursor = ChartCursor(self, self._dataManager, self._plots, self._item_plot_map)
+
+        self._initXRange()
 
     def add_plot(
         self,
@@ -293,6 +308,42 @@ class ChartGraph(pg.PlotWidget):
             interval = stringToInterval(intervalText)
             self.setAsset(chartInterval=interval)
 
+    def add_cursor(self) -> None:
+        """"""
+        if not self._chartCursor:
+            self._chartCursor = ChartCursor(
+                self, self._dataManager, self._plots, self._item_plot_map)
+
+    # def add_item(self, item: ChartBase, item_name: str,
+    #              plot_name: str) -> None:
+    #     """
+    #     Add chart item.
+    #     """
+    #     self._items[item_name] = item
+
+    #     plot: pg.PlotItem = self._plots.get(plot_name)
+    #     plot.addItem(item)
+
+    #     self._item_plot_map[item] = plot
+    #     self._update_plot_limits()
+
+    def add_item(
+        self,
+        item_class: Type[ChartBase],
+        item_name: str,
+        plot_name: str
+    ) -> None:
+        """
+        Add chart item.
+        """
+        item: ChartBase = item_class(self._dataManager)
+        self._items[item_name] = item
+
+        plot: pg.PlotItem = self._plots.get(plot_name)
+        plot.addItem(item)
+
+        self._item_plot_map[item] = plot
+
     def _initXRange(self):
         """
         
@@ -311,10 +362,9 @@ class ChartGraph(pg.PlotWidget):
             #     logger.info(f"chartGraph :_initXRange: item {itemname} is updating ...")
             #     item.update()
 
-    def setAsset(self, assetName: str = None, 
-                 chartInterval:ChartInterval = None,
-                 chartPeriod: ChartPeriod = None) -> bool:
-        return False
+    def setAsset(self, assetName: str = None) -> bool:
+
+            return True
         
     def _setAsset(self, assetName: str = None, 
                  chartInterval:ChartInterval = None,
@@ -380,25 +430,6 @@ class ChartGraph(pg.PlotWidget):
         # return pg.DateAxisItem()
         return DatetimeAxis(self._dataManager, orientation="bottom")
 
-    def add_cursor(self) -> None:
-        """"""
-        if not self._chartCursor:
-            self._chartCursor = ChartCursor(
-                self, self._dataManager, self._plots, self._item_plot_map)
-
-    def add_item(self, item: ChartBase, item_name: str,
-                 plot_name: str) -> None:
-        """
-        Add chart item.
-        """
-        self._items[item_name] = item
-
-        plot: pg.PlotItem = self._plots.get(plot_name)
-        plot.addItem(item)
-
-        self._item_plot_map[item] = plot
-        self._update_plot_limits()
-
     def get_plot(self, plot_name: str) -> pg.PlotItem:
         """
         Get specific plot with its name.
@@ -450,21 +481,25 @@ class ChartGraph(pg.PlotWidget):
         """
         Update a list of bar data.
         """
+        logger.info(f"ChartGraph:: update_history:: {len(barDatas)=}")
         self._dataManager.update_history(barDatas)
 
         for item in self._items.values():
+            logger.info(f"ChartGraph:: update_history:: ... item {item=}")
             item.update_history(barDatas)
 
         self._update_plot_limits()
         self.move_to_right()
+        logger.info(f"leaving ChartGraph:: update_history now....")
 
     def _update_plot_limits(self) -> None:
         """
         Update the limit of plots.
         """
+        logger.debug(f"chartGraph:: _update_plot_limits.......")
         for item, plot in self._item_plot_map.items():
             min_value, max_value = item.get_y_range(self._dataManager.getXMin(), self._dataManager.getXMax())
-
+            logger.debug(f"chartGraph:: _update_plot_limits....... {min_value=}, {max_value=} ")
             plot.setLimits(
                 xMin=-1,
                 xMax=self._dataManager.getXMax(),
@@ -478,17 +513,17 @@ class ChartGraph(pg.PlotWidget):
         """
         max_ix: int = self._right_ix
         min_ix: int = self._right_ix - self._bar_count
-        logger.debug(f"ChartGraph:: _update_x_range:: self._right_ix is {self._right_ix} and self._bar_count is {self._bar_count}, min_ix is {min_ix}")
+        logger.info(f"ChartGraph:: _update_x_range:: self._right_ix is {self._right_ix} and self._bar_count is {self._bar_count}, min_ix is {min_ix}")
 
         self._dataManager.setXMax(self._right_ix)        
         min_x = max(0, int(self._right_ix - self._bar_count))
         min_x = min(min_x, self._right_ix)
 
         self._dataManager.setXMin(min_x)
-        logger.debug(f"ChartGraph:: _update_x_range:: min_x is {self._dataManager.getXMin()} and max_x is {self._dataManager.getXMax()}")
+        logger.info(f"ChartGraph:: _update_x_range:: min_x is {self._dataManager.getXMin()} and max_x is {self._dataManager.getXMax()}")
 
         for plot in self._plots.values():
-            logger.debug(f"chartGraph :_update_x_range: plot is {plot.objectName()} and min_ix, max_ix is {min_ix, max_ix}")
+            logger.info(f"chartGraph :_update_x_range: plot is {plot.objectName()} and min_ix, max_ix is {min_ix, max_ix}")
             plot.setRange(xRange=(min_ix, max_ix), padding=0)
 
     def _update_y_range(self) -> None:
@@ -648,9 +683,11 @@ class ChartGraph(pg.PlotWidget):
         Move chart to the most right.
         """
         self._right_ix = self._dataManager.lastIndex()
-        logger.debug("inside move_to_right now...")
+        logger.info("inside move_to_right now...")
         self._update_x_range()
+        logger.info("inside move_to_right after update_x_range...")
         self._chartCursor.update_info()
+        logger.info("inside move_to_right after update_info... leaving move_to_right now")
 
 
 class ChartCursor(QtCore.QObject):
@@ -838,7 +875,7 @@ class ChartCursor(QtCore.QObject):
         
         """
         buf: dict = {}
-
+        logger.info("entered chartCursor:: update_info:: ........")
         for item, plot in self._item_plot_map.items():
             logger.debug(f"item is {item} and plot is {plot} and plotname is {plot.objectName()}")
             item_info_text: str = item.get_info_text(self._x)
@@ -849,23 +886,25 @@ class ChartCursor(QtCore.QObject):
             else:
                 if item_info_text:
                     buf[plot] += ("\n" + item_info_text)
-         
-        for plot_name, plot in self._plots.items():
-            plot_info_text: str = buf[plot]
-            logger.debug(f"plot_info_text is {plot_info_text}")
 
-            # print(f"polot_info_text is {plot_info_text}")
-            info: pg.TextItem = self._infos[plot_name]
-            # print(f"info is {info}")
-            info.setText(plot_info_text)
-            # print(f"info is {info}")
-            info.setOpacity(0.5)
-            info.show()
-            info.setPos(self._x, self._y)
-        
-            # view: pg.ViewBox = self._views[plot_name]
-            # top_left = view.mapSceneToView(view.sceneBoundingRect().topLeft())
-            # info.setPos(top_left)
+        if len(buf) > 0:
+            for plot_name, plot in self._plots.items():
+                plot_info_text: str = buf[plot]
+                logger.debug(f"plot_info_text is {plot_info_text}")
+
+                # print(f"polot_info_text is {plot_info_text}")
+                info: pg.TextItem = self._infos[plot_name]
+                logger.info("point 1 ..........")
+                # print(f"info is {info}")
+                info.setText(plot_info_text)
+                logger.info("point 2..........")
+                # print(f"info is {info}")
+                info.setOpacity(0.5)
+                logger.info("point 3 ..........")
+                info.show()
+                logger.info("point 4 ..........")
+                info.setPos(self._x, self._y)
+                logger.info("point 5 ..........")
 
     def move_right(self) -> None:
         """

@@ -464,7 +464,9 @@ class OrderManagement(BaseManagement):
 
     def eventTest(self, event:Event):
         # logger.info(f"this is successful now=============================")
-        logger.info(f"{event.type=}, and {event.data=}")
+        logger.info(f"orderManagement:: eventTest:: ===================== " +
+                    f"general handler for event now.\n {event.type=}")
+        pass
 
     def processHisData(self, event:Event) -> bool:
         """

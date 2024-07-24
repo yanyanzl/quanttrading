@@ -6,7 +6,7 @@ from tzlocal import get_localzone_name
 
 from event import EventEngine, Event
 from pandas import DataFrame
-
+import logging
 from ordermanagement import MainEngine
 from ui import QtWidgets, QtCore
 # from event import EVENT_TICK
@@ -23,8 +23,11 @@ from constant import (
     EVENT_TIMER
 )
 from .chart import Chart
+from .chartitems import CandlestickItems, VolumeItem
 # from vnpy_spreadtrading.base import SpreadItem, EVENT_SPREAD_DATA
 # from ..engine import APP_NAME, EVENT_CHART_HISTORY, ChartWizardEngine
+
+logger = logging.getLogger(__name__)
 
 class ChartWizardWidget(QtWidgets.QWidget):
     """charts control widget"""
@@ -76,6 +79,11 @@ class ChartWizardWidget(QtWidgets.QWidget):
     def create_chart(self, symbol:str=None) -> Chart:
         """创建图表对象"""
         chart: Chart = Chart("Real Time Chart", symbol)
+        chart.add_plot("candle", hide_x_axis=True)
+        chart.add_plot("volume", maximum_height=200)
+        chart.add_item(CandlestickItems, "candle", "candle")
+        chart.add_item(VolumeItem, "volume", "volume")
+        chart.add_cursor()
         return chart
 
     def show(self) -> None:
@@ -115,7 +123,7 @@ class ChartWizardWidget(QtWidgets.QWidget):
 
         # Query history data
         end: datetime = datetime.now(ZoneInfo(get_localzone_name()))
-        start: datetime = end - timedelta(days=5)
+        start: datetime = end - timedelta(days=1)
 
         exchange = Exchange.SMART
         self.query_history(
@@ -129,16 +137,11 @@ class ChartWizardWidget(QtWidgets.QWidget):
     def register_event(self) -> None:
         """注册事件监听"""
         self.signal_tick.connect(self.process_tick_event)
-        self.signal_history.connect(self.process_history_event)
+        # self.signal_history.connect(self.process_history_event)
         self.signal_spread.connect(self.process_spread_event)
 
         self.event_engine.register(EVENT_HISDATA, self.process_history_event)
-        # self.event_engine.register(EVENT_HISDATA_UPDATE, self.processHisDataUpdate)
-        # self.event_engine.register(EVENT_REALTIME_DATA, self.processHisDataUpdate)
-        # self.event_engine.register(EVENT_TICK_LAST_DATA, self.process_tick_event)
-        # self.event_engine.register(EVENT_TICK_BIDASK_DATA, self.process_tick_event)
-
-        self.event_engine.register(EVENT_HISDATA, self.signal_history.emit)
+        # self.event_engine.register(EVENT_HISDATA, self.signal_history.emit)
         self.event_engine.register(EVENT_TICK_LAST_DATA, self.signal_tick.emit)
         # self.event_engine.register(EVENT_SPREAD_DATA, self.signal_spread.emit)
 
@@ -161,21 +164,27 @@ class ChartWizardWidget(QtWidgets.QWidget):
         in a chart.
         """
         history: DataFrame = event.data
-        if not history or not isinstance(history, DataFrame) or history.empty:
+        if history is None or not isinstance(history, DataFrame) or history.empty:
             return
 
         symbol: str = history.at[history.first_valid_index(), 'Symbol']
         chart: Chart = self.charts[symbol]
+        logger.info(f"ChartWizardWidget:: process the history event data:\n {len(history)}")
         chart.update_history(history)
 
         # Subscribe following data update
+        logger.info(f"ChartWizardWidget:: process the history :: after chart update_history...")
         contract: Optional[ContractData] = self.main_engine.get_contract(symbol)
+        logger.info(f"ChartWizardWidget:: process the history :: after chart update_history 2...")
         if contract:
+            logger.info(f"ChartWizardWidget:: process the history :: enter if ...")
             req: SubscribeRequest = SubscribeRequest(
                 contract.symbol,
                 contract.exchange
             )
             self.main_engine.subscribe(req, contract.gateway_name)
+
+        logger.info(f"ChartWizardWidget:: process the history :: leaving  process_history_event ...")
 
     def process_spread_event(self, event: Event) -> None:
         """处理价差事件"""

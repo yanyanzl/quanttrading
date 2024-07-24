@@ -41,8 +41,8 @@ class DataManager():
         self._chartInterval = Aiconfig.get("DEFAULT_CHART_INTERVAL")
         self._yMarginPercent:int = int(Aiconfig.get("DEFAULT_Y_MARGIN"))/100
 
-        if assetName is not None:
-            self.setAsset(assetName)
+        # if assetName is not None:
+        #     self.setAsset(assetName)
 
         # self.register_event()
 
@@ -52,10 +52,16 @@ class DataManager():
             self._xMin = 0      # the min visible data's index x
         else:
             self._xMax = self.lastIndex()
-            self._xMin = max(0, self._xMax - self.MIN_BAR_COUNT)
-
+            # self._xMin = max(0, self._xMax - self.MIN_BAR_COUNT)
+            self._xMin = self._data.first_valid_index
 
     def setAsset(self, assetName: str = None, 
+                    chartInterval: ChartInterval = None,
+                    period: ChartPeriod = ChartPeriod.Y1
+                    ) -> bool:
+        return True
+
+    def _setAsset(self, assetName: str = None, 
                  chartInterval: ChartInterval = None,
                  period: ChartPeriod = ChartPeriod.Y1
                  ) -> bool:
@@ -114,9 +120,9 @@ class DataManager():
 
 
     def _formatData(self, data:DataFrame = None) -> DataFrame:
-        if not data and self.isEmpty():
-            return None
-        if not data:
+        if data is None:
+            if self.isEmpty():
+                return None
             self._data.reset_index(inplace=True)
             self._data.rename(columns={"Datetime":"Date"}, inplace=True)
         else:
@@ -148,8 +154,8 @@ class DataManager():
         if self._data is None or self._data.empty or index not in self._data.index:
             return None
         else:
-            date: Timestamp = self._data.loc[index]['Date']
-            return date.to_pydatetime()
+            date: datetime = datetime.strptime(self._data.loc[index]['Date'], "%Y%m%d %H:%M:%S")
+            return date
         
     def getData(self) -> DataFrame:
         return self._data
@@ -172,16 +178,24 @@ class DataManager():
         """
         self.update_bar(data)
 
-    def update_bar(self, bar: DataFrame) -> None:
+    def update_bar(self, data: DataFrame) -> None:
         """
         Update one single bar data.
         """
+        logger.info(f"here in DataManager:: update_bar:: {len(data)}")
         if isinstance(data, DataFrame) and not data.empty:
             data = self._formatData(data)
             self._data = pd.concat([self._data, data], ignore_index=True)
             self._data.drop_duplicates(subset='Date', keep= "last", inplace= True)
+
+            logger.warning(f"DataManager:: update_bar ...... \n {len(self._data)}")
+
             self._data.sort_values(by=['Date'], inplace= True)
-            self._data.reset_index(inplace=True, drop=True)        
+            self._data.reset_index(inplace=True, drop=True)
+            self._assetName = data.at[data.first_valid_index(),'Symbol']
+
+            self._initXRange()
+            logger.warning(f"DataManager:: update_bar update finished.")
 
     def append(self, data: DataFrame) -> bool:
 
@@ -430,11 +444,19 @@ class ChartBase(pg.GraphicsObject):
         """
         Update a list of bar data.
         """
+        logger.info(f"in chartbase:: update_history:: now......")
         self._bar_picutures.clear()
 
         bars = self._dataManager.getTotalDataNum()
+        logger.info(f"in chartbase:: update_history:: {bars=} ......")
         for ix in range(bars):
             self._bar_picutures[ix] = None
+
+        # min_x = 0
+        # max_x = bars-1
+        # logger.info(f"in chartbase:: update_history:: {min_x=} and {max_x=} ......")
+        # if max_x > min_x:
+        #     self._drawItemPicture(min_x, max_x)
 
         self.update()
 
@@ -453,9 +475,11 @@ class ChartBase(pg.GraphicsObject):
         """
         only update the drawing for the changed part of the data
         """
+        logger.info(f"entered update ..............")
         if self.scene():
             self._to_update = True
             self.scene().update()
+        logger.info(f" update completed ..............")
 
     def update_all(self):
         """
@@ -554,14 +578,18 @@ class ChartBase(pg.GraphicsObject):
         """
         Draw the picture of item in specific range.
         """
+        logger.info(f"entered into chartbase:: _drawItemPicture:: {min_ix} and {max_ix}")
+
         self._item_picuture = QtGui.QPicture()
         painter: QtGui.QPainter = QtGui.QPainter(self._item_picuture)
 
         for ix in range(min_ix, max_ix):
+            logger.info(f"chartbase:: _drawItemPicture:: enter for loop {len(self._bar_picutures)}")
             bar_picture: QtGui.QPicture = self._bar_picutures[ix]
             
             if bar_picture is None:
                 # bar:DataFrame  = self._dataManager.getByIndex(ix)
+                logger.info(f"chartbase:: _drawItemPicture:: before _drawBarPicture ")
                 bar_picture = self._drawBarPicture(ix)
                 self._bar_picutures[ix] = bar_picture
 
@@ -701,14 +729,16 @@ class CandlestickItems(ChartBase):
         """
         Draw picture for specific bar.
         """
-        
+        logger.info(f"now in candlestickitems:: _drawBarpictures:: {index_x=}")
         # Create candle picture's object
         candle_picture: QtGui.QPicture = QtGui.QPicture()
         p: QtGui.QPainter = QtGui.QPainter(candle_picture)
 
         data = self._dataManager.getByIndex(index_x)
+        logger.info(f"candlestickitems:: _drawBarpictures:: {data=}")
         if data is not None and not data.empty:
             w = self._candle_width
+            logger.info(f"candlestickitems:: _drawBarpictures:: before painting.")
 
             if data.at[index_x, 'Open'] > data.at[index_x, 'Close']:
                 p.setBrush(self._down_brush)
@@ -794,7 +824,7 @@ class VolumeItem(ChartBase):
 
         # data = self._dataManager.getByIndex(ix)
         bar = Candlestick(self._dataManager, ix)
-
+        logger.info(f"entered VolumeItem:: _drawBarPicture:: {ix=} ......")
         if bar is not None and bar.dateTime is not None:
 
             # Set painter color

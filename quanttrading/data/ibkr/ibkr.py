@@ -14,6 +14,7 @@ from ibapi.ticktype import TickTypeEnum
 from ibapi.execution  import Execution
 from datetime import datetime
 import pandas
+from pandas import DataFrame
 
 from ibapi.common import * # @UnusedWildImport
 from ibapi.common import BarData
@@ -155,9 +156,8 @@ class IbkrApp(AiWrapper, AiClient):
         # map reqId to Contract.
         self._reqIdMapToContract: dict[int, Contract] = {}
 
-        self._tickAlllast: TickData = None
-
-        self._tickBidAsk: TickData = None
+        # map symbol to historical Data
+        self._hisData: dict[str, DataFrame] = {}
     
     @staticmethod
     def has_message_queue():
@@ -208,7 +208,6 @@ class IbkrApp(AiWrapper, AiClient):
                 logger.info("IbkrApp:: _processData::" + 
                             "failed to find the eventEngine")
 
-
     def reqHistoricalData(self, reqId: int, contract: Contract,
                           endDateTime: str, durationStr: str,
                           barSizeSetting: str, whatToShow: str,
@@ -251,24 +250,26 @@ class IbkrApp(AiWrapper, AiClient):
         message = f"historicalData:: data received: {bar.date} : {bar.close=}"
         self._processMessage(message)
 
-        candle = self._wrapCandlebyBar(bar, reqId)
-        self._processData(EVENT_HISDATA, candle)
+        symbol = self.getSymbolByReqId(reqId)
+        data = self._wrapDataFramebyBar(bar, symbol)
 
-    def _setBarData(self, tickType: str, data, time: TickerId, bar: BarData) -> BarData:
+        df = self._hisData.get(symbol, None)
+        if df is None:
+            self._hisData[symbol] = data
+        else:
+            df = pandas.concat([df,data], ignore_index=True)            
+            self._hisData.update({symbol:df})
+
+    def _wrapDataFramebyBar(self, bar: BarData, symbol: str) -> DataFrame:
         """
-        setting the specified bar data as in the tickType
         """
-        if tickType == "OPEN":
-            bar.open = data
-        elif tickType == "CLOSE":
-            bar.close = data
-        elif tickType == "HIGH":
-            bar.high = data
-        elif tickType == "LOW":
-            bar.low == data
-        elif tickType == "VOLUME":
-            bar.volume == data
-        return bar
+        dates = bar.date.split()
+        data = {'Date':dates[0] + ' ' + dates[1], 'Open':bar.open, 'High':bar.high,
+              'Low':bar.low, 'Close':bar.close, 'Volume':bar.volume, 'Wap':bar.wap,
+              'Symbol':symbol, 'Gateway':self._gateway, 'Zone': dates[-1]}
+        
+        df = DataFrame(data=data,index=[0])
+        return df
 
     def _wrapCandlebyBar(self, bar: BarData, reqId: TickerId) -> CandleData:
         """
@@ -296,8 +297,8 @@ class IbkrApp(AiWrapper, AiClient):
         self._processMessage(message)
         super().historicalDataUpdate(reqId, bar)
 
-        candle = self._wrapCandlebyBar(bar, reqId)
-        self._processData(EVENT_HISDATA_UPDATE, candle)
+        data = self._wrapDataFramebyBar(bar, self.getSymbolByReqId(reqId))
+        self._processData(EVENT_HISDATA_UPDATE, data)
         return None
 
     def historicalDataEnd(self, reqId: TickerId, start: str, end: str):
@@ -306,6 +307,9 @@ class IbkrApp(AiWrapper, AiClient):
         """
         message = f"HistoricalDataEnd., {reqId=}, from : {start=} to: {end=}"
         self._processMessage(message)
+
+        self._processData(EVENT_HISDATA, self._hisData.get(self.getSymbolByReqId(reqId), None))
+
         return super().historicalDataEnd(reqId, start, end)
 
     def reqTickByTickData(self, reqId:int, contract:Contract,tickType:str,numberOfTicks:int,ignoreSize:bool):
@@ -642,7 +646,7 @@ class IbkrApp(AiWrapper, AiClient):
             symbols = [ct.symbol for ct in contracts]
             message = f"closing all data for contract.symbol: {symbols}"
             for ct in contracts:
-                self._activeContracts.remove(ct, None)
+                self._activeContracts.remove(ct)
 
             if self._tickDataReqIds is not None and len(self._tickDataReqIds) > 0:
                  for tickid in self._tickDataReqIds.values():
@@ -719,7 +723,7 @@ class IbkrApp(AiWrapper, AiClient):
     def load_contract_data(self) -> None:
         """load contract data from previously saved files."""
         with shelve.open(self.data_filepath) as f:
-            self._activeContracts = f.get("ib_contracts", {})
+            self._activeContracts = f.get("ib_contracts", [])
         # for contract in self.contracts.values():
         #     self.gateway.on_contract(contract)
 

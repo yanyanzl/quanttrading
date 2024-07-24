@@ -84,7 +84,7 @@ class EventEngine:
         logger.debug(f"_handlers are {self._handlers} and {event.type=}")
         if event.type in self._handlers:
             [handler(event) for handler in self._handlers[event.type]]
-
+        
         if self._general_handlers:
             [handler(event) for handler in self._general_handlers]
         

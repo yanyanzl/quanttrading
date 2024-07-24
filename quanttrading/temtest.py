@@ -59,7 +59,78 @@ import yfinance as yf
 # print(f"{_bar_picutures=}")
 # print(f"{type(_bar_picutures)=}")
 # print(f"{len(_bar_picutures)=}")
+# data_filename: str = "ib_contract_data.db"
+# data_filepath: str = str(get_file_path(data_filename))
+# print(f"{data_filepath}")
 
+# # with shelve.open(data_filepath) as f:
+# #     f["ib_contracts"] = []
+
+# with shelve.open(data_filepath) as f:
+#     _activeContracts = f.get("ib_contracts", [])
+#     print(f"{_activeContracts}")
+from zoneinfo import ZoneInfo
+from tzlocal import get_localzone_name
+import tzlocal
+from datetime import timedelta
+# end: datetime = datetime.now(ZoneInfo(get_localzone_name()))
+# print(f"{end=} and {type(end)}")
+zone = get_localzone_name()
+print(f"zone info is {get_localzone_name()}")
+
+end: datetime = datetime.now(ZoneInfo(get_localzone_name()))
+
+print(f"{end.strftime("%Y%m%d %H:%M:%S %Z")}")
+
+start: datetime = end - timedelta(days=500)
+from dateutil import parser
+# date6 = parser.parse("20240718 04:00:00 US/Eastern")
+date6 = datetime.strptime("20240718 04:00:00", "%Y%m%d %H:%M:%S")
+
+
+print(f"{date6}")
+
+def getDuration(start: datetime, end: datetime) -> str:
+    duration = ""
+    delta = end - start
+    seconds = int(delta.total_seconds())
+    if seconds > 3600 * 24:
+        duration = str(delta.days) + " D"
+        print(f"{duration=}")
+    else:
+        duration = str(seconds)+'S'
+        print(f"{duration=}")
+
+getDuration(start, end)
+
+
+
+import re
+from typing import Literal
+
+Interval = Literal["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "1wk"]
+# durationStr: S/D/W/M/Y. Example '1 D'
+
+
+
+def constructDataframe():
+    dt = {'Date':1, 'Open':2, 'High':3, 'Low':4, 'Close':5, 'Volume':6, 'Wap':7, 'Symbol':8, 'Gateway':9}
+    data = DataFrame(data=dt,index=[0])
+    dt1 = {'Date':1, 'Open':2, 'High':3, 'Low':4, 'Close':5, 'Volume':6, 'Wap':7, 'Symbol':8, 'Gateway':9}
+    data1 = DataFrame(data=dt,index=[0])
+
+    data = pd.concat([data, data1], ignore_index=True)
+
+    dt2 = {'Date':1, 'Open':2, 'High':3, 'Low':4, 'Close':5, 'Volume':6, 'Wap':7, 'Symbol':8, 'Gateway':9}
+    data2 = DataFrame(data=dt,index=[0])
+    dataDict = {"TSLA":dt, "AAPL":data1}
+
+    data = pd.concat([data, data2], ignore_index=True)
+    print(f"{data=}")
+    print(f"{dataDict=}")
+    dataDict.update({"TSLA":data})
+    print(f"{dataDict=}")
+constructDataframe()
 
 async def check_connection() -> None:
         """检查连接"""
@@ -71,10 +142,8 @@ async def check_connection() -> None:
 
 def testasync():
     loop = asyncio.get_event_loop()
-    # future = loop.create_task(check_connection)
-    loop.run_until_complete(check_connection)
-
-testasync()
+    future = loop.create_task(check_connection)
+    # loop.run_until_complete(check_connection)
 
 def shelveTest():
     print(f"{TEMP_DIR=} and {TRADER_DIR=}")
@@ -102,6 +171,10 @@ def shelveTest():
     with shelve.open(data_filepath) as f:
         f["account"] = account
 
+
+i = _idGenerator()
+n = next(i)
+print(f"{n=} and {type(n)}")
 
 def generatorTest():
     i = _idGenerator()
@@ -251,3 +324,42 @@ def test2():
 
 
 
+"""
+Python strftime cheatsheet
+🐍🐍🐍
+
+Code	Example	Description
+%a	Sun	Weekday as locale’s abbreviated name.
+%A	Sunday	Weekday as locale’s full name.
+%w	0	Weekday as a decimal number, where 0 is Sunday and 6 is Saturday.
+%d	08	Day of the month as a zero-padded decimal number.
+%-d	8	Day of the month as a decimal number. (Platform specific)
+%b	Sep	Month as locale’s abbreviated name.
+%B	September	Month as locale’s full name.
+%m	09	Month as a zero-padded decimal number.
+%-m	9	Month as a decimal number. (Platform specific)
+%y	13	Year without century as a zero-padded decimal number.
+%Y	2013	Year with century as a decimal number.
+%H	07	Hour (24-hour clock) as a zero-padded decimal number.
+%-H	7	Hour (24-hour clock) as a decimal number. (Platform specific)
+%I	07	Hour (12-hour clock) as a zero-padded decimal number.
+%-I	7	Hour (12-hour clock) as a decimal number. (Platform specific)
+%p	AM	Locale’s equivalent of either AM or PM.
+%M	06	Minute as a zero-padded decimal number.
+%-M	6	Minute as a decimal number. (Platform specific)
+%S	05	Second as a zero-padded decimal number.
+%-S	5	Second as a decimal number. (Platform specific)
+%f	000000	Microsecond as a decimal number, zero-padded to 6 digits.
+%z	+0000	UTC offset in the form ±HHMM[SS[.ffffff]] (empty string if the object is naive).
+%Z	UTC	Time zone name (empty string if the object is naive).
+%j	251	Day of the year as a zero-padded decimal number.
+%-j	251	Day of the year as a decimal number. (Platform specific)
+%U	36	Week number of the year (Sunday as the first day of the week) as a zero-padded decimal number. All days in a new year preceding the first Sunday are considered to be in week 0.
+%-U	36	Week number of the year (Sunday as the first day of the week) as a decimal number. All days in a new year preceding the first Sunday are considered to be in week 0. (Platform specific)
+%W	35	Week number of the year (Monday as the first day of the week) as a zero-padded decimal number. All days in a new year preceding the first Monday are considered to be in week 0.
+%-W	35	Week number of the year (Monday as the first day of the week) as a decimal number. All days in a new year preceding the first Monday are considered to be in week 0. (Platform specific)
+%c	Sun Sep 8 07:06:05 2013	Locale’s appropriate date and time representation.
+%x	09/08/13	Locale’s appropriate date representation.
+%X	07:06:05	Locale’s appropriate time representation.
+%%	%	A literal '%' character.
+"""

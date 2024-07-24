@@ -4,7 +4,8 @@ General utility functions.
 
 import json
 import logging.handlers
-import yaml
+# import yaml
+import threading
 import logging
 import sys, os
 from datetime import datetime, time
@@ -62,6 +63,37 @@ def setUpLogger(loggingLevel) ->str:
     ch.setFormatter(formatter)
     handlers = [fh, ch]
     logging.basicConfig(handlers=handlers, level=loggingLevel)
+
+def create_bg_loop():
+
+    def to_bg(loop:asyncio.BaseEventLoop):
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_forever()
+        except asyncio.CancelledError as e:
+            print('CANCELLEDERROR {}'.format(e))
+        finally:
+            # for task in asyncio.all_tasks():
+            #     task.cancel()
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.stop()
+            loop.close()
+    new_loop = asyncio.new_event_loop()
+    t = threading.Thread(target=to_bg, args=(new_loop,))
+    t.start()
+    return new_loop
+
+def getDuration(start: datetime, end: datetime) -> str:
+    duration = ""
+    delta = end - start
+    seconds = int(delta.total_seconds())
+    if seconds >= 3600 * 24:
+        duration = str(delta.days) + " D"
+        print(f"{duration=}")
+    else:
+        duration = str(seconds)+'S'
+        print(f"{duration=}")
+    return duration
 
 def _idGenerator():
     """ 
