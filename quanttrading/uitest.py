@@ -6,7 +6,7 @@ import time
 from event.engine import EventEngine
 
 from ordermanagement import MainEngine
-from data.ibkr.ibkrgateway import IbkrGateway
+from data.ibkr.IbGateway import IbGateway
 from ui import MainWindow, create_qapp
 from utility import current_task, setUpLogger
 from setting import Aiconfig
@@ -35,7 +35,7 @@ async def main():
 
         main_engine = MainEngine(event_engine)
         
-        main_engine.add_gateway(IbkrGateway,"ibkrgateway")
+        main_engine.add_gateway(IbGateway,"ibkrgateway")
 
         try:
 

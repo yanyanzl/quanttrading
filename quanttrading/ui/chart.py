@@ -14,6 +14,7 @@ from pandas import DataFrame
 from datetime import datetime
 from ordermanagement import MainEngine
 import logging
+import pandas as pd
 # from abc import ABC
 import asyncio
 
@@ -23,6 +24,7 @@ from sys import path as pt
 file = Path(__file__).resolve()
 pt.append(str(file.parents[1]))
 from constant import ChartInterval, ChartPeriod, stringToInterval
+from datatypes import BarData
 from .chartitems import Asset, CandlestickItems, ChartBase, DataManager, DatetimeAxis, Ticker, IntervalBox,VolumeItem
 from setting import Aiconfig
 import data.finlib as fb
@@ -211,7 +213,7 @@ class ChartGraph(pg.PlotWidget):
         self._layout: pg.GraphicsLayout = pg.GraphicsLayout()
         self._layout.setContentsMargins(10, 10, 10, 10)
         self._layout.setSpacing(0)
-        self._layout.setBorder(color='g', width=0.8)
+        self._layout.setBorder(color='g', width=1)
         self._layout.setZValue(0)
         self.setCentralItem(self._layout)
         # self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
@@ -249,17 +251,22 @@ class ChartGraph(pg.PlotWidget):
         plot.setClipToView(True)
         plot.hideAxis("left")
         plot.showAxis("right")
+        plot.showAxis("bottom")
         plot.setDownsampling(mode="peak")
         # plot.setRange(xRange=(0, 1), yRange=(0, 1))
         plot.hideButtons()
         plot.setMinimumHeight(minimum_height)
         # plot.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
         plot.setObjectName(plot_name)
+        if self._assetName:
+            plot.setTitle(f"Realtime Chart for {self._assetName}")
+        # plot.setContentsMargins(10,10,60,10)
 
         if maximum_height:
             plot.setMaximumHeight(maximum_height)
 
         if hide_x_axis:
+            logger.info(f"hiding x_axis......{hide_x_axis=}")
             plot.hideAxis("bottom")
 
         if not self._first_plot:
@@ -270,11 +277,13 @@ class ChartGraph(pg.PlotWidget):
         view: pg.ViewBox = plot.getViewBox()
         view.sigXRangeChanged.connect(self._update_y_range)
         view.setMouseEnabled(x=True, y=False)
-        view.setDefaultPadding(0.05)
+        view.setDefaultPadding(0.02)
 
         # Set right axis
         right_axis: pg.AxisItem = plot.getAxis("right")
         right_axis.setWidth(60)
+        # bottom_axis: pg.AxisItem = plot.getAxis("bottom")
+    
 
         # Connect x-axis link
         if self._plots:
@@ -466,7 +475,12 @@ class ChartGraph(pg.PlotWidget):
         """
         Update single bar data.
         """
+        if barData is None:
+            return
         
+        if isinstance(barData, BarData):
+            barData = self._wrapDataFramebyBar([barData])
+
         self._dataManager.update_bar(barData)
 
         for item in self._items.values():
@@ -477,6 +491,21 @@ class ChartGraph(pg.PlotWidget):
         if self._right_ix >= (self._dataManager.getTotalDataNum() - self._bar_count / 2):
             self.move_to_right()
 
+    def _wrapDataFramebyBar(self, barList: list[BarData]) -> DataFrame:
+        """
+        """
+        # dates = bar.date.split()
+        df = DataFrame()
+        if barList is not None and isinstance(barList, list) and len(barList) > 0:
+            for bar in barList:
+                data = {'Date':bar.datetime, 'Open':bar.open_price, 'High':bar.high_price,
+                    'Low':bar.low_price, 'Close':bar.close_price, 'Volume':bar.volume, 
+                    'Symbol':bar.symbol, 'Gateway':bar.gateway_name, 'vt_symbol': bar.vt_symbol, 'Interval': bar.interval}
+                
+                dataFrame = DataFrame(data=data,index=[0])
+                df = pd.concat([df, dataFrame], ignore_index=True)
+        return df
+    
     def update_history(self, barDatas:DataFrame =None) -> None:
         """
         Update a list of bar data.
@@ -498,11 +527,11 @@ class ChartGraph(pg.PlotWidget):
         """
         logger.debug(f"chartGraph:: _update_plot_limits.......")
         for item, plot in self._item_plot_map.items():
-            min_value, max_value = item.get_y_range(self._dataManager.getXMin(), self._dataManager.getXMax())
+            min_value, max_value = item.get_y_range()
             logger.debug(f"chartGraph:: _update_plot_limits....... {min_value=}, {max_value=} ")
             plot.setLimits(
                 xMin=-1,
-                xMax=self._dataManager.getXMax(),
+                xMax=self._dataManager.getTotalDataNum(),
                 yMin=min_value,
                 yMax=max_value
             )
@@ -511,7 +540,8 @@ class ChartGraph(pg.PlotWidget):
         """
         Update the x-axis range of plots.
         """
-        max_ix: int = int(self._right_ix)
+        # set a margin in the right for the paint with 20
+        max_ix: int = int(self._right_ix) + 20
         min_ix: int = int(self._right_ix - self._bar_count)
         logger.debug(f"ChartGraph:: _update_x_range:: self._right_ix is {self._right_ix} and self._bar_count is {self._bar_count}, min_ix is {min_ix}")
 
@@ -524,7 +554,7 @@ class ChartGraph(pg.PlotWidget):
 
         for plot in self._plots.values():
             logger.debug(f"chartGraph :_update_x_range: plot is {plot.objectName()} and min_ix, max_ix is {min_ix, max_ix}")
-            plot.setRange(xRange=(min_ix, max_ix), padding=0)
+            plot.setRange(xRange=(min_ix, max_ix))
 
     def _update_y_range(self) -> None:
         """
@@ -863,7 +893,9 @@ class ChartCursor(QtCore.QObject):
         if dt:
             self._x_label.setText(dt.strftime("%Y-%m-%d %H:%M:%S"))
             self._x_label.show()
-            self._x_label.setPos(self._x, minht)
+            
+            # logger.info(f"_update_label .............. {width=}")
+            self._x_label.setPos(max(0.0, self._x - 10), minht)
             self._x_label.setAnchor((0, 0))
 
     def update_info(self) -> None:
@@ -873,7 +905,7 @@ class ChartCursor(QtCore.QObject):
         buf: dict = {}
         logger.debug("entered chartCursor:: update_info:: ........")
         for item, plot in self._item_plot_map.items():
-            logger.debug(f"item is {item} and plot is {plot} and plotname is {plot.objectName()}")
+            # logger.debug(f"item is {item} and plot is {plot} and plotname is {plot.objectName()}")
             item_info_text: str = item.get_info_text(self._x)
             # print(f"item_info_text is {item_info_text}")
 
@@ -887,15 +919,17 @@ class ChartCursor(QtCore.QObject):
             for plot_name, plot in self._plots.items():
                 plot_info_text: str = buf[plot]
                 logger.debug(f"plot_info_text is {plot_info_text}")
-
+                
                 # print(f"polot_info_text is {plot_info_text}")
                 info: pg.TextItem = self._infos[plot_name]
+                
                 # print(f"info is {info}")
                 info.setText(plot_info_text)
+                
                 # print(f"info is {info}")
                 info.setOpacity(0.5)
                 info.show()
-                info.setPos(self._x, self._y)
+                info.setPos(self._x - 5, self._y)
 
     def move_right(self) -> None:
         """

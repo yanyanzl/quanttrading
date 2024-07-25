@@ -364,6 +364,7 @@ class IbkrGateway(BaseGateway):
         self._active: bool = False
         self._check_connection_task = None
 
+        self.subscribed: list[str] = []
 
     def connect(self, setting: dict) -> None:
         """
@@ -466,7 +467,49 @@ class IbkrGateway(BaseGateway):
         """
         Subscribe tick data update.
         """
-        pass
+        if not self._active or self._app.status:
+            return
+
+        if req.exchange not in EXCHANGE_QT2IB:
+            # self._gateway.write_log(f"don't support {req.exchange}")
+            return
+
+        if " " in req.symbol:
+            logger.info(f"invalid {req.symbol=}")
+            return
+
+        # filter the duplicated subscribe.
+        if req.symbol in self.subscribed:
+            return
+        self.subscribed[req.symbol] = req
+
+        # 解析IB合约详情
+        ib_contract: Contract = generate_ib_contract(req.symbol, req.exchange)
+        if not ib_contract:
+            self.gateway.write_log("代码解析失败，请检查格式是否正确")
+            return
+
+        # 通过TWS查询合约信息
+        self.reqid += 1
+        self.client.reqContractDetails(self.reqid, ib_contract)
+
+        # 如果使用了字符串风格的代码，则需要缓存
+        if "-" in req.symbol:
+            self.reqid_symbol_map[self.reqid] = req.symbol
+
+        #  订阅tick数据并创建tick对象缓冲区
+        self.reqid += 1
+        self.client.reqMktData(self.reqid, ib_contract, "", False, False, [])
+
+        tick: TickData = TickData(
+            symbol=req.symbol,
+            exchange=req.exchange,
+            datetime=datetime.now(LOCAL_TZ),
+            gateway_name=self.gateway_name
+        )
+        tick.extra = {}
+
+        self.ticks[self.reqid] = tick
 
     def send_order(self, req: OrderRequest) -> str:
         """

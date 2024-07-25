@@ -154,7 +154,10 @@ class DataManager():
         if self._data is None or self._data.empty or index not in self._data.index:
             return None
         else:
-            date: datetime = datetime.strptime(self._data.loc[index]['Date'], "%Y%m%d %H:%M:%S")
+            date = self._data.loc[index]['Date']
+            if isinstance(date, Timestamp):
+                date = datetime.fromtimestamp(date.timestamp())
+            # date: datetime = datetime.strptime(self._data.loc[index]['Date'], "%Y%m%d %H:%M:%S")
             return date
         
     def getData(self) -> DataFrame:
@@ -188,8 +191,7 @@ class DataManager():
             self._data = pd.concat([self._data, data], ignore_index=True)
             self._data.drop_duplicates(subset='Date', keep= "last", inplace= True)
 
-            logger.debug(f"DataManager:: update_bar ...... \n {len(self._data)}")
-
+            logger.debug(f"DataManager:: update_bar ...... \n {self._data['Date']}")
             self._data.sort_values(by=['Date'], inplace= True)
             self._data.reset_index(inplace=True, drop=True)
             self._assetName = data.at[data.first_valid_index(),'Symbol']
@@ -226,7 +228,7 @@ class DataManager():
         if bar is not None and isinstance(bar, DataFrame) and not bar.empty:
             try:
 
-                index = self._data[self._data['Date'] == bar.at[bar.first_valid_index(), 'Date']].index
+                index = self._data[self._data['Date'] == bar.at[bar.first_valid_index(), 'Date']].first_valid_index()
 
                 return index
             except Exception as e:
@@ -283,31 +285,31 @@ class DataManager():
         # print(f"max_ix is {max_ix} \n")
         if self.isEmpty():
             return 0, 1
-
-        if not min_ix or max_ix:
+        logger.debug(f"Datamanager:: getYRange:: =====================\n"+
+                    f"{min_ix=} and {max_ix=}")
+        if not min_ix or not max_ix:
             min_ix: int = 0
             max_ix: int = self.getTotalDataNum() - 1
         else:
             min_ix: int = int(min_ix)
             max_ix: int = int(max_ix)
             max_ix = min(max_ix, self.getTotalDataNum())
-
         if min_ix > max_ix:
             i = min_ix
             min_ix = max_ix
             max_ix = i
-
+        
         if min_ix in self._data.index and max_ix in self._data.index:
             # print(self._data)
             data = self._data[min_ix:max_ix]
-            min = data['Low'].min()
+            miny = data['Low'].min()
 
-            max = data['High'].max()
-            margin = (max - min) * (self._yMarginPercent)
-            min -= margin
-            max += margin
+            maxy = data['High'].max()
+            margin = (maxy - miny) * (self._yMarginPercent)
+            miny -= margin
+            maxy += margin
 
-            return (min, max)
+            return (miny, maxy)
 
     def getVolumeRange(self, min_ix: int = None, max_ix: int = None) -> Tuple[float, float]:
         """
@@ -748,7 +750,7 @@ class CandlestickItems(ChartBase):
             p.drawLine(QtCore.QPointF(index_x, data.at[index_x, 'Low']), QtCore.QPointF(index_x, data.at[index_x, 'High']))
             p.drawRect(QtCore.QRectF(index_x-w, data.at[index_x, 'Open'], w * 2, data.at[index_x, 'Close'] - data.at[index_x, 'Open']))
         else:
-            logger.warning(f"no data find in the datamanager index is {index_x}")
+            logger.debug(f"no data find in the datamanager index is {index_x}")
         
         # Finish
         p.end()
@@ -843,7 +845,7 @@ class VolumeItem(ChartBase):
             painter.drawRect(rect)
         
         else:
-            print(f"VolumeItem: _drawBarPicture: no data find in the datamanager index is {ix}")
+            logger.debug(f"VolumeItem: _drawBarPicture: no data find in the datamanager index is {ix}")
 
         # Finish
         painter.end()
@@ -916,24 +918,28 @@ class DatetimeAxis(pg.AxisItem):
         Convert original index to datetime string.
         """
         # Show no axis string if spacing smaller than 1
+        # logger.info("entering DatetimeAxis:: tickStrings:: ")
         if spacing < 1 or self._manager is None:
             return ["" for i in values]
 
         strings: list = []
 
         for ix in values:
-            dt: datetime = self._manager.getDateTime(ix)
 
+            dt: datetime = self._manager.getDateTime(ix)
+            # logger.info(f"entering DatetimeAxis:: tickStrings:: {dt=} ")
             if not dt:
                 s: str = ""
             elif dt.hour:
                 # s: str = dt.strftime("%Y-%m-%d\n%H:%M:%S")
+                
                 s: str = dt.strftime("%H:%M:%S")
+                # logger.info(f"entering DatetimeAxis:: tickStrings:: {dt.hour=} and  {s}")
             else:
                 s: str = dt.strftime("%Y-%m-%d")
 
             strings.append(s)
-
+        # logger.info(f"entering DatetimeAxis:: tickStrings:: {strings}")
         return strings
 
 

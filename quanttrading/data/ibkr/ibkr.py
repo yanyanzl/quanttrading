@@ -21,9 +21,20 @@ from ibapi.common import BarData
 from ibapi.utils import * # @UnusedWildImport
 from .aiorder import *
 from setting import Aiconfig
-from datatypes import TickData, CandleData, Account
+from datatypes import (
+    TickData, 
+    CandleData, 
+    Account, 
+    SubscribeRequest, 
+    HistoryRequest, 
+    OrderRequest, 
+    CancelRequest, 
+    QuoteRequest
+)
+from .ibkrgateway import EXCHANGE_IB2QT, EXCHANGE_QT2IB
 import logging
 from .aitools import *
+from .aicontract import stock_contract
 from event.engine import EventEngine, Event
 from utility import timeToStr, get_file_path
 from constant import (
@@ -124,6 +135,7 @@ class IbkrApp(AiWrapper, AiClient):
         
         # app connected to server or not
         self.status: bool = False
+        self.nextReqId:int = 0
         
         self.account: Account = Account()
         #  account_info;` columns: reqid, account, key, value, currency`
@@ -142,6 +154,7 @@ class IbkrApp(AiWrapper, AiClient):
         self.previous_contract = Contract()
 
         self._accountReqId = -1
+
         self._tickDataReqIds:dict[str,TickerId] = {}
         self._realtimeBarReqIds:list[TickerId] = []
         self._marketReqIds:list[TickerId] = []
@@ -158,6 +171,10 @@ class IbkrApp(AiWrapper, AiClient):
 
         # map symbol to historical Data
         self._hisData: dict[str, DataFrame] = {}
+
+        # list of symbols subscribed tick data. 
+        # symbol to Subscribe request
+        self.subscribed: dict[str, SubscribeRequest] = {}
     
     @staticmethod
     def has_message_queue():
@@ -207,6 +224,50 @@ class IbkrApp(AiWrapper, AiClient):
             else:
                 logger.info("IbkrApp:: _processData::" + 
                             "failed to find the eventEngine")
+
+    def subscribe(self, req: SubscribeRequest) -> None:
+        """
+        Subscribe tick data update.
+        """
+        if not self.status:
+            return
+
+        if req.exchange not in EXCHANGE_QT2IB:
+            logger.info(f"don't support {req.exchange}")
+            return
+
+        if " " in req.symbol:
+            logger.info(f"invalid {req.symbol=}")
+            return
+
+        # filter the duplicated subscribe.
+        if req.symbol in self.subscribed:
+            return
+        self.subscribed[req.symbol] = req
+
+        # construct contract
+        ib_contract: Contract = stock_contract(req.symbol, req.exchange)
+
+        # query contract info
+        self.nextReqId += 1
+        self.reqContractDetails(self.nextReqId, ib_contract)
+
+        self._reqIdMapToContract.update({self.nextReqId: ib_contract})
+
+        #  订阅tick数据并创建tick对象缓冲区
+        self.nextReqId += 1
+        # tickType = req.tickType
+        self.reqTickByTickData(self.nextReqId, ib_contract, "AllLast", 0, True)
+        # self.client.reqMktData(self.reqid, ib_contract, "", False, False, [])
+
+        # tick: TickData = TickData(
+        #     symbol=req.symbol,
+        #     exchange=req.exchange,
+        #     datetime=datetime.now(LOCAL_TZ),
+        #     gateway_name=self.gateway_name
+        # )
+        # tick.extra = {}
+        # self.ticks[self.reqid] = tick
 
     def reqHistoricalData(self, reqId: int, contract: Contract,
                           endDateTime: str, durationStr: str,
@@ -320,12 +381,15 @@ class IbkrApp(AiWrapper, AiClient):
         ignoreSize: bool. Omit updates that reflect only changes in size,
         and not price. Applicable to Bid_Ask data requests.
         """
+
         super().reqTickByTickData(reqId, contract, tickType, numberOfTicks, ignoreSize)
         self._tickDataReqIds[tickType] = reqId
         self._reqIdMapToContract[reqId] = contract
 
         if contract not in self._activeContracts:
             self._activeContracts.append(contract)
+
+
 
     def tickByTickBidAsk(self, reqId: int, time: int, bidPrice: float, askPrice: float, bidSize: Decimal, askSize: Decimal, tickAttribBidAsk: TickAttribBidAsk):
         """

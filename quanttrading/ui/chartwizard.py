@@ -79,7 +79,7 @@ class ChartWizardWidget(QtWidgets.QWidget):
     def create_chart(self, symbol:str=None) -> Chart:
         """创建图表对象"""
         chart: Chart = Chart("Real Time Chart", symbol)
-        chart.add_plot("candle", hide_x_axis=True)
+        chart.add_plot("candle", hide_x_axis=False)
         chart.add_plot("volume", maximum_height=200)
         chart.add_item(CandlestickItems, "candle", "candle")
         chart.add_item(VolumeItem, "volume", "volume")
@@ -108,8 +108,8 @@ class ChartWizardWidget(QtWidgets.QWidget):
         if symbol in self.charts:
             return
 
-        # if "LOCAL" not in vt_symbol:
-        #     contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
+        # if "LOCAL" not in symbol:
+        #     contract: Optional[ContractData] = self.main_engine.get_contract(symbol)
         #     if not contract:
         #         return
 
@@ -133,29 +133,79 @@ class ChartWizardWidget(QtWidgets.QWidget):
             start,
             end
         )
+    
+    def new_interval(self, symbol:str, interval:Interval) -> None:
+        """
+        change the chart interval for an existing chart
+        """
+        # Filter invalid vt_symbol
+        if not symbol or not interval or symbol not in self.charts:
+            return
+
+        # Query history data
+        start, end = self._getStartEndByIntervale(interval)
+        exchange = Exchange.SMART
+        self.query_history(
+            symbol, 
+            exchange, 
+            interval,
+            start,
+            end
+        )
+
+    def _getStartEndByIntervale(self, interval:Interval) -> tuple[datetime, datetime]:
+        """
+        return start and end as datetime format based on Interval.
+        Literal['1m', '2m', '5m', '15m', '30m', '60m', '90m', '1h', '1d', '1wk']
+        """
+        if not interval:
+            return None
+        days = 1
+        if interval in ['1m', '2m']:
+            pass
+        elif interval in ['5m', '15m']:
+            days = 5
+        elif interval in ['30m', '60m', '90m', '1h']:
+            days = 90
+        elif interval in ['1d', '1wk']:
+            days = 760
+
+        end: datetime = datetime.now(ZoneInfo(get_localzone_name()))
+        start: datetime = end - timedelta(days=days)
+        return start, end
+
 
     def register_event(self) -> None:
         """注册事件监听"""
         self.signal_tick.connect(self.process_tick_event)
-        # self.signal_history.connect(self.process_history_event)
-        self.signal_spread.connect(self.process_spread_event)
+        self.signal_history.connect(self.process_history_event)
+        # self.signal_spread.connect(self.process_spread_event)
 
-        self.event_engine.register(EVENT_HISDATA, self.process_history_event)
-        # self.event_engine.register(EVENT_HISDATA, self.signal_history.emit)
+        # This kind of different-thread problems happen all the
+        #  time with Qt when you use multiple threads. 
+        # The canonical way to solve this problem is to use signals and slots.
+        # self.event_engine.register(EVENT_HISDATA, self.process_history_event)
+        self.event_engine.register(EVENT_HISDATA, self.signal_history.emit)
         self.event_engine.register(EVENT_TICK_LAST_DATA, self.signal_tick.emit)
         # self.event_engine.register(EVENT_SPREAD_DATA, self.signal_spread.emit)
 
     def process_tick_event(self, event: Event) -> None:
         """process Tick Data Event"""
         tick: TickData = event.data
-        bg: Optional[BarGenerator] = self.bgs.get(tick.vt_symbol, None)
-
+        logger.debug(f"entering  process_tick_event:: {tick.symbol=}")
+        if tick is None:
+            return
+        symbol = tick.symbol
+        # logger.info(f"entering  process_tick_event:: {self.bgs=}")
+        bg: Optional[BarGenerator] = self.bgs.get(symbol, None)
+        logger.debug(f"process_tick_event:: {bg=}")
         if bg:
             bg.update_tick(tick)
 
-            chart: Chart = self.charts[tick.vt_symbol]
+            chart: Chart = self.charts[tick.symbol]
             bar: BarData = copy(bg.bar)
             bar.datetime = bar.datetime.replace(second=0, microsecond=0)
+            logger.debug(f"process_tick_event:: {bar=} ...... ")
             chart.update_bar(bar)
 
     def process_history_event(self, event: Event) -> None:
@@ -173,18 +223,24 @@ class ChartWizardWidget(QtWidgets.QWidget):
         chart.update_history(history)
 
         # Subscribe following data update
-        logger.info(f"ChartWizardWidget:: process the history :: after chart update_history...")
         contract: Optional[ContractData] = self.main_engine.get_contract(symbol)
-        logger.info(f"ChartWizardWidget:: process the history :: after chart update_history 2...")
-        if contract:
-            logger.info(f"ChartWizardWidget:: process the history :: enter if ...")
-            req: SubscribeRequest = SubscribeRequest(
-                contract.symbol,
-                contract.exchange
+        logger.info(f"ChartWizardWidget:: process the history :: after chart update_history"+
+                    f"{symbol=} and {contract=}")
+        # if contract:
+        #     logger.info(f"ChartWizardWidget:: process the history :: enter if ...")
+        #     req: SubscribeRequest = SubscribeRequest(
+        #         contract.symbol,
+        #         contract.exchange
+        #     )
+        #     self.main_engine.subscribe(req, contract.gateway_name)
+        req: SubscribeRequest = SubscribeRequest(
+                symbol,
+                Exchange.SMART,
+                'AllLast'
             )
-            self.main_engine.subscribe(req, contract.gateway_name)
-
-        logger.info(f"ChartWizardWidget:: process the history :: leaving  process_history_event ...")
+        gateways = self.main_engine.get_all_gateway_names()
+        if gateways is not None and len(gateways) > 0:
+            self.main_engine.subscribe(req, gateways[0])
 
     def process_spread_event(self, event: Event) -> None:
         """处理价差事件"""
@@ -214,7 +270,7 @@ class ChartWizardWidget(QtWidgets.QWidget):
 
     def on_bar(self, bar: BarData) -> None:
         """K线合成回调"""
-        chart: Chart = self.charts[bar.vt_symbol]
+        chart: Chart = self.charts[bar.symbol]
         chart.update_bar(bar)
 
     def _query_history(

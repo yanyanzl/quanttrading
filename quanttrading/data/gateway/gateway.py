@@ -13,6 +13,7 @@ from constant import (
     EVENT_CONTRACT,
     EVENT_LOG,
     EVENT_QUOTE,
+    EVENT_TICK_LAST_DATA
 )
 from datatypes import (
     TickData,
@@ -100,6 +101,12 @@ class BaseGateway(ABC):
         """
         self.on_event(EVENT_TICK, tick)
         self.on_event(EVENT_TICK + tick.vt_symbol, tick)
+
+    def on_tick_last(self, tick: TickData) -> None:
+        """
+        Tick event push.
+        """
+        self.on_event(EVENT_TICK_LAST_DATA, tick)
 
     def on_trade(self, trade: TradeData) -> None:
         """

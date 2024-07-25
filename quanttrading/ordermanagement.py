@@ -460,12 +460,13 @@ class OrderManagement(BaseManagement):
         self.event_engine.register(EVENT_PORTFOLIO, self.eventTest)
         self.event_engine.register(EVENT_ORDER_STATUS, self.eventTest)
         # self.event_engine.register(EVENT_ACCOUNT, self.eventTest)
-        self.event_engine.register_general(self.eventTest)
+
+
+        # self.event_engine.register_general(self.eventTest)
 
     def eventTest(self, event:Event):
-        # logger.info(f"this is successful now=============================")
-        logger.info(f"orderManagement:: eventTest:: ===================== " +
-                    f"general handler for event now.\n {event.type=}")
+        logger.info(f"orderManagement:: eventTest:: ====== " +
+                    f" {event.type=}")
         pass
 
     def processHisData(self, event:Event) -> bool:
@@ -542,9 +543,9 @@ class OrderManagement(BaseManagement):
         """
         account information. saved in DataFrame object.
         """
-        account: Account = event.data
+        account: AccountData = event.data
         # account: DataFrame = 
-        self.accounts[account.get('id')] = account
+        self.accounts[account.accountid] = account
 
     def process_contract_event(self, event: Event) -> None:
         """"""
@@ -617,6 +618,7 @@ class OrderManagement(BaseManagement):
         """
         Get contract data by vt_symbol.
         """
+        logger.debug(f"--------------get_contract {vt_symbol=} and {self.contracts=}")
         return self.contracts.get(vt_symbol, None)
 
     def get_quote(self, vt_quoteid: str) -> Optional[QuoteData]:

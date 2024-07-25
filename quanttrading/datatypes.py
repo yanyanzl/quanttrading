@@ -439,6 +439,7 @@ class SubscribeRequest:
 
     symbol: str
     exchange: Exchange
+    tickType: Literal['Last', 'AllLast', 'BidAsk', 'MidPoint'] = "AllLast"
 
     def __post_init__(self) -> None:
         """"""

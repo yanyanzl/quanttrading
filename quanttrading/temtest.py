@@ -75,20 +75,7 @@ import tzlocal
 from datetime import timedelta
 # end: datetime = datetime.now(ZoneInfo(get_localzone_name()))
 # print(f"{end=} and {type(end)}")
-zone = get_localzone_name()
-print(f"zone info is {get_localzone_name()}")
 
-end: datetime = datetime.now(ZoneInfo(get_localzone_name()))
-
-print(f"{end.strftime("%Y%m%d %H:%M:%S %Z")}")
-
-start: datetime = end - timedelta(days=500)
-from dateutil import parser
-# date6 = parser.parse("20240718 04:00:00 US/Eastern")
-date6 = datetime.strptime("20240718 04:00:00", "%Y%m%d %H:%M:%S")
-
-
-print(f"{date6}")
 
 def getDuration(start: datetime, end: datetime) -> str:
     duration = ""
@@ -101,36 +88,78 @@ def getDuration(start: datetime, end: datetime) -> str:
         duration = str(seconds)+'S'
         print(f"{duration=}")
 
-getDuration(start, end)
+    getDuration(start, end)
 
 
 
-import re
-from typing import Literal
+    import re
+    from typing import Literal
 
-Interval = Literal["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "1wk"]
-# durationStr: S/D/W/M/Y. Example '1 D'
+    Interval = Literal["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "1wk"]
+    # durationStr: S/D/W/M/Y. Example '1 D'
+    zone = get_localzone_name()
+    print(f"zone info is {get_localzone_name()}")
+
+    end: datetime = datetime.now(ZoneInfo(get_localzone_name()))
+
+    print(f"{end.strftime("%Y%m%d %H:%M:%S %Z")}")
+
+    start: datetime = end - timedelta(days=500)
+    from dateutil import parser
+    # date6 = parser.parse("20240718 04:00:00 US/Eastern")
+    date6 = datetime.strptime("20240718 04:00:00", "%Y%m%d %H:%M:%S")
 
 
+    print(f"{date6}")
+    
+# from datetime import
+from pandas import Timestamp
+stamp = Timestamp('2024-07-25 12:11:00+0100', tz='Europe/London')
+print(f"{stamp=}")
+date = datetime.fromtimestamp(stamp.timestamp())
+print(f"{date=}")
+
+LOCAL_TZ = ZoneInfo(get_localzone_name())
+print(f"{LOCAL_TZ=}")
+# date = date.astimezone(LOCAL_TZ)
+date = date.replace(tzinfo=LOCAL_TZ)
+
+print(f"{date=}")
+
+m = 7
+n = 6
+if not m:
+    n = 8
+
+print(f"{n}")
 
 def constructDataframe():
     dt = {'Date':1, 'Open':2, 'High':3, 'Low':4, 'Close':5, 'Volume':6, 'Wap':7, 'Symbol':8, 'Gateway':9}
     data = DataFrame(data=dt,index=[0])
-    dt1 = {'Date':1, 'Open':2, 'High':3, 'Low':4, 'Close':5, 'Volume':6, 'Wap':7, 'Symbol':8, 'Gateway':9}
+    dt1 = {'Date':2, 'Open':2, 'High':3, 'Low':4, 'Close':5, 'Volume':6, 'Wap':7, 'Symbol':8, 'Gateway':9}
     data1 = DataFrame(data=dt,index=[0])
 
     data = pd.concat([data, data1], ignore_index=True)
 
-    dt2 = {'Date':1, 'Open':2, 'High':3, 'Low':4, 'Close':5, 'Volume':6, 'Wap':7, 'Symbol':8, 'Gateway':9}
-    data2 = DataFrame(data=dt,index=[0])
+    dt2 = {'Date':3, 'Open':2, 'High':3, 'Low':4, 'Close':5, 'Volume':6, 'Wap':7, 'Symbol':8, 'Gateway':9}
+    data2 = DataFrame(data=dt2,index=[0])
     dataDict = {"TSLA":dt, "AAPL":data1}
 
     data = pd.concat([data, data2], ignore_index=True)
     print(f"{data=}")
-    print(f"{dataDict=}")
-    dataDict.update({"TSLA":data})
-    print(f"{dataDict=}")
-constructDataframe()
+
+    index = data[data['Date'] == data2.at[data2.first_valid_index(), 'Date']].first_valid_index()
+
+    print(f"{index=} and {type(index)}")
+    # dataDict.update({"TSLA":data})
+    # print(f"{dataDict=}")
+    # dtt = DataFrame()
+    # dtlist = [[1, 2, 3, 4, 5, 6]]
+    # dffromlist = DataFrame(dtlist)
+    # print(f"{dffromlist=}")
+    # dtt = pd.concat([dtt,dffromlist], ignore_index=True)
+    # print(f"{dtt=}")
+
 
 async def check_connection() -> None:
         """检查连接"""
