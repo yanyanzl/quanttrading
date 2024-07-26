@@ -9,7 +9,7 @@ from ibapi.common import BarData, TagValueList, TickAttribLast, TickerId
 from ibapi.wrapper import EWrapper
 from ibapi.reader import EReader
 
-from ibapi.contract import Contract
+from ibapi.contract import Contract, ContractDetails
 from ibapi.ticktype import TickTypeEnum
 from ibapi.execution  import Execution
 from datetime import datetime
@@ -224,7 +224,10 @@ class IbkrApp(AiWrapper, AiClient):
             else:
                 logger.info("IbkrApp:: _processData::" + 
                             "failed to find the eventEngine")
-
+                
+    def contractDetails(self, reqId: TickerId, contractDetails: ContractDetails):
+        return super().contractDetails(reqId, contractDetails)
+    
     def subscribe(self, req: SubscribeRequest) -> None:
         """
         Subscribe tick data update.
@@ -268,6 +271,8 @@ class IbkrApp(AiWrapper, AiClient):
         # )
         # tick.extra = {}
         # self.ticks[self.reqid] = tick
+
+
 
     def reqHistoricalData(self, reqId: int, contract: Contract,
                           endDateTime: str, durationStr: str,

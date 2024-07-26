@@ -179,7 +179,8 @@ class DataManager():
         """
         Update a list of bar data.
         """
-        self.update_bar(data)
+        if isinstance(data, DataFrame) and not data.empty:
+            self.update_bar(data)
 
     def update_bar(self, data: DataFrame) -> None:
         """

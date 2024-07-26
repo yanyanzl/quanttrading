@@ -153,6 +153,7 @@ class Chart(QtWidgets.QWidget):
     def _addFunctions(self):
         self.update_bar = self._chartGraph.update_bar
         self.update_history = self._chartGraph.update_history
+        self.clearAll = self._chartGraph.clearAll
         self.add_plot = self._chartGraph.add_plot
         self.add_cursor = self._chartGraph.add_cursor
         self.add_item = self._chartGraph.add_item
