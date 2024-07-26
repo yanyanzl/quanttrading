@@ -266,6 +266,10 @@ class IbGateway(BaseGateway):
         """查询持仓"""
         pass
 
+    def add_contract(self, symbol: str, exchange: Exchange) -> None:
+        
+        self.api.add_contract(symbol, exchange)
+    
     def query_history(self, req: HistoryRequest) -> list[BarData]:
         """查询历史数据"""
         # event = Event(EVENT)
@@ -976,8 +980,8 @@ class IbApi(EWrapper):
 
         #  订阅tick数据并创建tick对象缓冲区
         self.reqid += 1
-        # self.client.reqMktData(self.reqid, ib_contract, "", False, False, [])
-        self.client.reqTickByTickData(self.reqid, ib_contract, req.tickType, 0, True)
+        self.client.reqMktData(self.reqid, ib_contract, "", False, False, [])
+        # self.client.reqTickByTickData(self.reqid, ib_contract, req.tickType, 0, True)
 
         tick: TickData = TickData(
             symbol=req.symbol,
@@ -1113,6 +1117,19 @@ class IbApi(EWrapper):
         self.gateway.event_engine.put(Event(EVENT_HISDATA, data))
         del history
         return None
+
+    def add_contract(self, symbol:str, exchange:Exchange) -> None:
+        if not self.status:
+            return
+
+        ib_contract: Contract = generate_ib_contract(symbol, exchange)
+
+        if ib_contract.symbol not in self.contracts:
+           self.reqid += 1
+           
+        #    self.client.reqContractDetails(self.reqid, ib_contract)
+           req = SubscribeRequest(symbol, exchange)
+           self.subscribe(req)
 
     def _wrapDataFramebyBar(self, barList: list[BarData]) -> DataFrame:
         """

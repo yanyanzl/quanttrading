@@ -10,6 +10,7 @@ from data.ibkr.IbGateway import IbGateway
 from ui import MainWindow, create_qapp
 from utility import current_task, setUpLogger
 from setting import Aiconfig
+from vnpy_algotrading import AlgoTradingApp
 
 import logging
 import tracemalloc, os
@@ -36,6 +37,8 @@ async def main():
         main_engine = MainEngine(event_engine)
         
         main_engine.add_gateway(IbGateway,"ibkrgateway")
+        
+        main_engine.add_app(AlgoTradingApp)
 
         try:
 

@@ -166,6 +166,12 @@ class MainEngine:
             self.write_log(_(f"Can't find {gateway_name=}"))
         return gateway
 
+    def get_engine(self, engine_name:str) -> "BaseManagement":
+        """
+        Return engine object by name.
+        """
+        return self.getManagement(engine_name)
+
     def getManagement(self, management_name: str) -> "BaseManagement":
         """
         Return engine object by name.
@@ -218,6 +224,16 @@ class MainEngine:
         if gateway:
             gateway.subscribe(req)
 
+    def add_contract(self, symbol:str, exchange: Exchange, gateway_name:str) -> None:
+        """
+        add a contract to the system
+        """
+        gateway: BaseGateway = self.get_gateway(gateway_name)
+        if gateway:
+            return gateway.add_contract(symbol, exchange)
+        else:
+            return ""
+        
     def send_order(self, req: OrderRequest, gateway_name: str) -> str:
         """
         Send new order request to a specific gateway.

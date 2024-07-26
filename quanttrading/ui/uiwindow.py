@@ -66,7 +66,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.init_toolbar()
         self.init_menu()
         self.load_window_setting("custom")
-        self.init_chart()
+        self.init_central()
 
     def init_dock(self) -> None:
         """"""
@@ -102,15 +102,18 @@ class MainWindow(QtWidgets.QMainWindow):
         tick_widget.itemDoubleClicked.connect(self.trading_widget.update_with_cell)
         position_widget.itemDoubleClicked.connect(self.trading_widget.update_with_cell)
 
-    def init_chart(self) -> None:
+    def init_central(self) -> None:
         """
         initiate the chart graph
         """
         # to be changed: ***************
         # self.chartWidget = Chart("Real Time Chart", "TSLA")
-        self.chartWidget = ChartWizardWidget(self.main_engine,self.event_engine)
+        # self.chartWidget = ChartWizardWidget(self.main_engine,self.event_engine)
+        from vnpy_algotrading.ui.widget import AlgoManager, APP_NAME
+        _central = AlgoManager(self.main_engine, self.event_engine)
+        self.widgets[APP_NAME] = _central
 
-        self.setCentralWidget(self.chartWidget)
+        self.setCentralWidget(_central)
 
     def init_menu(self) -> None:
         """"""

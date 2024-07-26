@@ -154,6 +154,10 @@ class BaseGateway(ABC):
         """
         self.on_event(EVENT_LOG, log)
 
+    def add_contract(self, symbol:str, exchange: Exchange) -> None:
+        
+        pass
+
     def on_contract(self, contract: ContractData) -> None:
         """
         Contract event push.

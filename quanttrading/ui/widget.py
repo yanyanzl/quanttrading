@@ -738,6 +738,9 @@ class TradingWidget(QtWidgets.QWidget):
         cancel_button: QtWidgets.QPushButton = QtWidgets.QPushButton(_("全撤"))
         cancel_button.clicked.connect(self.cancel_all)
 
+        add_contract_button: QtWidgets.QPushButton = QtWidgets.QPushButton(_("Add Contract"))
+        add_contract_button.clicked.connect(self.add_contract)
+
         grid: QtWidgets.QGridLayout = QtWidgets.QGridLayout()
         grid.addWidget(QtWidgets.QLabel(_("交易所")), 0, 0)
         grid.addWidget(QtWidgets.QLabel(_("代码")), 1, 0)
@@ -760,6 +763,7 @@ class TradingWidget(QtWidgets.QWidget):
         grid.addWidget(self.gateway_combo, 8, 1, 1, 2)
         grid.addWidget(send_button, 9, 0, 1, 3)
         grid.addWidget(cancel_button, 10, 0, 1, 3)
+        grid.addWidget(add_contract_button, 11, 0, 1, 3)
 
         # Market depth display area
         bid_color: str = "rgb(255,174,201)"
@@ -991,6 +995,18 @@ class TradingWidget(QtWidgets.QWidget):
         gateway_name: str = str(self.gateway_combo.currentText())
 
         self.main_engine.send_order(req, gateway_name)
+
+    def add_contract(self) -> None:
+        """
+        add contract to the system first.
+        """
+        symbol: str = str(self.symbol_line.text())
+        if not symbol:
+            QtWidgets.QMessageBox.critical(self, _("Failed to add contract"), _("Please input the symbol firstly!"))
+            return
+        exchange=Exchange(str(self.exchange_combo.currentText()))
+        gateway_name: str = str(self.gateway_combo.currentText())
+        self.main_engine.add_contract(symbol, exchange, gateway_name)
 
     def cancel_all(self) -> None:
         """
