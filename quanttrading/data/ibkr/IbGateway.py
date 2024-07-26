@@ -674,7 +674,7 @@ class IbApi(EWrapper):
 
         # 提取合约信息
         ib_contract: Contract = contractDetails.contract
-        self.gateway.write_log(f"entered contractDetails.. {reqId=} and {contractDetails=}")
+        # self.gateway.write_log(f"entered contractDetails.. {reqId=} and {contractDetails=}")
         # 处理合约乘数为0的情况
         if not ib_contract.multiplier:
             ib_contract.multiplier = 1
@@ -690,7 +690,7 @@ class IbApi(EWrapper):
         product: Product = PRODUCT_IB2VT.get(ib_contract.secType, None)
         if not product:
             return
-        self.gateway.write_log(f"entered contractDetails.. {product=}")
+        # self.gateway.write_log(f"entered contractDetails.. {product=}")
         # 生成合约
         contract: ContractData = ContractData(
             symbol=symbol,
@@ -716,7 +716,7 @@ class IbApi(EWrapper):
             contract.option_expiry = datetime.strptime(ib_contract.lastTradeDateOrContractMonth, "%Y%m%d")
             contract.option_underlying = underlying_symbol + "_" + ib_contract.lastTradeDateOrContractMonth
 
-        self.gateway.write_log(f"entered contractDetails.. {contract.vt_symbol=} and {self.contracts}")
+        # self.gateway.write_log(f"entered contractDetails.. {contract.vt_symbol=} and {self.contracts}")
         if contract.vt_symbol not in self.contracts:
             self.gateway.on_contract(contract)
             self.gateway.write_log(f" end of  contractDetails..")
@@ -1045,11 +1045,13 @@ class IbApi(EWrapper):
     def query_history(self, req: HistoryRequest) -> list[BarData]:
         """查询历史数据"""
         print(f"=============== {req=} and {self.contracts=}")
+        if not self.status:
+            return
         # contract: ContractData = self.contracts[req.vt_symbol]
         # if not contract:
         #     self.gateway.write_log(f"找不到合约：{req.vt_symbol}，请先订阅")
         #     return []
-
+        
         self.history_req = req
 
         self.reqid += 1
@@ -1106,10 +1108,11 @@ class IbApi(EWrapper):
         self.history_buf: list[BarData] = []       # 创新新的缓冲列表
         self.history_req: HistoryRequest = None
 
-        history = self._wrapDataFramebyBar(history)
+        data = self._wrapDataFramebyBar(history)
 
-        self.gateway.event_engine.put(Event(EVENT_HISDATA, history))
-        return history
+        self.gateway.event_engine.put(Event(EVENT_HISDATA, data))
+        del history
+        return None
 
     def _wrapDataFramebyBar(self, barList: list[BarData]) -> DataFrame:
         """

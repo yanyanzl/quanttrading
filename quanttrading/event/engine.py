@@ -52,7 +52,7 @@ class EventEngine:
         self._queue: Queue = Queue()
         self._active: bool = False
         self._thread: Thread = Thread(target=self._run)
-        # self._timer: Thread = Thread(target=self._run_timer)
+        self._timer: Thread = Thread(target=self._run_timer)
         self._handlers: defaultdict = defaultdict(list)
         self._general_handlers: List = []
 
@@ -107,14 +107,14 @@ class EventEngine:
         logger.info(f"engine started ... {"******" * 20} ")
         self._active = True
         self._thread.start()
-        # self._timer.start()
+        self._timer.start()
 
     def stop(self) -> None:
         """
         Stop event engine.
         """
         self._active = False
-        # self._timer.join()
+        self._timer.join()
         self._thread.join()
 
     def put(self, event: Event) -> None:

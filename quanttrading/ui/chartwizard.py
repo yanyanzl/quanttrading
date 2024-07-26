@@ -220,6 +220,7 @@ class ChartWizardWidget(QtWidgets.QWidget):
         symbol: str = history.at[history.first_valid_index(), 'Symbol']
         chart: Chart = self.charts[symbol]
         logger.info(f"ChartWizardWidget:: process the history event data:\n {len(history)}")
+        chart.clearAll()
         chart.update_history(history)
 
         # Subscribe following data update
