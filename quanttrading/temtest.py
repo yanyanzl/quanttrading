@@ -1,7 +1,7 @@
 from pandas import DataFrame, to_datetime
 import pandas as pd
 from data.finlib import Asset
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 from datatypes import Account
 from ui.chartitems import DataManager
@@ -9,6 +9,9 @@ from utility import _idGenerator, TEMP_DIR, TRADER_DIR, get_file_path
 import shelve
 import asyncio
 import yfinance as yf
+from zoneinfo import ZoneInfo
+from tzlocal import get_localzone_name
+import tzlocal
 
 # tsla = yf.Ticker("TSLA")
 
@@ -32,10 +35,7 @@ import yfinance as yf
 # df1.sort_values(by=['Date'], inplace= True)
 # df1.reset_index(inplace=True, drop=True)
 
-
 # print(f"after drop_duplicates \n {df1=}")
-
-
 # df3 = df1.merge(df2, how='right', on='Date')
 
 # print(f"df1 is \n {df1}")
@@ -54,27 +54,15 @@ import yfinance as yf
 #     df1.value
 
 
-# _bar_picutures: dict[int, str] = {}
+_bar_picutures: dict[int, set] = {1:{"name","age"}, 2:{"age"}, 3:{"address"}}
 
-# print(f"{_bar_picutures=}")
-# print(f"{type(_bar_picutures)=}")
-# print(f"{len(_bar_picutures)=}")
-# data_filename: str = "ib_contract_data.db"
-# data_filepath: str = str(get_file_path(data_filename))
-# print(f"{data_filepath}")
+print(f"{_bar_picutures=}")
 
-# # with shelve.open(data_filepath) as f:
-# #     f["ib_contracts"] = []
+bars = _bar_picutures.get(2)
+bars.add("contact number")
+print(f"{bars=}")
+print(f"{_bar_picutures=}")
 
-# with shelve.open(data_filepath) as f:
-#     _activeContracts = f.get("ib_contracts", [])
-#     print(f"{_activeContracts}")
-from zoneinfo import ZoneInfo
-from tzlocal import get_localzone_name
-import tzlocal
-from datetime import timedelta
-# end: datetime = datetime.now(ZoneInfo(get_localzone_name()))
-# print(f"{end=} and {type(end)}")
 
 
 def getDuration(start: datetime, end: datetime) -> str:
@@ -111,27 +99,22 @@ def getDuration(start: datetime, end: datetime) -> str:
 
 
     print(f"{date6}")
-    
-# from datetime import
-from pandas import Timestamp
-stamp = Timestamp('2024-07-25 12:11:00+0100', tz='Europe/London')
-print(f"{stamp=}")
-date = datetime.fromtimestamp(stamp.timestamp())
-print(f"{date=}")
 
-LOCAL_TZ = ZoneInfo(get_localzone_name())
-print(f"{LOCAL_TZ=}")
-# date = date.astimezone(LOCAL_TZ)
-date = date.replace(tzinfo=LOCAL_TZ)
+def timeZone():
+    # from datetime import
+    from pandas import Timestamp
+    stamp = Timestamp('2024-07-25 12:11:00+0100', tz='Europe/London')
+    print(f"{stamp=}")
+    date = datetime.fromtimestamp(stamp.timestamp())
+    print(f"{date=}")
 
-print(f"{date=}")
+    LOCAL_TZ = ZoneInfo(get_localzone_name())
+    print(f"{LOCAL_TZ=}")
+    # date = date.astimezone(LOCAL_TZ)
+    date = date.replace(tzinfo=LOCAL_TZ)
 
-m = 7
-n = 6
-if not m:
-    n = 8
+    print(f"{date=}")
 
-print(f"{n}")
 
 def constructDataframe():
     dt = {'Date':1, 'Open':2, 'High':3, 'Low':4, 'Close':5, 'Volume':6, 'Wap':7, 'Symbol':8, 'Gateway':9}
@@ -200,10 +183,6 @@ def shelveTest():
     with shelve.open(data_filepath) as f:
         f["account"] = account
 
-
-i = _idGenerator()
-n = next(i)
-print(f"{n=} and {type(n)}")
 
 def generatorTest():
     i = _idGenerator()
