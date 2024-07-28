@@ -23,7 +23,7 @@
 from pathlib import Path
 from typing import Type
 
-from vnpy.trader.app import BaseApp
+from datatypes import BaseApp
 
 from .engine import RiskEngine, APP_NAME
 

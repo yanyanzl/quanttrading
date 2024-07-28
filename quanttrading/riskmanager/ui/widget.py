@@ -1,6 +1,8 @@
-from vnpy.event import EventEngine
-from vnpy.trader.engine import MainEngine
-from vnpy.trader.ui import QtWidgets, QtCore
+
+
+from event import EventEngine
+from ordermanagement import MainEngine
+from ui.uiapp import QtWidgets, QtCore
 
 from ..engine import APP_NAME, RiskEngine
 

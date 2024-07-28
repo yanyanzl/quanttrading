@@ -11,6 +11,7 @@ from ui import MainWindow, create_qapp
 from utility import current_task, setUpLogger
 from setting import Aiconfig
 from vnpy_algotrading import AlgoTradingApp
+from riskmanager import RiskManagerApp
 
 import logging
 import tracemalloc, os
@@ -38,7 +39,11 @@ async def main():
         
         main_engine.add_gateway(IbGateway,"ibkrgateway")
         
+        # add algo trading app
         main_engine.add_app(AlgoTradingApp)
+
+        # add the Riskmanager application
+        main_engine.add_app(RiskManagerApp)
 
         try:
 
