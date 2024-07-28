@@ -53,8 +53,24 @@ import tzlocal
 #     df1.loc[df1['Date'] == df2.iloc[[index, 'Date']]]
 #     df1.value
 import inspect
+from riskmanager.engine import TradeBook, RiskLevel
 
-symbol = ""
+
+for risk in RiskLevel:
+    print(f"{risk.name=}")
+
+book = TradeBook("TSLA")
+activeTradeBook: dict[str, TradeBook] = {}
+
+if not activeTradeBook:
+    print(f"activeTradeBook is empty {activeTradeBook}")
+
+activeTradeBook["TSLA"] = book
+symbol = "TSLA"
+if symbol in activeTradeBook:
+    print(f"{activeTradeBook.get(symbol)}")
+else: 
+    print(f"{symbol=}")
 
 contract = symbol if symbol else "IBDE30"
 

@@ -95,6 +95,15 @@ EVENT_PORTFOLIO = "ePortfolio"
 EVENT_ORDER_STATUS = "eOrderStatus"
 EVENT_OPEN_ORDER = "eOpenOrder"
 
+class RiskLevel(Enum):
+    """
+    risk levels
+    """
+    LevelZero = 0
+    LevelNormal = 1
+    LevelWarning = 2
+    LevelCritical = 3
+
 class Direction(Enum):
     """
     Direction of order/trade/position.

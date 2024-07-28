@@ -279,6 +279,22 @@ class MainEngine:
             return gateway.query_history(req)
         else:
             return None
+        
+    def cancel_all_orders(self) -> None:
+        """
+        cancel all orders. 
+        """
+        self.write_log(f"Cancelling all active orders ...... ")
+        orders: list[OrderData] = self.get_all_active_orders()
+        self.write_log(f"order list to be cancelled: {orders}")
+
+        if not orders:
+            return
+        for order in orders:
+            cancelRequest = order.create_cancel_request()
+            self.cancel_order(cancelRequest, order.gateway_name)
+
+        return None
 
     def close(self) -> None:
         """
@@ -311,6 +327,7 @@ class BaseManagement(ABC):
         self.main_engine: MainEngine = main_engine
         self.event_engine: EventEngine = event_engine
         self.management_name: str = management_name
+        self.app_name: str = management_name
 
     def close(self) -> None:
         """"""
