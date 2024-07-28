@@ -10,17 +10,17 @@ from pandas.core.window import ExponentialMovingWindow
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from vnpy.trader.constant import (
+from constant import (
     Direction,
     Offset,
     Exchange,
     Interval,
     Status
 )
-from vnpy.trader.database import get_database, BaseDatabase
-from vnpy.trader.object import OrderData, TradeData, BarData, TickData
-from vnpy.trader.utility import round_to, extract_vt_symbol
-from vnpy.trader.optimize import (
+from database import get_database, BaseDatabase
+from datatypes import OrderData, TradeData, BarData, TickData
+from utility import round_to, extract_vt_symbol
+from optimize import (
     OptimizationSetting,
     check_optimization_setting,
     run_bf_optimization,

@@ -2,9 +2,9 @@ from abc import ABC
 from copy import copy
 from typing import Any, Callable, List
 
-from vnpy.trader.constant import Interval, Direction, Offset
-from vnpy.trader.object import BarData, TickData, OrderData, TradeData
-from vnpy.trader.utility import virtual
+from constant import Interval, Direction, Offset
+from datatypes import BarData, TickData, OrderData, TradeData
+from utility import virtual
 
 from .base import StopOrder, EngineType
 

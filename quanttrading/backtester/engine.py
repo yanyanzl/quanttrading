@@ -10,13 +10,13 @@ from types import ModuleType
 from pandas import DataFrame
 from typing import Optional
 
-from vnpy.event import Event, EventEngine
-from vnpy.trader.engine import BaseEngine, MainEngine
-from vnpy.trader.constant import Interval
-from vnpy.trader.utility import extract_vt_symbol
-from vnpy.trader.object import HistoryRequest, TickData, ContractData, BarData
-from vnpy.trader.datafeed import BaseDatafeed, get_datafeed
-from vnpy.trader.database import BaseDatabase, get_database
+from event import Event, EventEngine
+from ordermanagement import BaseManagement as BaseEngine, MainEngine
+from constant import Interval
+from utility import extract_vt_symbol
+from datatypes import HistoryRequest, TickData, ContractData, BarData
+from datafeed import BaseDatafeed, get_datafeed
+from database import BaseDatabase, get_database
 
 import vnpy_ctastrategy
 from vnpy_ctastrategy import CtaTemplate, TargetPosTemplate

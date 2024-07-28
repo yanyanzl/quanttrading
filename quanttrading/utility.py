@@ -58,7 +58,8 @@ def setUpLogger(loggingLevel) ->str:
     # create console handler with a higher log level
     ch = logging.StreamHandler()
     # create formatter and add it to the handlers
-    formatter = logging.Formatter(bcolors.WARNING+' ===> %(asctime)s - %(name)s - %(levelname)s - %(message)s'+ bcolors.ENDC)
+
+    formatter = logging.Formatter(bcolors.WARNING+' ===> %(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s'+ bcolors.ENDC)
     fh.setFormatter(formatter)
     ch.setFormatter(formatter)
     handlers = [fh, ch]
@@ -177,7 +178,7 @@ def decrypt(key, source, decode=True):
     return data[:-padding]  # remove the padding
 
 
-''' 
+
 
 def extract_vt_symbol(vt_symbol: str) -> Tuple[str, Exchange]:
     """
@@ -192,7 +193,7 @@ def generate_vt_symbol(symbol: str, exchange: Exchange) -> str:
     return vt_symbol
     """
     return f"{symbol}.{exchange.value}"
-'''
+''' '''
 
 def _get_trader_dir(temp_name: str) -> Tuple[Path, Path]:
     """

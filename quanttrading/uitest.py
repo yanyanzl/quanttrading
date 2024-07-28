@@ -12,6 +12,7 @@ from utility import current_task, setUpLogger
 from setting import Aiconfig
 from vnpy_algotrading import AlgoTradingApp
 from riskmanager import RiskManagerApp
+from backtester import CtaBacktesterApp
 
 import logging
 import tracemalloc, os
@@ -44,6 +45,9 @@ async def main():
 
         # add the Riskmanager application
         main_engine.add_app(RiskManagerApp)
+
+        # add backtester application
+        main_engine.add_app(CtaBacktesterApp)
 
         try:
 

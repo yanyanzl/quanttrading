@@ -11,12 +11,12 @@ from pandas import DataFrame
 from constant import Interval, Direction, Exchange
 from ordermanagement import MainEngine, BaseManagement as BaseEngine
 from ui.uiapp import QtCore, QtWidgets, QtGui
-from vnpy.trader.ui.widget import BaseMonitor, BaseCell, DirectionCell, EnumCell
-from vnpy.event import Event, EventEngine
-from vnpy.chart import ChartWidget, CandleItem, VolumeItem
-from vnpy.trader.utility import load_json, save_json
-from vnpy.trader.object import BarData, TradeData, OrderData
-from vnpy.trader.database import DB_TZ
+from ui.widget import BaseMonitor, BaseCell, DirectionCell, EnumCell
+from event import Event, EventEngine
+from ui.chart import Chart as ChartWidget, CandlestickItems as CandleItem, VolumeItem
+from utility import load_json, save_json
+from datatypes import BarData, TradeData, OrderData
+from database import DB_TZ
 from vnpy_ctastrategy.backtesting import DailyResult
 
 from ..locale import _
@@ -352,7 +352,7 @@ class BacktesterManager(QtWidgets.QWidget):
         old_setting: dict = self.settings[class_name]
         dialog: BacktestingSettingEditor = BacktestingSettingEditor(class_name, old_setting)
         i: int = dialog.exec()
-        if i != dialog.Accepted:
+        if i != dialog.DialogCode.Accepted:
             return
 
         new_setting: dict = dialog.get_setting()
@@ -402,7 +402,8 @@ class BacktesterManager(QtWidgets.QWidget):
         parameters: dict = self.settings[class_name]
         dialog: OptimizationSettingEditor = OptimizationSettingEditor(class_name, parameters)
         i: int = dialog.exec()
-        if i != dialog.Accepted:
+        print(f"{i=} and {dialog.DialogCode.Accepted} and {i == dialog.DialogCode.Accepted}")
+        if i != dialog.DialogCode.Accepted:
             return
 
         optimization_setting, use_ga, max_workers = dialog.get_setting()
@@ -592,7 +593,7 @@ class StatisticsMonitor(QtWidgets.QTableWidget):
         self.horizontalHeader().setSectionResizeMode(
             QtWidgets.QHeaderView.Stretch
         )
-        self.setEditTriggers(self.NoEditTriggers)
+        self.setEditTriggers(self.EditTrigger.NoEditTriggers)
 
         for row, key in enumerate(self.KEY_NAME_MAP.keys()):
             cell: QtWidgets.QTableWidgetItem = QtWidgets.QTableWidgetItem()

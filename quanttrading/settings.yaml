@@ -54,6 +54,7 @@ database.host: ''
 database.name: sqlite
 database.password: ''
 database.port: 0
+database.timezone: Europe/London
 database.user: ''
 datafeed.name: ''
 datafeed.password: ''

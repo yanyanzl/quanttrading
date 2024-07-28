@@ -7,7 +7,7 @@ Global setting of the trading platform.
 from logging import CRITICAL, INFO, WARNING, DEBUG
 import logging
 from typing import Dict, Any
-# from tzlocal import get_localzone_name
+from tzlocal import get_localzone_name
 
 import yaml
 import os
@@ -166,8 +166,8 @@ def initialize_settings_data():
             "datafeed.name": "",
             "datafeed.username": "",
             "datafeed.password": "",
-
-            # "database.timezone": get_localzone_name(),
+            
+            "database.timezone": get_localzone_name(),
             "database.name": "sqlite",
             "database.database": "database.db",
             "database.host": "",
