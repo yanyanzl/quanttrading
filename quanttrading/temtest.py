@@ -52,18 +52,23 @@ import tzlocal
 #     print(f"{df2.iloc[[index]]=}")
 #     df1.loc[df1['Date'] == df2.iloc[[index, 'Date']]]
 #     df1.value
+import inspect
 
+symbol = ""
 
-_bar_picutures: dict[int, set] = {1:{"name","age"}, 2:{"age"}, 3:{"address"}}
+contract = symbol if symbol else "IBDE30"
 
-print(f"{_bar_picutures=}")
+print(f"{contract=}")
 
-bars = _bar_picutures.get(2)
-bars.add("contact number")
-print(f"{bars=}")
-print(f"{_bar_picutures=}")
+def updateDict():
+    _bar_picutures: dict[int, set] = {1:{"name","age"}, 2:{"age"}, 3:{"address"}}
 
+    print(f"{_bar_picutures=}")
 
+    bars = _bar_picutures.get(2)
+    bars.add("contact number")
+    print(f"{bars=}")
+    print(f"{_bar_picutures=}")
 
 def getDuration(start: datetime, end: datetime) -> str:
     duration = ""
