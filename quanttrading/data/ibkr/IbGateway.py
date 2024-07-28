@@ -31,6 +31,7 @@ from ibapi.order_state import OrderState
 from ibapi.ticktype import TickType, TickTypeEnum
 from ibapi.wrapper import EWrapper
 from ibapi.common import BarData as IbBarData
+from ibapi.utils import floatMaxString, decimalMaxString
 
 from data.gateway.gateway import BaseGateway
 from datatypes import (
@@ -879,6 +880,23 @@ class IbApi(EWrapper):
         self.gateway.on_tick_last(tickData)
 
         return None
+
+    # ! [pnl] app.reqPnL(102, "U123456", "")
+    def pnl(self, reqId: int, dailyPnL: float,
+            unrealizedPnL: float, realizedPnL: float):
+        super().pnl(reqId, dailyPnL, unrealizedPnL, realizedPnL)
+        print("Daily PnL. ReqId:", reqId, "DailyPnL:", floatMaxString(dailyPnL),
+              "UnrealizedPnL:", floatMaxString(unrealizedPnL), "RealizedPnL:", floatMaxString(realizedPnL))
+    # ! [pnl]
+
+    # ! [pnlsingle] app.reqPnLSingle(101, "U123456", "", 8314) #IBM conId: 8314
+    def pnlSingle(self, reqId: int, pos: Decimal, dailyPnL: float,
+                  unrealizedPnL: float, realizedPnL: float, value: float):
+        super().pnlSingle(reqId, pos, dailyPnL, unrealizedPnL, realizedPnL, value)
+        print("Daily PnL Single. ReqId:", reqId, "Position:", decimalMaxString(pos),
+              "DailyPnL:", floatMaxString(dailyPnL), "UnrealizedPnL:", floatMaxString(unrealizedPnL),
+              "RealizedPnL:", floatMaxString(realizedPnL), "Value:", floatMaxString(value))
+    # ! [pnlsingle]
 
     def connect(
         self,
