@@ -30,6 +30,9 @@ class CtaTemplate(ABC):
 
         self.inited: bool = False
         self.trading: bool = False
+
+        # position already hold for this strategy. add when long
+        # subtract when short. By engine
         self.pos: int = 0
 
         # Copy a new variables list here to avoid duplicate insert when multiple

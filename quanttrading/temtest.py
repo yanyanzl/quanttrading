@@ -54,27 +54,113 @@ import tzlocal
 #     df1.value
 import inspect
 from riskmanager.engine import TradeBook, RiskLevel
+from pathlib import Path
+from vnpy_ctastrategy import CtaTemplate, TargetPosTemplate
+from glob import glob
+import importlib, traceback
+from constant import _
+from types import ModuleType
 
 
-for risk in RiskLevel:
-    print(f"{risk.name=}")
 
-book = TradeBook("TSLA")
-activeTradeBook: dict[str, TradeBook] = {}
+def load_strategy_class_from_folder(path: Path, module_name: str = "") -> None:
+    """
+    Load strategy class from certain folder.
+    """
+    for suffix in ["py", "pyd", "so"]:
+        pathname: str = str(path.joinpath(f"*.{suffix}"))
+        print(f"{suffix=} and \n {pathname=}")
+        # glob() Return a list of paths matching a pathname pattern.
+        # The pattern may contain simple shell-style wildcards a la 
+        # fnmatch. Unlike fnmatch, filenames starting with a dot are
+        #  special cases that are not matched by '*' and '?' patterns
+        #  by default.
+        for filepath in glob(pathname):
+            # stem: The final path component, minus its last suffix.
+            # so you get the file name if filepath point to a full path
+            # of a file like get 'enngine' for:
+            # /Users/z/python/quanttrading/quanttrading/event/engine.py
+            filename = Path(filepath).stem
+            name: str = f"{module_name}.{filename}"
+            print(f"{module_name=} and \n {filename=} and {name=}")
+            # load_strategy_class_from_module(name)
 
-if not activeTradeBook:
-    print(f"activeTradeBook is empty {activeTradeBook}")
+def load_strategy_class() -> None:
+    """
+    Load strategy class from source code.
+    """
+    path1: Path = Path(__file__).parent.joinpath("event/engine.py")
+    load_strategy_class_from_folder(path1, "vnpy_ctastrategy.strategies")
 
-activeTradeBook["TSLA"] = book
-symbol = "TSLA"
-if symbol in activeTradeBook:
-    print(f"{activeTradeBook.get(symbol)}")
-else: 
-    print(f"{symbol=}")
+    path2: Path = Path.cwd().joinpath("strategies")
+    load_strategy_class_from_folder(path2, "strategies")
+    # path1 = str(path1.joinpath("*.py"))
+    print(f"{path1.stem=} and {path2=}")
+    print(f"{path1.exists()=} and {path2.exists()=}")
 
-contract = symbol if symbol else "IBDE30"
+load_strategy_class()
 
-print(f"{contract=}")
+def load_strategy_class_from_module(module_name: str) -> None:
+    """
+    Load strategy class from module file.
+    """
+    try:
+        classes: dict = {}
+        # importlib.import_module(name, package=None)
+        # Import a module. The name argument specifies what module to
+        #  import in absolute or relative terms (e.g. either pkg.mod 
+        # or ..mod). If the name is specified in relative terms, then
+        #  the package argument must be set to the name of the package
+        #  which is to act as the anchor for resolving the package name
+        #  (e.g. import_module('..mod', 'pkg.subpkg') will import pkg.mod).
+        module: ModuleType = importlib.import_module(module_name)
+
+        # importlib.reload(module)
+        # Reload a previously imported module. The argument must be a
+        # module object, so it must have been successfully imported 
+        # before. This is useful if you have edited the module source 
+        # file using an external editor and want to try out the new 
+        # version without leaving the Python interpreter. 
+        # The return value is the module object (which can be different
+        #  if re-importing causes a different object to be placed in 
+        # sys.modules).
+        importlib.reload(module)
+        print(f"{module.__name__=}")
+        for name in dir(module):
+            value = getattr(module, name)
+            print(f"{name=} and {value=}")
+            if (
+                isinstance(value, type)
+                and issubclass(value, CtaTemplate)
+                and value not in {CtaTemplate, TargetPosTemplate}
+            ):
+                classes[value.__name__] = value
+    except:  # noqa
+        msg: str = _("策略文件{}加载失败，触发异常：\n{}").format(module_name, traceback.format_exc())
+        print(msg)
+
+# load_strategy_class_from_module("utility")
+
+def noneEmptyInObjectTest():
+    for risk in RiskLevel:
+        print(f"{risk.name=}")
+
+    book = TradeBook("TSLA")
+    activeTradeBook: dict[str, TradeBook] = {}
+
+    if not activeTradeBook:
+        print(f"activeTradeBook is empty {activeTradeBook}")
+
+    activeTradeBook["TSLA"] = book
+    symbol = "TSLA"
+    if symbol in activeTradeBook:
+        print(f"{activeTradeBook.get(symbol)}")
+    else: 
+        print(f"{symbol=}")
+
+    contract = symbol if symbol else "IBDE30"
+
+    print(f"{contract=}")
 
 def updateDict():
     _bar_picutures: dict[int, set] = {1:{"name","age"}, 2:{"age"}, 3:{"address"}}

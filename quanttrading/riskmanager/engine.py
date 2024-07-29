@@ -85,6 +85,7 @@ class RiskEngine(BaseEngine):
 
         # symbol to tradebook map
         self.active_trades: Dict[str, TradeBook] = {}
+        self.all_trades: list[TradeData] = []
 
         self.load_setting()
         self.register_event()
@@ -229,6 +230,7 @@ class RiskEngine(BaseEngine):
             riskLevel = self.check_pnl_risk()
             if self.freeze and riskLevel > RiskLevel.LevelNormal:
                 self.main_engine.cancel_all_orders()
+                # cover all outstanding positions to be added.
 
     def write_log(self, msg: str) -> None:
         """"""
@@ -239,6 +241,10 @@ class RiskEngine(BaseEngine):
     def update_pnl_risk(self) -> bool:
         if not self.active or not self.active_trades:
             return True
+        
+        # self.active_trades = self.main_engine.get_all_trades()
+        # if not self.active_trades:
+        #     return True
         
         realised = 0
         total = 0
@@ -430,15 +436,3 @@ class TradeBook:
         
         self.total_pnl = (tick.last_price * self.long_size - self.long_cost) + (self.short_cost - tick.last_price * self.short_size)
         return
-
-    def get_best_bid(self) -> float:
-        """获取最高买价"""
-        if not self.bid_prices:
-            return 0
-        return max(self.bid_prices.values())
-
-    def get_best_ask(self) -> float:
-        """获取最低卖价"""
-        if not self.ask_prices:
-            return 0
-        return min(self.ask_prices.values())

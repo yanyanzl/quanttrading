@@ -734,6 +734,8 @@ class ArrayManager(object):
     def sma(self, n: int, array: bool = False) -> Union[float, np.ndarray]:
         """
         Simple moving average.
+        n: period of the SMA. example 14, 50, 200
+        array: true
         """
         result: np.ndarray = talib.SMA(self.close, n)
         if array:

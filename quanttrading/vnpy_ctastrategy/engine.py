@@ -104,7 +104,7 @@ class CtaEngine(BaseEngine):
         self.load_strategy_setting()
         self.load_strategy_data()
         self.register_event()
-        self.write_log(_("CTA策略引擎初始化成功"))
+        self.write_log(_("CTA strategy engine initialized successfully!"))
 
     def close(self) -> None:
         """"""
@@ -810,6 +810,7 @@ class CtaEngine(BaseEngine):
             module: ModuleType = importlib.import_module(module_name)
 
             # 重载模块，确保如果策略文件中有任何修改，能够立即生效。
+            # module is strategies under 
             importlib.reload(module)
 
             for name in dir(module):

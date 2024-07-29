@@ -42,6 +42,10 @@ class RiskManager(QtWidgets.QDialog):
         self.realised_profit_limit_spin: RiskManagerSpinBox = RiskManagerSpinBox()
         self.total_loss_limit_spin: RiskManagerSpinBox = RiskManagerSpinBox()
         self.realised_loss_limit_spin: RiskManagerSpinBox = RiskManagerSpinBox()
+        self.total_loss_limit_spin.setMinimum(-1000)
+        self.total_loss_limit_spin.setMaximum(-10)
+        self.realised_loss_limit_spin.setMinimum(-1000)
+        self.realised_loss_limit_spin.setMaximum(-10)
 
         # freeze trading level: 
         self.freeze_combo: QtWidgets.QComboBox = QtWidgets.QComboBox()

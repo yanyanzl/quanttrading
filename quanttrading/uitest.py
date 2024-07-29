@@ -13,6 +13,7 @@ from setting import Aiconfig
 from vnpy_algotrading import AlgoTradingApp
 from riskmanager import RiskManagerApp
 from backtester import CtaBacktesterApp
+from vnpy_ctastrategy import CtaStrategyApp
 
 import logging
 import tracemalloc, os
@@ -48,6 +49,9 @@ async def main():
 
         # add backtester application
         main_engine.add_app(CtaBacktesterApp)
+
+        # add CTA strategy application
+        main_engine.add_app(CtaStrategyApp)
 
         try:
 

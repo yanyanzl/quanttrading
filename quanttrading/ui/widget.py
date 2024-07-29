@@ -54,7 +54,7 @@ class BaseCell(QtWidgets.QTableWidgetItem):
     def __init__(self, content: Any, data: Any) -> None:
         """"""
         super().__init__()
-        self.setTextAlignment(QtCore.Qt.AlignCenter)
+        self.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.set_content(content, data)
 
     def set_content(self, content: Any, data: Any) -> None:
@@ -340,7 +340,7 @@ class BaseMonitor(QtWidgets.QTableWidget):
         """
         Resize all columns according to contents.
         """
-        self.horizontalHeader().resizeSections(QtWidgets.QHeaderView.ResizeToContents)
+        self.horizontalHeader().resizeSections(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 
     def save_csv(self) -> None:
         """
@@ -389,7 +389,7 @@ class BaseMonitor(QtWidgets.QTableWidget):
 
         if isinstance(column_state, QtCore.QByteArray):
             self.horizontalHeader().restoreState(column_state)
-            self.horizontalHeader().setSortIndicator(-1, QtCore.Qt.AscendingOrder)
+            self.horizontalHeader().setSortIndicator(-1, QtCore.Qt.SortOrder.AscendingOrder)
 
 
 class TickMonitor(BaseMonitor):

@@ -1,0 +1,15 @@
+{
+    "TSLA.SMART": {
+        "class_name": "MultiSignalStrategy",
+        "vt_symbol": "TSLA.SMART",
+        "setting": {
+            "class_name": "MultiSignalStrategy",
+            "rsi_window": 14,
+            "rsi_level": 20,
+            "cci_window": 30,
+            "cci_level": 10,
+            "fast_window": 5,
+            "slow_window": 20
+        }
+    }
+}

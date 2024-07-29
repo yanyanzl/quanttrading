@@ -434,9 +434,16 @@ class OrderManagement(BaseManagement):
         self._ticksBidAsk: Dict[str, TickData] = {}
 
         self.orders: Dict[str, OrderData] = {}
+
+        # trade.vt_tradeid to TradeData
         self.trades: Dict[str, TradeData] = {}
+
+        # all the positions holded
         self.positions: Dict[str, PositionData] = {}
+        
+        # all account infomation
         self.accounts: Dict[str, AccountData] = {}
+
         self.contracts: Dict[str, ContractData] = {}
         self.quotes: Dict[str, QuoteData] = {}
 

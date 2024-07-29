@@ -1,3 +1,7 @@
+"""
+multiple signal trigger the strategy.
+
+"""
 from vnpy_ctastrategy import (
     StopOrder,
     TickData,
@@ -12,10 +16,21 @@ from vnpy_ctastrategy import (
 
 
 class RsiSignal(CtaSignal):
-    """"""
+    """ 
+     Relative Strenght Index (RSI) signal 
+    """
 
     def __init__(self, rsi_window: int, rsi_level: float):
-        """Constructor"""
+        """
+        Constructor.
+        rsi_window: period of the RSI
+        rsi_level: level to trigger signal
+        high will be 50 + rsi_level and 
+        low will be 50 - rsi_level
+        if rsi level < low. trigger rsi signal : -1
+        if rsi level > high. trigger rsi signal : 1
+        otherwise signal : 0
+        """
         super().__init__()
 
         self.rsi_window = rsi_window
@@ -51,10 +66,33 @@ class RsiSignal(CtaSignal):
 
 
 class CciSignal(CtaSignal):
-    """"""
+    """ 
+    Commodity Channel Index (CCI) Signal 
+    measures the current price level relative to an average 
+    price level over a given period of time. 
+
+    CCI is relatively high when prices are far above their average. 
+    CCI is relatively low when prices are far below their average.
+
+    When the CCI is above zero, it indicates the price is above 
+    the historic average. Conversely, when the CCI is below zero,
+      the price is below the historic average.
+
+    """
 
     def __init__(self, cci_window: int, cci_level: float):
-        """"""
+        """ 
+        cci_window: period of CCI
+        cci_level: level to trigger the cci signal
+        if cci level < - cci_level. trigger cci signal : -1
+        if cci level > cci_level. trigger cci signal : 1
+        otherwise signal : 0
+        The CCI is an unbounded oscillator, meaning it can go higher or
+          lower indefinitely. For this reason, overbought and oversold
+            levels are typically determined for each individual asset by
+              looking at historical extreme CCI levels where the price 
+              reversed from
+        """
         super().__init__()
 
         self.cci_window = cci_window
@@ -90,10 +128,28 @@ class CciSignal(CtaSignal):
 
 
 class MaSignal(CtaSignal):
-    """"""
+    """ 
+    Fast and Slow Moving Averages Crossover signal 
+    The fast and slow moving average crossover strategy is a 
+    quantitative trading strategy that generates trading signals by
+      comparing fast and slow moving averages. It goes long when the
+        fast MA crosses above the slow MA, and goes short when the 
+        fast MA crosses below the slow MA. The strategy aims to capture
+          trend turning points on the medium-short term timeframe
+    """
 
     def __init__(self, fast_window: int, slow_window: int):
-        """"""
+        """
+        fast_window: period for short term SMA. example 50
+        slow_window: period for long term SMA. example 200
+        long when fast MA crosses above slow MA. signal : 1
+        short when fast MA crosses below slow MA. signal : -1
+
+        The fast MA reacts swiftly to price changes and reflects the
+          latest trend. The slow MA filters out low frequency noises
+            and captures the major trend. Crossovers signal potential
+              trend reversals for improved trading accuracy.
+        """
         super().__init__()
 
         self.fast_window = fast_window
@@ -132,9 +188,9 @@ class MaSignal(CtaSignal):
 
 
 class MultiSignalStrategy(TargetPosTemplate):
-    """"""
+    """ multi-signal strategy class """
 
-    author = "用Python的交易员"
+    author = "Steven Jiang"
 
     rsi_window = 14
     rsi_level = 20
@@ -144,9 +200,12 @@ class MultiSignalStrategy(TargetPosTemplate):
     slow_window = 20
 
     signal_pos = {}
-
+    # parameters is used to control the signal parameters like:
+    # period, trigger level etc. which is different for different
+    # strategy signals.
     parameters = ["rsi_window", "rsi_level", "cci_window",
                   "cci_level", "fast_window", "slow_window"]
+    
     variables = ["signal_pos"]
 
     def __init__(self, cta_engine, strategy_name, vt_symbol, setting):

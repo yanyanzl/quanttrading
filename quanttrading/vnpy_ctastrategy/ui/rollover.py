@@ -3,12 +3,12 @@ from time import sleep
 from typing import TYPE_CHECKING, List, Optional
 from copy import copy
 
-from vnpy.trader.engine import MainEngine
-from vnpy.trader.constant import OrderType
-from vnpy.trader.object import ContractData, OrderRequest, SubscribeRequest, TickData
-from vnpy.trader.object import Direction, Offset
-from vnpy.trader.ui import QtWidgets
-from vnpy.trader.converter import OffsetConverter, PositionHolding
+from ordermanagement import MainEngine
+from constant import OrderType
+from datatypes import ContractData, OrderRequest, SubscribeRequest, TickData
+from datatypes import Direction, Offset
+from ui.uiapp import QtWidgets
+from converter import OffsetConverter, PositionHolding
 
 from ..engine import CtaEngine, APP_NAME
 from ..template import CtaTemplate
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class RolloverTool(QtWidgets.QDialog):
-    """"""
+    """roll over the position holded """
 
     def __init__(self, cta_manager: "CtaManager") -> None:
         """"""
