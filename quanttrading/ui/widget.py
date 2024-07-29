@@ -511,8 +511,8 @@ class PositionMonitor(BaseMonitor):
     sorting: bool = True
 
     headers: dict = {
-        "symbol": {"display": _("代码"), "cell": BaseCell, "update": False},
-        "exchange": {"display": _("交易所"), "cell": EnumCell, "update": False},
+        "symbolName": {"display": _("Symbol"), "cell": BaseCell, "update": False},
+        "exchange": {"display": _("Exchange"), "cell": EnumCell, "update": False},
         "direction": {"display": _("方向"), "cell": DirectionCell, "update": False},
         "volume": {"display": _("数量"), "cell": BaseCell, "update": True},
         "yd_volume": {"display": _("昨仓"), "cell": BaseCell, "update": True},

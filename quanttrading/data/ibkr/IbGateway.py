@@ -203,7 +203,7 @@ def intervalToIB(interval) -> str:
         tobe = re.sub(ori, rep, interval)
     
     return tobe
-
+from .aiorder import OrderSamples
 # 其他常量
 LOCAL_TZ = ZoneInfo(get_localzone_name())
 JOIN_SYMBOL: str = "-"
@@ -240,6 +240,7 @@ class IbGateway(BaseGateway):
         account: str = setting["交易账户"]
 
         self.api.connect(host, port, clientid, account)
+        self.alive = self.api.status
 
         self.event_engine.register(EVENT_TIMER, self.process_timer_event)
 
@@ -285,7 +286,7 @@ class IbGateway(BaseGateway):
         self.count = 0
 
         self.api.check_connection()
-
+        self.alive = self.api.status
 
 class IbApi(EWrapper):
     """IB的API接口"""
@@ -389,7 +390,7 @@ class IbApi(EWrapper):
 
     def tickPrice(self, reqId: TickerId, tickType: TickType, price: float, attrib: TickAttrib) -> None:
         """tick价格更新回报"""
-        super().tickPrice(reqId, tickType, price, attrib)
+        # super().tickPrice(reqId, tickType, price, attrib)
 
         if tickType not in TICKFIELD_IB2VT:
             return
@@ -418,7 +419,7 @@ class IbApi(EWrapper):
 
     def tickSize(self, reqId: TickerId, tickType: TickType, size: Decimal) -> None:
         """tick数量更新回报"""
-        super().tickSize(reqId, tickType, size)
+        # super().tickSize(reqId, tickType, size)
 
         if tickType not in TICKFIELD_IB2VT:
             return
@@ -435,7 +436,7 @@ class IbApi(EWrapper):
 
     def tickString(self, reqId: TickerId, tickType: TickType, value: str) -> None:
         """tick字符串更新回报"""
-        super().tickString(reqId, tickType, value)
+        # super().tickString(reqId, tickType, value)
 
         if tickType != TickTypeEnum.LAST_TIMESTAMP:
             return
@@ -697,6 +698,7 @@ class IbApi(EWrapper):
             return
         # self.gateway.write_log(f"entered contractDetails.. {product=}")
         # 生成合约
+        print(f"=========================== {contractDetails.contract.symbol=} and {contractDetails.underSymbol=}") 
         contract: ContractData = ContractData(
             symbol=symbol,
             exchange=EXCHANGE_IB2VT[ib_contract.exchange],
@@ -709,7 +711,9 @@ class IbApi(EWrapper):
             history_data=True,
             stop_supported=True,
             gateway_name=self.gateway_name,
+            symbolName=contractDetails.contract.symbol,
         )
+        # contract.
 
         if contract.product == Product.OPTION:
             underlying_symbol: str = str(contractDetails.underConId)
@@ -722,6 +726,7 @@ class IbApi(EWrapper):
             contract.option_underlying = underlying_symbol + "_" + ib_contract.lastTradeDateOrContractMonth
 
         # self.gateway.write_log(f"entered contractDetails.. {contract.vt_symbol=} and {self.contracts}")
+        print(f"=========================== {contract=}")
         if contract.vt_symbol not in self.contracts:
             self.gateway.on_contract(contract)
             self.gateway.write_log(f" end of  contractDetails..")
@@ -1014,6 +1019,7 @@ class IbApi(EWrapper):
 
     def send_order(self, req: OrderRequest) -> str:
         """委托下单"""
+        self.gateway.write_log(f"main engine send_order: {req=} and {self.status}  ")
         if not self.status:
             return ""
 
@@ -1049,6 +1055,7 @@ class IbApi(EWrapper):
         elif req.type == OrderType.STOP:
             ib_order.auxPrice = req.price
 
+        self.gateway.write_log(f"ibgate way placeing order: {self.orderid=} and \n {ib_contract=} and \n {ib_order=}  ")
         self.client.placeOrder(self.orderid, ib_contract, ib_order)
         self.client.reqIds(1)
 
@@ -1062,7 +1069,7 @@ class IbApi(EWrapper):
         if not self.status:
             return
 
-        self.client.cancelOrder(int(req.orderid), "")
+        self.client.cancelOrder(int(req.orderid), OrderSamples.CancelOrderEmpty())
 
     def query_history(self, req: HistoryRequest) -> list[BarData]:
         """查询历史数据"""
@@ -1166,15 +1173,16 @@ class IbApi(EWrapper):
     
     def load_contract_data(self) -> None:
         """加载本地合约数据"""
-        f = shelve.open(self.data_filepath)
-        self.contracts = f.get("contracts", {})
-        self.ib_contracts = f.get("ib_contracts", {})
-        f.close()
+        # f = shelve.open(self.data_filepath)
+        # self.contracts = f.get("contracts", {})
+        # self.ib_contracts = f.get("ib_contracts", {})
+        # f.close()
 
-        for contract in self.contracts.values():
-            self.gateway.on_contract(contract)
+        # for contract in self.contracts.values():
+        #     self.gateway.on_contract(contract)
 
-        self.gateway.write_log("本地缓存合约信息加载成功")
+        # self.gateway.write_log("本地缓存合约信息加载成功")
+        pass
 
     def save_contract_data(self) -> None:
         """保存合约数据至本地"""

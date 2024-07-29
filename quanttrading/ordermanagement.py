@@ -238,7 +238,9 @@ class MainEngine:
         """
         Send new order request to a specific gateway.
         """
+        
         gateway: BaseGateway = self.get_gateway(gateway_name)
+        self.write_log(f"main engine send_order: {gateway=} and {req=}  ")
         if gateway:
             return gateway.send_order(req)
         else:
@@ -280,12 +282,20 @@ class MainEngine:
         else:
             return None
         
-    def cancel_all_orders(self) -> None:
+    def cancel_all_orders(self, symbol:str=None) -> None:
         """
-        cancel all orders. 
+        cancel all active orders for a specified Symbol. 
+        call all active orders for all symbols if symbol is not given
         """
         self.write_log(f"Cancelling all active orders ...... ")
         orders: list[OrderData] = self.get_all_active_orders()
+        if symbol:
+            tempOrders: list[OrderData] = []
+            for _ in orders:
+               if _.symbol == symbol:
+                   self.write_log(f"cancel_all_orders: {_.symbol} and {_.vt_symbol}")
+                   tempOrders.append(_)
+            orders = tempOrders
         self.write_log(f"order list to be cancelled: {orders}")
 
         if not orders:
@@ -293,6 +303,23 @@ class MainEngine:
         for order in orders:
             cancelRequest = order.create_cancel_request()
             self.cancel_order(cancelRequest, order.gateway_name)
+
+        return None
+
+    def cover_all_trades(self, server: bool = False) -> None:
+        """
+        call this function very carefully. it will cover all 
+        your open trades
+        cover all trades
+        server: 
+            True: all positions on server (may include positions not 
+        opened by this trading platform)
+            False: all positions opened by this trading platform
+        """
+        
+        trades:list[TradeData] = []
+        if server:
+            trades = self.getall
 
         return None
 
@@ -591,7 +618,7 @@ class OrderManagement(BaseManagement):
         """"""
         contract: ContractData = event.data
         self.contracts[contract.vt_symbol] = contract
-
+        print(f"process_contract_event =========================== {contract=}")
         # Initialize offset converter for each gateway
         if contract.gateway_name not in self.offset_converters:
             self.offset_converters[contract.gateway_name] = OffsetConverter(self)
@@ -658,8 +685,18 @@ class OrderManagement(BaseManagement):
         """
         Get contract data by vt_symbol.
         """
-        logger.debug(f"--------------get_contract {vt_symbol=} and {self.contracts=}")
-        return self.contracts.get(vt_symbol, None)
+        logger.info(f"--------------get_contract {vt_symbol=} and {self.contracts=}")
+        contract = self.contracts.get(vt_symbol, None)
+        if not contract:
+            if not self.contracts:
+                pass
+            else:
+                for _ in self.contracts.values():
+                    logger.info(f"{_.symbolName=}")
+                    if _.symbolName == vt_symbol:
+                        contract = _
+                        break
+        return contract
 
     def get_quote(self, vt_quoteid: str) -> Optional[QuoteData]:
         """

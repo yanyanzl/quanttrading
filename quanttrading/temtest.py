@@ -61,7 +61,11 @@ import importlib, traceback
 from constant import _
 from types import ModuleType
 
-
+sting1 = 3
+if sting1:
+    print("sting1 is empty")
+else:
+    print("not there ")
 
 def load_strategy_class_from_folder(path: Path, module_name: str = "") -> None:
     """
