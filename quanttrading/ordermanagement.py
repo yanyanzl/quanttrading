@@ -38,6 +38,7 @@ from constant import (
     EVENT_REALTIME_DATA,
     EVENT_TICK_BIDASK_DATA,
     EVENT_TICK_LAST_DATA,
+    Direction,
 )
 from data.gateway.gateway import BaseGateway
 from datatypes import (
@@ -58,7 +59,8 @@ from datatypes import (
     ContractData,
     Exchange,
     CandleData,
-    Account
+    Account,
+    OrderType
 )
 from setting import SETTINGS
 from utility import get_folder_path, TRADER_DIR
@@ -306,20 +308,42 @@ class MainEngine:
 
         return None
 
-    def cover_all_trades(self, server: bool = False) -> None:
+    def cover_all_trades(self, server: bool = False, symbol:str=None) -> None:
         """
         call this function very carefully. it will cover all 
-        your open trades
-        cover all trades
+        your open trades/positions
+        cover all trades for the specified symbol. 
+        if no symbol provided. cover all trades.
         server: 
             True: all positions on server (may include positions not 
         opened by this trading platform)
             False: all positions opened by this trading platform
         """
-        
-        trades:list[TradeData] = []
+
         if server:
-            trades = self.getall
+            positions: list[PositionData] = self.get_all_positions()
+            if positions:
+                for position in positions:
+                    if position.volume != 0:
+                        req: OrderRequest = OrderRequest()
+                        req.type = OrderType.MARKET
+                        req.symbol = position.symbol
+                        req.exchange = position.exchange
+                        if position.direction == Direction.LONG:
+                            req.direction = Direction.SHORT
+                        else:
+                            req.direction = Direction.LONG
+                        req.volume = position.volume
+                        self.write_log(f"{position=}")
+                        # self.send_order(req, position.gateway_name)
+
+        else:
+            trades:list[TradeData] = self.get_all_trades()
+            if trades:
+                for trade in trades:
+                    self.write_log(f"{trade}")
+                    
+                    # self.send_order(req, position.gateway_name)
 
         return None
 
