@@ -558,3 +558,81 @@ class QuoteRequest:
             gateway_name=gateway_name,
         )
         return quote
+
+
+class TradeBook:
+    """
+    long/short trades for a single symbol
+    calculate the PnL based on the trades
+    """
+
+    def __init__(self, vt_symbol: str) -> None:
+        """"""
+        self.vt_symbol: str = vt_symbol
+
+        # long position size * price
+        self.long_cost:float  = 0
+
+        # short position size * price
+        self.short_cost: float = 0
+
+        self.long_size: int = 0
+
+        self.short_size: int = 0
+
+        self.exchange: Exchange = None
+        self.gateway_name: str = ""
+
+        # the realised pnl for this symbol. 
+        # positive for profit. negative for loss
+        self.realised_pnl = 0
+
+        # the total pnl for this symbol. 
+        # positive for profit. negative for loss
+        self.total_pnl = 0
+
+    def update_trades(self, trade: TradeData) -> None:
+        """update the trades information."""
+        if trade is not None and isinstance(trade, TradeData) and trade.vt_symbol == self.vt_symbol:
+            self.exchange = trade.exchange
+            self.gateway_name = trade.gateway_name
+
+            if trade.direction == Direction.LONG:
+                self.long_size += trade.volume
+                self.long_cost += (trade.volume * trade.price)
+            else:
+                self.short_size += trade.volume
+                self.short_cost += (trade.volume * trade.price)
+            
+            self.total_pnl = (trade.price * self.long_size - self.long_cost) + (self.short_cost - trade.price * self.short_size)
+            if self.long_size >= self.short_size > 0:
+                self.realised_pnl = self.short_size * (self.short_cost/self.short_size - self.long_cost/self.long_size)
+            elif self.short_size > self.long_size > 0:
+                self.realised_pnl = self.long_size * (self.short_cost/self.short_size - self.long_cost/self.long_size)
+
+    def on_tick(self, tick:TickData) -> None:
+        """
+        update the pnl based on the tickdata.
+        """
+        
+        self.total_pnl = (tick.last_price * self.long_size - self.long_cost) + (self.short_cost - tick.last_price * self.short_size)
+        return
+    
+    def create_cover_req(self) -> OrderRequest:
+        """
+        creating a orderrequest to cover all the outstanding postion for this symbol
+        if no outstanding position. Return None
+        cover by a Market order by default.
+        """
+        if not self.vt_symbol or not self.exchange:
+            return
+        
+        if self.long_size == self.short_size:
+            return
+        
+        direction = Direction.LONG
+        volume = self.long_size - self.short_size
+        if volume > 0:
+            direction = Direction.SHORT
+        req = OrderRequest(self.vt_symbol, self.exchange, direction, OrderType.MARKET, abs(volume))
+        return req

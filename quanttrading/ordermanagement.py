@@ -308,7 +308,7 @@ class MainEngine:
 
         return None
 
-    def cover_all_trades(self, server: bool = False, symbol:str=None) -> None:
+    def cover_all_trades(self, server: bool = False, symbol:str=None, orderType:OrderType = OrderType.MARKET) -> None:
         """
         call this function very carefully. it will cover all 
         your open trades/positions
@@ -321,12 +321,16 @@ class MainEngine:
         """
 
         if server:
-            positions: list[PositionData] = self.get_all_positions()
+            if symbol:
+                positions: list[PositionData] = self.get_position(symbol)
+            else:
+                positions: list[PositionData] = self.get_all_positions()
+            
             if positions:
                 for position in positions:
                     if position.volume != 0:
                         req: OrderRequest = OrderRequest()
-                        req.type = OrderType.MARKET
+                        req.type = orderType
                         req.symbol = position.symbol
                         req.exchange = position.exchange
                         if position.direction == Direction.LONG:
@@ -338,12 +342,46 @@ class MainEngine:
                         # self.send_order(req, position.gateway_name)
 
         else:
-            trades:list[TradeData] = self.get_all_trades()
+            if symbol:
+                trades:list[TradeData] = self.get_all_trades(symbol)
+            else:
+                trades:list[TradeData] = self.get_all_trades()
+            
             if trades:
+                # get a map from symbol to all trades to a symbol
+                tempTrades: dict[str, list[TradeData]] = {}
                 for trade in trades:
                     self.write_log(f"{trade}")
-                    
-                    # self.send_order(req, position.gateway_name)
+                    if trade.symbol in tempTrades:
+                        tempTrades.get(trade.symbol).append(trade)
+                    else:
+                        tempTrades[trade.symbol] = [trade]
+
+                for symbol, trades1 in tempTrades.items():
+                    direction = Direction.LONG
+                    volume = 0
+                    # for trades for the same symbol. calculate the 
+                    # accumulate position after set off.
+                    for trade in trades1:
+                        if trade.direction == Direction.LONG:
+                            volume += trade.volume
+                        elif trade.direction == Direction.SHORT:
+                            volume -= trade.volume
+                    if volume > 0:
+                        direction = Direction.SHORT
+                    elif volume == 0:
+                        # no position hold for this symbol
+                        # continue to the next symbol
+                        continue
+
+                    req: OrderRequest = OrderRequest()
+                    req.symbol = symbol
+                    req.exchange = trades1[0].exchange
+                    req.type = orderType
+                    req.direction = direction
+                    req.volume = abs(volume)
+                    self.write_log(f"{req=}, {trades1[0].gateway_name=}")
+                    # self.send_order(req, trades1[0].gateway_name)
 
         return None
 
@@ -693,11 +731,21 @@ class OrderManagement(BaseManagement):
         """
         return self.trades.get(vt_tradeid, None)
 
-    def get_position(self, vt_positionid: str) -> Optional[PositionData]:
+    def get_position(self, vt_positionidOrSymbol: str) -> Optional[PositionData]:
         """
-        Get latest position data by vt_positionid.
+        Get latest position data by vt_positionid or symbol
+        get by vt_positionid firstly.
+        if None. try to get position data by symbol
         """
-        return self.positions.get(vt_positionid, None)
+        position = self.positions.get(vt_positionidOrSymbol, None)
+
+        if not position and self.positions:
+            for _ in self.positions.values():
+                if _.symbol == vt_positionidOrSymbol:
+                    position = _
+                    break
+
+        return position
 
     def get_account(self, vt_accountid: str) -> Optional[AccountData]:
         """
@@ -740,11 +788,21 @@ class OrderManagement(BaseManagement):
         """
         return list(self.orders.values())
 
-    def get_all_trades(self) -> List[TradeData]:
+    def get_all_trades(self, symbol:str = None) -> List[TradeData]:
         """
-        Get all trade data.
+        Get all trade data for a specified symbol.
+        get all trades data for all if symbol is not specified.
         """
-        return list(self.trades.values())
+        trades: list[TradeData] = []
+        if symbol and self.trades:
+            for _ in self.trades.values():
+                if _.symbol == symbol:
+                    trades.append(_)
+
+        else:
+            trades = list(self.trades.values())
+
+        return trades
 
     def get_all_positions(self) -> List[PositionData]:
         """

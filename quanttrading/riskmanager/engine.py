@@ -2,7 +2,7 @@ from collections import defaultdict
 from typing import Callable, Dict, Optional
 
 from event import Event, EventEngine
-from datatypes import OrderData, OrderRequest, LogData, TradeData, TickData
+from datatypes import OrderData, OrderRequest, LogData, TradeData, TickData, TradeBook
 from ordermanagement import MainEngine, BaseManagement as BaseEngine
 from constant import EVENT_TRADE, EVENT_ORDER, EVENT_LOG, EVENT_TIMER, EVENT_TICK, RiskLevel
 from constant import Direction, Status
@@ -20,7 +20,7 @@ class RiskEngine(BaseEngine):
         # number of canceled orders. default 500
         # max number of trades: default 1000
         # max size per order. default 100
-        # max orders per period: default 50 per 1 sencond
+        # max orders per period: default 10 per 1 sencond
         # total profit limit (realize + unrealized): default 1000
         # realized profit limit: default 1000
         # total loss limit: default 150
@@ -39,9 +39,9 @@ class RiskEngine(BaseEngine):
         # freeze all due to risk level too high.
         self.freeze: bool = True
 
-        # max orders per period: default 50
+        # max orders per period: default 10
         self.order_flow_count: int = 0
-        self.order_flow_limit: int = 50
+        self.order_flow_limit: int = 10
 
         # max orders period length: 1 sencond
         self.order_flow_clear: int = 1
@@ -230,8 +230,9 @@ class RiskEngine(BaseEngine):
             riskLevel = self.check_pnl_risk()
             if self.freeze and riskLevel > RiskLevel.LevelNormal:
                 self.main_engine.cancel_all_orders()
+                self.main_engine.cover_all_trades()
                 # cover all outstanding positions to be added.
-
+                
     def write_log(self, msg: str) -> None:
         """"""
         log: LogData = LogData(msg=msg, gateway_name="RiskManager")
@@ -241,10 +242,6 @@ class RiskEngine(BaseEngine):
     def update_pnl_risk(self) -> bool:
         if not self.active or not self.active_trades:
             return True
-        
-        # self.active_trades = self.main_engine.get_all_trades()
-        # if not self.active_trades:
-        #     return True
         
         realised = 0
         total = 0
@@ -384,55 +381,3 @@ class ActiveOrderBook:
         if not self.ask_prices:
             return 0
         return min(self.ask_prices.values())
-    
-class TradeBook:
-    """
-    long/short trades for a single symbol
-    calculate the PnL based on the trades
-    """
-
-    def __init__(self, vt_symbol: str) -> None:
-        """"""
-        self.vt_symbol: str = vt_symbol
-
-        # long position size * price
-        self.long_cost:float  = 0
-
-        # short position size * price
-        self.short_cost: float = 0
-
-        self.long_size: int = 0
-
-        self.short_size: int = 0
-
-        # the realised pnl for this symbol. 
-        # positive for profit. negative for loss
-        self.realised_pnl = 0
-
-        # the total pnl for this symbol. 
-        # positive for profit. negative for loss
-        self.total_pnl = 0
-
-    def update_trades(self, trade: TradeData) -> None:
-        """update the trades information."""
-        if trade is not None and isinstance(trade, TradeData) and trade.vt_symbol == self.vt_symbol:
-            if trade.direction == Direction.LONG:
-                self.long_size += trade.volume
-                self.long_cost += (trade.volume * trade.price)
-            else:
-                self.short_size += trade.volume
-                self.short_cost += (trade.volume * trade.price)
-            
-            self.total_pnl = (trade.price * self.long_size - self.long_cost) + (self.short_cost - trade.price * self.short_size)
-            if self.long_size >= self.short_size > 0:
-                self.realised_pnl = self.short_size * (self.short_cost/self.short_size - self.long_cost/self.long_size)
-            elif self.short_size > self.long_size > 0:
-                self.realised_pnl = self.long_size * (self.short_cost/self.short_size - self.long_cost/self.long_size)
-
-    def on_tick(self, tick:TickData) -> None:
-        """
-        update the pnl based on the tickdata.
-        """
-        
-        self.total_pnl = (tick.last_price * self.long_size - self.long_cost) + (self.short_cost - tick.last_price * self.short_size)
-        return

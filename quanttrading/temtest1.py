@@ -41,7 +41,7 @@ def eventTest(event:Event):
 async def gatewayTest():
     engine = EventEngine(10)
     gw = IbkrGateway(engine, "IbkrGateway")
-    gwSetting = {"IP":"127.0.0.1", "PORT":7497}
+    gwSetting = {"IP":"192.168.1.127", "PORT":7497}
     gw.connect(gwSetting)
     logger.info("connect completed!==================================================")
 

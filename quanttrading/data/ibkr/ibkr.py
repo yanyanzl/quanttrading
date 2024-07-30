@@ -31,7 +31,7 @@ from datatypes import (
     CancelRequest, 
     QuoteRequest
 )
-from .ibkrgateway import EXCHANGE_IB2QT, EXCHANGE_QT2IB
+# from .ibkrgateway import EXCHANGE_QT2IB
 import logging
 from .aitools import *
 from .aicontract import stock_contract
@@ -235,9 +235,9 @@ class IbkrApp(AiWrapper, AiClient):
         if not self.status:
             return
 
-        if req.exchange not in EXCHANGE_QT2IB:
-            logger.info(f"don't support {req.exchange}")
-            return
+        # if req.exchange not in EXCHANGE_QT2IB:
+        #     logger.info(f"don't support {req.exchange}")
+        #     return
 
         if " " in req.symbol:
             logger.info(f"invalid {req.symbol=}")
