@@ -791,6 +791,7 @@ class IbApi(EWrapper):
             volume=float(execution.shares),
             datetime=dt,
             gateway_name=self.gateway_name,
+            symbolName=contract.symbol
         )
 
         self.gateway.on_trade(trade)

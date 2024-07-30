@@ -445,16 +445,19 @@ class TradeMonitor(BaseMonitor):
     sorting: bool = True
 
     headers: dict = {
-        "tradeid": {"display": _("成交号"), "cell": BaseCell, "update": False},
+        
         "orderid": {"display": _("委托号"), "cell": BaseCell, "update": False},
-        "symbol": {"display": _("代码"), "cell": BaseCell, "update": False},
+        "symbolName": {"display": _("symbol"), "cell": BaseCell, "update": False},
         "exchange": {"display": _("交易所"), "cell": EnumCell, "update": False},
         "direction": {"display": _("方向"), "cell": DirectionCell, "update": False},
-        "offset": {"display": _("开平"), "cell": EnumCell, "update": False},
+        
         "price": {"display": _("价格"), "cell": BaseCell, "update": False},
         "volume": {"display": _("数量"), "cell": BaseCell, "update": False},
         "datetime": {"display": _("时间"), "cell": TimeCell, "update": False},
+        "symbol": {"display": _("代码"), "cell": BaseCell, "update": False},
         "gateway_name": {"display": _("接口"), "cell": BaseCell, "update": False},
+        "offset": {"display": _("开平"), "cell": EnumCell, "update": False},
+        "tradeid": {"display": _("成交号"), "cell": BaseCell, "update": False},
     }
 
 
@@ -469,17 +472,17 @@ class OrderMonitor(BaseMonitor):
 
     headers: dict = {
         "orderid": {"display": _("委托号"), "cell": BaseCell, "update": False},
-        "reference": {"display": _("来源"), "cell": BaseCell, "update": False},
         "symbol": {"display": _("代码"), "cell": BaseCell, "update": False},
-        "exchange": {"display": _("交易所"), "cell": EnumCell, "update": False},
-        "type": {"display": _("类型"), "cell": EnumCell, "update": False},
         "direction": {"display": _("方向"), "cell": DirectionCell, "update": False},
-        "offset": {"display": _("开平"), "cell": EnumCell, "update": False},
         "price": {"display": _("价格"), "cell": BaseCell, "update": False},
         "volume": {"display": _("总数量"), "cell": BaseCell, "update": True},
         "traded": {"display": _("已成交"), "cell": BaseCell, "update": True},
         "status": {"display": _("状态"), "cell": EnumCell, "update": True},
+        "type": {"display": _("类型"), "cell": EnumCell, "update": False},
+        "reference": {"display": _("来源"), "cell": BaseCell, "update": False},
+        "exchange": {"display": _("交易所"), "cell": EnumCell, "update": False},
         "datetime": {"display": _("时间"), "cell": TimeCell, "update": True},
+        "offset": {"display": _("开平"), "cell": EnumCell, "update": False},
         "gateway_name": {"display": _("接口"), "cell": BaseCell, "update": False},
     }
 
