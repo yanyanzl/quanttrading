@@ -61,9 +61,12 @@ import importlib, traceback
 from constant import _
 from types import ModuleType
 
-sting1 = 3
-if sting1:
-    print("sting1 is empty")
+sting1 = "tsla.smart"
+
+if sting1 and "." in sting1:
+    sting2 = sting1.split('.')[0]
+    print(f"{sting2=} is empty")
+
 else:
     print("not there ")
 

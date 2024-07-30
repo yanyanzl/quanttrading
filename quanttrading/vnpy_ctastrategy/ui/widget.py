@@ -1,5 +1,6 @@
 from typing import Dict
 
+from constant import Exchange
 from event import Event, EventEngine
 from ordermanagement import MainEngine
 from ui.uiapp import QtCore, QtGui, QtWidgets
@@ -172,6 +173,8 @@ class CtaManager(QtWidgets.QWidget):
         if n == editor.DialogCode.Accepted:
             setting: dict = editor.get_setting()
             vt_symbol: str = setting.pop("vt_symbol")
+            exchange: str = setting.pop("exchange")
+            vt_symbol = ".".join([vt_symbol, exchange])
             strategy_name: str = setting.pop("strategy_name")
 
             self.cta_engine.add_strategy(
@@ -467,7 +470,7 @@ class SettingEditor(QtWidgets.QDialog):
             parameters: dict = {"strategy_name": "", "vt_symbol": ""}
             parameters.update(self.parameters)
         else:
-            self.setWindowTitle(_("参数编辑：{}").format(self.strategy_name))
+            self.setWindowTitle(_("Parameters Edit {}").format(self.strategy_name))
             button_text: str = _("确定")
             parameters: dict = self.parameters
 
@@ -481,6 +484,13 @@ class SettingEditor(QtWidgets.QDialog):
             elif type_ is float:
                 validator: QtGui.QDoubleValidator = QtGui.QDoubleValidator()
                 edit.setValidator(validator)
+            if name is "exchange":
+                edit : QtWidgets.QComboBox = QtWidgets.QComboBox()
+                edit.setMinimumWidth(100)
+                edit.addItems([exchange.value for exchange in Exchange.__members__.values()])
+                if type_ is Exchange:
+                    value = value.value
+                edit.setCurrentText(value)
 
             form.addRow(f"{name} {type_}", edit)
 
@@ -510,15 +520,20 @@ class SettingEditor(QtWidgets.QDialog):
 
         for name, tp in self.edits.items():
             edit, type_ = tp
-            value_text = edit.text()
 
-            if type_ == bool:
-                if value_text == "True":
-                    value = True
-                else:
-                    value = False
+            if type_ == Exchange or name == "exchange":
+                value = edit.currentText()
+                print(f"exchange value is {value=}")
             else:
-                value = type_(value_text)
+                value_text = edit.text()
+                if type_ == bool:
+                    if value_text == "True":
+                        value = True
+                    else:
+                        value = False
+                else:
+                    value = type_(value_text)
+
 
             setting[name] = value
 

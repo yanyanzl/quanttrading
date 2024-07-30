@@ -1,5 +1,5 @@
 {
-    "TSLA.SMART": {
+    "strategy1": {
         "class_name": "MultiSignalStrategy",
         "vt_symbol": "TSLA.SMART",
         "setting": {

@@ -27,6 +27,9 @@ class CtaTemplate(ABC):
         self.cta_engine: Any = cta_engine
         self.strategy_name: str = strategy_name
         self.vt_symbol: str = vt_symbol
+        self.symbol: str = ""
+        if vt_symbol and "." in vt_symbol:
+            self.symbol = vt_symbol.split('.')[0]
 
         self.inited: bool = False
         self.trading: bool = False

@@ -758,14 +758,14 @@ class OrderManagement(BaseManagement):
         """
         Get contract data by vt_symbol.
         """
-        logger.info(f"--------------get_contract {vt_symbol=} and {self.contracts=}")
+        logger.info(f"--------------get_contract {vt_symbol=}")
         contract = self.contracts.get(vt_symbol, None)
         if not contract:
             if not self.contracts:
                 pass
             else:
                 for _ in self.contracts.values():
-                    logger.info(f"{_.symbolName=}")
+                    # logger.info(f"{_.symbolName=}")
                     if _.symbolName == vt_symbol:
                         contract = _
                         break

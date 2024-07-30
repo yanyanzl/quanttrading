@@ -2,6 +2,7 @@
 multiple signal trigger the strategy.
 
 """
+from constant import Exchange
 from vnpy_ctastrategy import (
     StopOrder,
     TickData,
@@ -198,12 +199,13 @@ class MultiSignalStrategy(TargetPosTemplate):
     cci_level = 10
     fast_window = 5
     slow_window = 20
+    exchange = Exchange.SMART
 
     signal_pos = {}
     # parameters is used to control the signal parameters like:
     # period, trigger level etc. which is different for different
     # strategy signals.
-    parameters = ["rsi_window", "rsi_level", "cci_window",
+    parameters = ["exchange", "rsi_window", "rsi_level", "cci_window",
                   "cci_level", "fast_window", "slow_window"]
     
     variables = ["signal_pos"]

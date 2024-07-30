@@ -635,14 +635,14 @@ class CtaEngine(BaseEngine):
             self.write_log(_("创建策略失败，找不到策略类{}").format(class_name))
             return
 
-        # if "." not in vt_symbol:
-        #     self.write_log(_("创建策略失败，本地代码缺失交易所后缀"))
-        #     return
+        if "." not in vt_symbol:
+            self.write_log(_("创建策略失败，本地代码缺失交易所后缀"))
+            return
 
-        # __, exchange_str = vt_symbol.split(".")
-        # if exchange_str not in Exchange.__members__:
-        #     self.write_log(_("创建策略失败，本地代码的交易所后缀不正确"))
-        #     return
+        __, exchange_str = vt_symbol.split(".")
+        if exchange_str not in Exchange.__members__:
+            self.write_log(_("创建策略失败，本地代码的交易所后缀不正确"))
+            return
 
         strategy: CtaTemplate = strategy_class(self, strategy_name, vt_symbol, setting)
         self.strategies[strategy_name] = strategy
@@ -686,10 +686,13 @@ class CtaEngine(BaseEngine):
                     setattr(strategy, name, value)
 
         # Subscribe market data
-        contract: Optional[ContractData] = self.main_engine.get_contract(strategy.vt_symbol)
+
+        
+        contract: Optional[ContractData] = self.main_engine.get_contract(strategy.symbol)
+        # self.write_log(f"{strategy.symbol=} and {contract=}")
         if contract:
             req: SubscribeRequest = SubscribeRequest(
-                symbol=contract.symbol, exchange=contract.exchange)
+                symbol=contract.symbolName, exchange=contract.exchange)
             self.main_engine.subscribe(req, contract.gateway_name)
         else:
             self.write_log(_("行情订阅失败，找不到合约{}").format(strategy.vt_symbol), strategy)
