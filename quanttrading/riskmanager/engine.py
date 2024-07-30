@@ -5,7 +5,7 @@ from event import Event, EventEngine
 from datatypes import OrderData, OrderRequest, LogData, TradeData, TickData, TradeBook
 from ordermanagement import MainEngine, BaseManagement as BaseEngine
 from constant import EVENT_TRADE, EVENT_ORDER, EVENT_LOG, EVENT_TIMER, EVENT_TICK, RiskLevel
-from constant import Direction, Status
+from constant import Direction, Status, Offset
 from utility import load_json, save_json
 
 
@@ -34,7 +34,7 @@ class RiskEngine(BaseEngine):
         super().__init__(main_engine, event_engine, APP_NAME)
 
         # start risk management in the main engine or not
-        self.active: bool = False
+        self.active: bool = True
 
         # freeze all due to risk level too high.
         self.freeze: bool = True
@@ -83,6 +83,7 @@ class RiskEngine(BaseEngine):
         self.realised_loss_limit: float = -100
         # self.realised_loss: float = 0
 
+
         # symbol to tradebook map
         self.active_trades: Dict[str, TradeBook] = {}
         self.all_trades: list[TradeData] = []
@@ -100,8 +101,27 @@ class RiskEngine(BaseEngine):
 
     def send_order(self, req: OrderRequest, gateway_name: str) -> str:
         """"""
+        # check if the request is to cover positions
+        isCover = self.check_is_cover(req)
+        if isCover:
+            result = ""
+            self.write_log(f"RiskEngine:: covering positions by {req.symbol=} {req.direction=} {req.type=} {req.volume=}")
+            # split orders to order size limit
+            totalVolume = req.volume
+            while totalVolume > self.order_size_limit:
+                req.volume = self.order_size_limit
+                totalVolume -= self.order_size_limit
+                result = self._send_order(req, gateway_name)
+            
+            if totalVolume > 0:
+                req.volume = totalVolume
+                result = self._send_order(req, gateway_name)
+
+            return result
+
         result: bool = self.check_risk(req, gateway_name)
         if not result:
+            # self.write_log(f"RiskEngine: only orders for cover positions allowed!")
             return ""
 
         return self._send_order(req, gateway_name)
@@ -228,7 +248,7 @@ class RiskEngine(BaseEngine):
             self.pnl_check_timer = 0
             self.update_pnl_risk()
             riskLevel = self.check_pnl_risk()
-            if self.freeze and riskLevel > RiskLevel.LevelNormal:
+            if self.freeze and riskLevel in [RiskLevel.LevelWarning, RiskLevel.LevelCritical]:
                 self.main_engine.cancel_all_orders()
                 self.main_engine.cover_all_trades()
                 # cover all outstanding positions to be added.
@@ -282,7 +302,7 @@ class RiskEngine(BaseEngine):
         if not self.active:
             return True
         riskLevel = self.check_pnl_risk()
-        if riskLevel:
+        if riskLevel not in [RiskLevel.LevelZero, RiskLevel.LevelNormal]:
             self.write_log(f"Risk Management Warning:: current PnL risk level is {riskLevel}")
             return False
 
@@ -337,6 +357,15 @@ class RiskEngine(BaseEngine):
         # Add flow count if pass all checks
         self.order_flow_count += 1
         return True
+
+    def check_is_cover(self,req: OrderRequest) -> bool:
+        """
+        check if the order is for cover the current outstanding trades/positions
+        if it is orders to cover positions. return True. else False
+        """
+        if req and req.offset == Offset.COVER:
+            return True
+        return False
 
     def get_order_book(self, vt_symbol: str) -> "ActiveOrderBook":
         """"""

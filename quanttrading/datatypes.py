@@ -319,7 +319,7 @@ class PositionData(BaseData):
     price: float = 0
     pnl: float = 0
     yd_volume: float = 0
-
+    symbolName: str = ""
     def __post_init__(self) -> None:
         """"""
         self.vt_symbol: str = f"{self.symbol}.{self.exchange.value}"
@@ -624,9 +624,11 @@ class TradeBook:
         if no outstanding position. Return None
         cover by a Market order by default.
         """
+        print(f"{self.vt_symbol=} and {self.exchange=}, {self.long_size=} and {self.short_size=}")
         if not self.vt_symbol or not self.exchange:
             return
         
+
         if self.long_size == self.short_size:
             return
         
@@ -634,5 +636,5 @@ class TradeBook:
         volume = self.long_size - self.short_size
         if volume > 0:
             direction = Direction.SHORT
-        req = OrderRequest(self.vt_symbol, self.exchange, direction, OrderType.MARKET, abs(volume))
+        req = OrderRequest(self.vt_symbol, self.exchange, direction, OrderType.MARKET, abs(volume), offset=Offset.COVER)
         return req

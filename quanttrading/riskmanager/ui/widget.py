@@ -55,6 +55,12 @@ class RiskManager(QtWidgets.QDialog):
         save_button: QtWidgets.QPushButton = QtWidgets.QPushButton("Save")
         save_button.clicked.connect(self.save_setting)
 
+        coverall_button: QtWidgets.QPushButton = QtWidgets.QPushButton("Cover All Position")
+        coverall_button.clicked.connect(self.cover_all_position)
+
+        coverTradings_button: QtWidgets.QPushButton = QtWidgets.QPushButton("Cover All Tradings")
+        coverTradings_button.clicked.connect(self.cover_all_tradings)
+        
 
         # Form layout
         form: QtWidgets.QFormLayout = QtWidgets.QFormLayout()
@@ -76,6 +82,8 @@ class RiskManager(QtWidgets.QDialog):
         form.addRow("Freeze trade when PnL limits reached: ", self.freeze_combo)
 
         form.addRow(save_button)
+        form.addRow(coverall_button)
+        form.addRow(coverTradings_button)
 
         self.setLayout(form)
 
@@ -118,6 +126,19 @@ class RiskManager(QtWidgets.QDialog):
         self.rm_engine.save_setting()
 
         self.close()
+
+    def cover_all_position(self) -> None:
+        """
+        manually cover all positions hold on this account!
+        """
+        self.main_engine.cover_all_trades(server=True)
+        return None
+
+    def cover_all_tradings(self) -> None:
+        """
+        manually cover all tradings by this platforms!
+        """
+        self.main_engine.cover_all_trades(server=False)
 
     def update_setting(self) -> None:
         """

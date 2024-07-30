@@ -39,6 +39,7 @@ from constant import (
     EVENT_TICK_BIDASK_DATA,
     EVENT_TICK_LAST_DATA,
     Direction,
+    Offset,
 )
 from data.gateway.gateway import BaseGateway
 from datatypes import (
@@ -242,7 +243,7 @@ class MainEngine:
         """
         
         gateway: BaseGateway = self.get_gateway(gateway_name)
-        self.write_log(f"main engine send_order: {gateway=} and {req=}  ")
+        self.write_log(f"main engine send_order: {gateway_name=} and {req.symbol=}  ")
         if gateway:
             return gateway.send_order(req)
         else:
@@ -325,28 +326,31 @@ class MainEngine:
                 positions: list[PositionData] = self.get_position(symbol)
             else:
                 positions: list[PositionData] = self.get_all_positions()
-            
+
+            self.write_log(f"covering all positions now ... ")
+            self.write_log(f"{symbol=} and {positions=} ")
+
             if positions:
+
                 for position in positions:
+
                     if position.volume != 0:
-                        req: OrderRequest = OrderRequest()
-                        req.type = orderType
-                        req.symbol = position.symbol
-                        req.exchange = position.exchange
+
+                        direction = Direction.LONG
                         if position.direction == Direction.LONG:
-                            req.direction = Direction.SHORT
-                        else:
-                            req.direction = Direction.LONG
-                        req.volume = position.volume
-                        self.write_log(f"{position=}")
-                        # self.send_order(req, position.gateway_name)
+                            direction = Direction.SHORT
+
+                        req: OrderRequest = OrderRequest(position.symbolName, position.exchange, direction, orderType, abs(position.volume))
+                        req.offset = Offset.COVER
+                        self.send_order(req, position.gateway_name)
 
         else:
             if symbol:
                 trades:list[TradeData] = self.get_all_trades(symbol)
             else:
                 trades:list[TradeData] = self.get_all_trades()
-            
+            self.write_log(f"covering all trades opened by this trading platform now ... ")
+            self.write_log(f"{symbol=} and {trades=} ") 
             if trades:
                 # get a map from symbol to all trades to a symbol
                 tempTrades: dict[str, list[TradeData]] = {}
@@ -374,14 +378,11 @@ class MainEngine:
                         # continue to the next symbol
                         continue
 
-                    req: OrderRequest = OrderRequest()
-                    req.symbol = symbol
-                    req.exchange = trades1[0].exchange
-                    req.type = orderType
-                    req.direction = direction
-                    req.volume = abs(volume)
+                    req: OrderRequest = OrderRequest(symbol, trades1[0].exchange, direction, orderType, abs(volume))
+
+                    req.offset = Offset.COVER
                     self.write_log(f"{req=}, {trades1[0].gateway_name=}")
-                    # self.send_order(req, trades1[0].gateway_name)
+                    self.send_order(req, trades1[0].gateway_name)
 
         return None
 

@@ -122,6 +122,7 @@ class Offset(Enum):
     CLOSE = _("平")
     CLOSETODAY = _("平今")
     CLOSEYESTERDAY = _("平昨")
+    COVER = "cover"
 
 
 class Status(Enum):

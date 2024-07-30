@@ -507,7 +507,7 @@ class PositionMonitor(BaseMonitor):
     """
 
     event_type: str = EVENT_POSITION
-    data_key: str = "vt_positionid"
+    data_key: str = "symbolName"
     sorting: bool = True
 
     headers: dict = {

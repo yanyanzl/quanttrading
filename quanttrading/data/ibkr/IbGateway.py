@@ -639,6 +639,10 @@ class IbApi(EWrapper):
             accountName,
         )
 
+        direction = Direction.LONG
+        if position < 0:
+            direction = Direction.SHORT
+
         if contract.exchange:
             exchange: Exchange = EXCHANGE_IB2VT.get(contract.exchange, None)
         elif contract.primaryExchange:
@@ -660,11 +664,12 @@ class IbApi(EWrapper):
         pos: PositionData = PositionData(
             symbol=self.generate_symbol(contract),
             exchange=exchange,
-            direction=Direction.NET,
+            direction=direction,
             volume=float(position),
             price=price,
             pnl=unrealizedPNL,
             gateway_name=self.gateway_name,
+            symbolName=contract.symbol
         )
         self.gateway.on_position(pos)
 
@@ -1019,7 +1024,7 @@ class IbApi(EWrapper):
 
     def send_order(self, req: OrderRequest) -> str:
         """委托下单"""
-        self.gateway.write_log(f"main engine send_order: {req=} and {self.status}  ")
+        # self.gateway.write_log(f" send_order: {req=} and {self.status}  ")
         if not self.status:
             return ""
 
@@ -1055,7 +1060,7 @@ class IbApi(EWrapper):
         elif req.type == OrderType.STOP:
             ib_order.auxPrice = req.price
 
-        self.gateway.write_log(f"ibgate way placeing order: {self.orderid=} and \n {ib_contract=} and \n {ib_order=}  ")
+        self.gateway.write_log(f"ibgateway send_order: {self.orderid=},  {ib_contract.symbol=},  {ib_order.totalQuantity=}, {ib_order.action=}  ")
         self.client.placeOrder(self.orderid, ib_contract, ib_order)
         self.client.reqIds(1)
 
