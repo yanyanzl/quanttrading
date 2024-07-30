@@ -243,7 +243,10 @@ class CtaEngine(BaseEngine):
                     else:
                         price = tick.bid_price_5
 
-                contract: Optional[ContractData] = self.main_engine.get_contract(stop_order.vt_symbol)
+                symbol = stop_order.vt_symbol
+                if "." in symbol:
+                    symbol = symbol.split('.')[0]
+                contract: Optional[ContractData] = self.main_engine.get_contract(symbol)
 
                 vt_orderids: list = self.send_limit_order(
                     strategy,
@@ -470,7 +473,7 @@ class CtaEngine(BaseEngine):
     ) -> list:
         """
         """
-        contract: Optional[ContractData] = self.main_engine.get_contract(strategy.vt_symbol)
+        contract: Optional[ContractData] = self.main_engine.get_contract(strategy.symbol)
         if not contract:
             self.write_log(_("委托失败，找不到合约：{}").format(strategy.vt_symbol), strategy)
             return ""
@@ -520,7 +523,7 @@ class CtaEngine(BaseEngine):
         """
         Return contract pricetick data.
         """
-        contract: Optional[ContractData] = self.main_engine.get_contract(strategy.vt_symbol)
+        contract: Optional[ContractData] = self.main_engine.get_contract(strategy.symbol)
 
         if contract:
             return contract.pricetick
@@ -531,7 +534,7 @@ class CtaEngine(BaseEngine):
         """
         Return contract size data.
         """
-        contract: Optional[ContractData] = self.main_engine.get_contract(strategy.vt_symbol)
+        contract: Optional[ContractData] = self.main_engine.get_contract(strategy.symbol)
 
         if contract:
             return contract.size
@@ -555,7 +558,7 @@ class CtaEngine(BaseEngine):
         # Pass gateway and datafeed if use_database set to True
         if not use_database:
             # Query bars from gateway if available
-            contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
+            contract: Optional[ContractData] = self.main_engine.get_contract(symbol)
 
             if contract and contract.history_data:
                 req: HistoryRequest = HistoryRequest(
