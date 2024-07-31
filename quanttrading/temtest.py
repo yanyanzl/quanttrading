@@ -58,17 +58,64 @@ from pathlib import Path
 from vnpy_ctastrategy import CtaTemplate, TargetPosTemplate
 from glob import glob
 import importlib, traceback
-from constant import _
+from constant import _, Exchange
 from types import ModuleType
 
-sting1 = "tsla.smart"
+from database import get_database
+from datatypes import Interval
+from typing import get_args
+from data.yfdatafeed import YfDatafeed
+from datatypes import HistoryRequest
+from utility import dateToLocal, LOCAL_TZ
 
-if sting1 and "." in sting1:
-    sting2 = sting1.split('.')[0]
-    print(f"{sting2=} is empty")
+x = 3
+y = 6
+x = y = 8
+if x == y == 8:
 
-else:
-    print("not there ")
+    print(f"this is a test. But now it's a new one!! {x=} and {y=}")
+
+def yfTest():
+    df = YfDatafeed()
+    end: datetime = datetime.now()
+    start: datetime = end - timedelta(1)
+
+    req = HistoryRequest("TSLA", Exchange.SMART, start, end, "", "1m" )
+    data = df.query_bar_history(req)
+
+    print(f"{data}")
+# from pandas import Timestamp
+
+# dates = data['Datetime']
+
+# stamp: Timestamp = dates[0]
+# stamp = stamp.tz_convert(get_localzone_name())
+# date  = Timestamp.strftime(stamp, '%Y-%m-%d %X')
+# k = datetime.strptime(date, '%Y-%m-%d %X')
+
+# print(f"{k=}")
+# print(f"{type(k)}")
+# print(f"{stamp.tz_convert(get_localzone_name())} and {stamp=} ")
+
+# date  = Timestamp.strftime(stamp, '%Y-%m-%d %X %z')
+# print(f"{date=} and {type(date)=}")
+
+# x = "555"
+# if x not in get_args(Interval):
+#     print(f"{x} is not in {get_args(Interval)=}")
+
+# db = get_database()
+# print(f"{db=}")
+
+def stringTest():
+    sting1 = "tsla.smart"
+
+    if sting1 and "." in sting1:
+        sting2 = sting1.split('.')[0]
+        print(f"{sting2=} is empty")
+
+    else:
+        print("not there ")
 
 def load_strategy_class_from_folder(path: Path, module_name: str = "") -> None:
     """
@@ -105,7 +152,7 @@ def load_strategy_class() -> None:
     print(f"{path1.stem=} and {path2=}")
     print(f"{path1.exists()=} and {path2.exists()=}")
 
-load_strategy_class()
+# load_strategy_class()
 
 def load_strategy_class_from_module(module_name: str) -> None:
     """

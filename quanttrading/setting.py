@@ -163,7 +163,7 @@ def initialize_settings_data():
             "email.sender": "",
             "email.receiver": "",
 
-            "datafeed.name": "",
+            "datafeed.name": "data.yfdatafeed",
             "datafeed.username": "",
             "datafeed.password": "",
             

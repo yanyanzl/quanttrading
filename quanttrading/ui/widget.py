@@ -15,6 +15,7 @@ import importlib_metadata
 from .uiapp import QtCore, QtGui, QtWidgets
 from constant import Direction, Exchange, Offset, OrderType, _
 from ordermanagement import MainEngine, Event, EventEngine
+from importlib import reload, import_module
 
 from constant import (
     EVENT_QUOTE,
@@ -1289,3 +1290,52 @@ class GlobalDialog(QtWidgets.QDialog):
 
         save_settings(settings)
         self.accept()
+
+
+class ReloadDialog(QtWidgets.QDialog):
+    """
+    Reload the a specified module
+    """
+
+    def __init__(self) -> None:
+        """"""
+        super().__init__()
+
+        self.widgets: Dict[str, Any] = {}
+
+        self.init_ui()
+
+    def init_ui(self) -> None:
+        """"""
+        self.setWindowTitle(_("Reload Modules"))
+        self.setMinimumWidth(800)
+
+        # Initialize line edits and form layout based on setting.
+        form: QtWidgets.QFormLayout = QtWidgets.QFormLayout()
+
+
+        widget: QtWidgets.QLineEdit = QtWidgets.QLineEdit("Module")
+
+        form.addRow(f"Module", widget)
+        self.widgets["Module"] = widget
+
+        button: QtWidgets.QPushButton = QtWidgets.QPushButton(_("Confirm"))
+        button.clicked.connect(self.update_module)
+        form.addRow(button)
+
+        # vbox: QtWidgets.QVBoxLayout = QtWidgets.QVBoxLayout()
+        # vbox.addWidget(scroll_area)
+        self.setLayout(form)
+
+    def update_module(self) -> None:
+        """
+        Get setting value from line edits and update global setting file.
+        """
+        self.accept()
+        for field_name, widget in self.widgets.items():
+            module_name: str = widget.text()
+            print(f"{module_name=}")
+            module = import_module(module_name)
+            reload(module)
+        
+

@@ -592,6 +592,8 @@ class TradeBook:
         # positive for profit. negative for loss
         self.total_pnl = 0
 
+        self.cover_req: OrderRequest = None
+
     def update_trades(self, trade: TradeData) -> None:
         """update the trades information."""
         if trade is not None and isinstance(trade, TradeData) and trade.vt_symbol == self.vt_symbol:
@@ -623,19 +625,21 @@ class TradeBook:
         """
         creating a orderrequest to cover all the outstanding postion for this symbol
         if no outstanding position. Return None
-        cover by a Market order by default.
+        cover by a Market order by default. can only creat once
         """
         print(f"{self.vt_symbol=} and {self.exchange=}, {self.long_size=} and {self.short_size=}")
         if not self.vt_symbol or not self.exchange:
             return
         
-
         if self.long_size == self.short_size:
+            return
+        
+        if self.cover_req:
             return
         
         direction = Direction.LONG
         volume = self.long_size - self.short_size
         if volume > 0:
             direction = Direction.SHORT
-        req = OrderRequest(self.vt_symbol, self.exchange, direction, OrderType.MARKET, abs(volume), offset=Offset.COVER)
-        return req
+        self.cover_req = OrderRequest(self.vt_symbol, self.exchange, direction, OrderType.MARKET, abs(volume), offset=Offset.COVER)
+        return self.cover_req

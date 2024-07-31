@@ -30,7 +30,8 @@ from .widget import (
     ContractManager,
     TradingWidget,
     AboutDialog,
-    GlobalDialog
+    GlobalDialog,
+    ReloadDialog,
 )
 from ordermanagement import MainEngine, BaseApp
 from event.engine import EventEngine
@@ -161,14 +162,28 @@ class MainWindow(QtWidgets.QMainWindow):
         action.triggered.connect(self.edit_global_setting)
         bar.addAction(action)
 
+
+
         # Help menu
         help_menu: QtWidgets.QMenu = bar.addMenu(_("帮助"))
+
+        # reloadAction: QtGui.QAction = QtWidgets.QAction("Reload Module", self)
+        # reloadAction.triggered.connect(self.reload_module)
+    
 
         self.add_action(
             help_menu,
             _("查询合约"),
             get_icon_path(__file__, "contract.ico"),
             partial(self.open_widget, ContractManager, "contract"),
+            True
+        )
+
+        self.add_action(
+            help_menu,
+            _("Reload Module"),
+            get_icon_path(__file__, "contract.ico"),
+            self.reload_module,
             True
         )
 
@@ -348,4 +363,10 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         """
         dialog: GlobalDialog = GlobalDialog()
+        dialog.exec()
+
+    def reload_module(self) -> None:
+        """
+        """
+        dialog: ReloadDialog = ReloadDialog()
         dialog.exec()

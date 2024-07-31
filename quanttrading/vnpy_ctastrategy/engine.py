@@ -294,7 +294,7 @@ class CtaEngine(BaseEngine):
         """
         # Create request and send order.
         original_req: OrderRequest = OrderRequest(
-            symbol=contract.symbol,
+            symbol=contract.symbolName,
             exchange=contract.exchange,
             direction=direction,
             offset=offset,
@@ -559,7 +559,7 @@ class CtaEngine(BaseEngine):
         if not use_database:
             # Query bars from gateway if available
             contract: Optional[ContractData] = self.main_engine.get_contract(symbol)
-
+            self.write_log(f"CtaEngine: load_bar. {contract.history_data=}")
             if contract and contract.history_data:
                 req: HistoryRequest = HistoryRequest(
                     symbol=symbol,

@@ -195,6 +195,8 @@ def intervalToIB(interval) -> str:
     # 1 hour, 2/3/4/8 hours, 1 day, 1W, 1M"
     #     example '1 hour' or '1 min'
     """
+    if isinstance(interval, Interval):
+        interval = interval.value
     tobe = re.sub('1m','1 min', interval)
     replaceDict = {'1m':'1 min', 'm': ' mins', '1h': '1 hour', 'h': ' hours', '1d': '1 day', '1wk':'1W'}
     for ori, rep in replaceDict.items():
@@ -1109,7 +1111,6 @@ class IbApi(EWrapper):
             duration: str = f"{days} D"
         else:
             duration: str = f"{delta.days/365:.0f} Y"
-
         bar_size: str = intervalToIB(req.interval)
         bar_type = "TRADES"
         # if contract.product in [Product.SPOT, Product.FOREX]:

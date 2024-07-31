@@ -14,6 +14,7 @@ import sys
 import logging
 import requests
 import statistics as st
+from datafeed import BaseDatafeed
 
 import traceback
 # import logging
@@ -120,12 +121,12 @@ class StringName(str):
             raise ValueError("string expected for ", self._name)
         instance.__dict__[self._name] = value
 
-
 # finclass
 # to be added:
 # max draw down (month, year): from nearest peak to nearest trough 
 # to define a function to get N months max draw down for the asset.
 # and unit test cases
+
 
 class AssetBase(object):
     """

@@ -25,12 +25,16 @@ import asyncio
 from datatypes import BarData, TickData
 from constant import Exchange, Interval
 # from locale import _
+from tzlocal import get_localzone_name
+
 
 
 if sys.version_info >= (3, 9):
     from zoneinfo import ZoneInfo, available_timezones              # noqa
 else:
     from backports.zoneinfo import ZoneInfo, available_timezones    # noqa
+
+LOCAL_TZ = ZoneInfo(get_localzone_name())
 
 class bcolors:
     """
@@ -95,6 +99,89 @@ def getDuration(start: datetime, end: datetime) -> str:
         duration = str(seconds)+'S'
         print(f"{duration=}")
     return duration
+
+import pandas as pd
+from pandas import DataFrame, Timestamp
+def _wrapBarbyDataFrame(barList: DataFrame, gateway_name:str = "", symbol:str = "", interval: str = "", exchange: Exchange = Exchange.SMART) -> list[BarData]:
+    """
+
+    """
+    # dates = bar.date.split()
+    bars:list[BarData] = []
+    if barList is not None and isinstance(barList, DataFrame) and not barList.empty:
+        dateList = barList['Datetime']
+        openList = barList['Open']
+        highList = barList['High']
+        lowList = barList['Low']
+        closeList = barList['Close']
+        volumeList = barList['Volume']
+        for i in range(len(dateList)):
+            stamp: Timestamp = dateList[i]
+            stamp = stamp.tz_convert(get_localzone_name())
+            stampstr  = Timestamp.strftime(stamp, '%Y-%m-%d %X')
+            date = datetime.strptime(stampstr, '%Y-%m-%d %X')
+            # date  = Timestamp.strftime(stamp, '%Y-%m-%d %X')
+            bar: BarData = BarData(gateway_name, symbol, exchange, datetime=date, interval=interval)
+            bar.open_price = openList[i]
+            bar.close_price = closeList[i]
+            bar.high_price = highList[i]
+            bar.low_price = lowList[i]
+            bar.volume = volumeList[i]
+
+            bars.append(bar)
+
+    return bars
+
+
+def _wrapDataFramebyBar(barList: list[BarData]) -> DataFrame:
+    """
+    """
+    # dates = bar.date.split()
+    df = DataFrame()
+    if barList is not None and isinstance(barList, list) and len(barList) > 0:
+        for bar in barList:
+            data = {'Date':bar.datetime, 'Open':bar.open_price, 'High':bar.high_price,
+                'Low':bar.low_price, 'Close':bar.close_price, 'Volume':bar.volume, 
+                'Symbol':bar.symbol, 'Gateway':bar.gateway_name, 'vt_symbol': bar.vt_symbol, 'Interval': bar.interval}
+            
+            dataFrame = DataFrame(data=data,index=[0])
+            df = pd.concat([df, dataFrame], ignore_index=True)
+    return df
+
+def dateToLocal(date) -> datetime:
+        time_str: str = date
+        time_split: list = time_str.split(" ")
+        words_count: int = 3
+
+        if ":" not in time_str:
+            words_count -= 1
+
+        if len(time_split) == words_count:
+            timezone = time_split[-1]
+            time_str = time_str.replace(f" {timezone}", "")
+            tz = ZoneInfo(timezone)
+        elif len(time_split) == (words_count - 1):
+            tz = LOCAL_TZ
+        else:
+            print(f"format not support: {time_str}")
+            return
+
+        if "-" in time_str:
+                formatstr = "%Y-%m-%d"
+        else:
+            formatstr = "%Y%m%d"
+
+        if ":" in time_str:
+                formatstr += " %H:%M:%S"
+
+        dt: datetime = datetime.strptime(time_str, formatstr)
+        dt: datetime = dt.replace(tzinfo=tz)
+
+        if tz != LOCAL_TZ:
+            print(f"{tz=} and {LOCAL_TZ=}")
+            dt: datetime = dt.astimezone(LOCAL_TZ)
+        
+        return dt
 
 def _idGenerator():
     """ 
@@ -735,7 +822,7 @@ class ArrayManager(object):
         """
         Simple moving average.
         n: period of the SMA. example 14, 50, 200
-        array: true
+        array: True will return 
         """
         result: np.ndarray = talib.SMA(self.close, n)
         if array:
