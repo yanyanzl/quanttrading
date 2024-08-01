@@ -718,7 +718,7 @@ class IbApi(EWrapper):
             return
         # self.gateway.write_log(f"entered contractDetails.. {product=}")
         # 生成合约
-        print(f"=========================== {contractDetails.contract.symbol=} and {contractDetails.underSymbol=}") 
+        # print(f"=========================== {contractDetails.contract.symbol=}") 
         contract: ContractData = ContractData(
             symbol=symbol,
             exchange=EXCHANGE_IB2VT[ib_contract.exchange],
@@ -746,7 +746,7 @@ class IbApi(EWrapper):
             contract.option_underlying = underlying_symbol + "_" + ib_contract.lastTradeDateOrContractMonth
 
         # self.gateway.write_log(f"entered contractDetails.. {contract.vt_symbol=} and {self.contracts}")
-        print(f"=========================== {contract=}")
+        # print(f"=========================== {contract=}")
         if contract.vt_symbol not in self.contracts:
             self.gateway.on_contract(contract)
             self.gateway.write_log(f" end of  contractDetails..")

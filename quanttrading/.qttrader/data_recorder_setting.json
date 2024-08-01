@@ -1,14 +1,14 @@
 {
     "tick": {
-        "TSLA": {
-            "symbol": "TSLA",
+        "NVDA": {
+            "symbol": "NVDA",
             "exchange": "SMART",
             "gateway_name": "ibkrgateway"
         }
     },
     "bar": {
-        "TSLA": {
-            "symbol": "TSLA",
+        "NVDA": {
+            "symbol": "NVDA",
             "exchange": "SMART",
             "gateway_name": "ibkrgateway"
         }

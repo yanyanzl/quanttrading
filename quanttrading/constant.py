@@ -7,7 +7,7 @@ from typing import List
 
 # from .locale import _
 
-LOCAL_TZ = ZoneInfo(get_localzone_name())
+# LOCAL_TZ = ZoneInfo(get_localzone_name())
 def _(name):
     """
     use _() as a function to translate the locale.
