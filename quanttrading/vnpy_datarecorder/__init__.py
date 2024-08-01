@@ -20,40 +20,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+
 from pathlib import Path
 
 import importlib_metadata
-from datatypes import (
-    OrderData,
-    TradeData,
-    TickData,
-    BarData,
-    BaseApp
-)
+from datatypes import BaseApp
 
-from .engine import (
-    SpreadEngine,
-    APP_NAME,
-    SpreadData,
-    LegData,
-    SpreadStrategyTemplate,
-    SpreadAlgoTemplate
-)
+from .engine import RecorderEngine, APP_NAME
 
 
 try:
-    __version__ = importlib_metadata.version("vnpy_spreadtrading")
+    __version__ = importlib_metadata.version("vnpy_datarecorder")
 except importlib_metadata.PackageNotFoundError:
     __version__ = "dev"
 
 
-class SpreadTradingApp(BaseApp):
+class DataRecorderApp(BaseApp):
     """"""
 
     app_name: str = APP_NAME
     app_module: str = __module__
     app_path: Path = Path(__file__).parent
-    display_name: str = "价差交易"
-    engine_class: SpreadEngine = SpreadEngine
-    widget_name: str = "SpreadManager"
-    icon_name: str = str(app_path.joinpath("ui", "spread.ico"))
+    display_name: str = "行情记录"
+    engine_class: RecorderEngine = RecorderEngine
+    widget_name: str = "RecorderManager"
+    icon_name: str = str(app_path.joinpath("ui", "recorder.ico"))

@@ -9,22 +9,22 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, Future
 
-from vnpy.event import EventEngine, Event
-from vnpy.trader.engine import BaseEngine, MainEngine
-from vnpy.trader.event import (
+from event import EventEngine, Event
+from ordermanagement import BaseManagement as BaseEngine, MainEngine
+from constant import (
     EVENT_TICK, EVENT_POSITION, EVENT_CONTRACT,
     EVENT_ORDER, EVENT_TRADE, EVENT_TIMER
 )
-from vnpy.trader.utility import load_json, save_json
-from vnpy.trader.object import (
+from utility import load_json, save_json
+from datatypes import (
     TickData, ContractData, BarData,
     PositionData, OrderData, TradeData, LogData,
     SubscribeRequest, OrderRequest, CancelRequest
 )
-from vnpy.trader.constant import (
+from constant import (
     Direction, Offset, OrderType, Interval
 )
-from vnpy.trader.database import DB_TZ
+from database import DB_TZ
 
 from .base import (
     LegData, SpreadData,

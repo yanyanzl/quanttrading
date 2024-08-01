@@ -56,7 +56,7 @@ database.password: ''
 database.port: 0
 database.timezone: Europe/London
 database.user: ''
-datafeed.name: ''
+datafeed.name: data.yfdatafeed
 datafeed.password: ''
 datafeed.username: ''
 email.password: ''

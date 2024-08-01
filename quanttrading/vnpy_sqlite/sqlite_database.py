@@ -217,6 +217,7 @@ class SqliteDatabase(BaseDatabase):
 
         # 将TickData数据转换为字典，并调整时区
         data: list = []
+        # print(f"====================={tick=}")
 
         for tick in ticks:
             tick.datetime = convert_tz(tick.datetime)
@@ -225,11 +226,13 @@ class SqliteDatabase(BaseDatabase):
             d["exchange"] = d["exchange"].value
             d.pop("gateway_name")
             d.pop("vt_symbol")
+            d.pop("extra")
             data.append(d)
 
         # 使用upsert操作将数据更新到数据库中
         with self.db.atomic():
             for c in chunked(data, 10):
+                # print(f"{c=} ")
                 DbTickData.insert_many(c).on_conflict_replace().execute()
 
         # 更新Tick汇总数据
@@ -298,7 +301,7 @@ class SqliteDatabase(BaseDatabase):
                 gateway_name="DB"
             )
             bars.append(bar)
-
+        print("sqlite_database: load_bar_data:")
         return bars
 
     def load_tick_data(

@@ -2,6 +2,6 @@ from pathlib import Path
 import gettext
 
 localedir = Path(__file__).parent
-translations = gettext.translation('vnpy_ctabacktester', localedir=localedir, fallback=True)
+translations = gettext.translation('backtester', localedir=localedir, fallback=True)
 
 _ = translations.gettext

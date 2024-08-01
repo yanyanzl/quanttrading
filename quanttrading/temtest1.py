@@ -28,6 +28,7 @@ from datetime import datetime
 import os
 from event.engine import EventEngine, Event
 from data.ibkr.ibkrgateway import IbkrGateway
+from data.ibkr.IbGateway import IbGateway
 import asyncio, time
 
 setUpLogger(logging.INFO)
@@ -67,9 +68,47 @@ async def gatewayTest():
     # gw._app.cancelTickByTickData(2)
     eventEngine.stop()
     gw.close()
+from constant import Exchange
+async def gatewayTest1():
+    engine = EventEngine(10)
+    gw = IbGateway(engine, "IbGateway")
+    gwSetting: dict = {
+    "TWS地址": "192.168.1.127",
+    "TWS端口": 7497,
+    "客户号": 2,
+    "交易账户": ""
+    }
+    # gwSetting = {"TWS地址":"192.168.1.127", "PORT":7497}
+    gw.connect(gwSetting)
+    logger.info("connect completed!==================================================")
 
+    eventEngine = EventEngine()
+    eventEngine.start()
+    eventEngine.register(EVENT_HISDATA, eventTest)
+    eventEngine.register(EVENT_HISDATA_UPDATE, eventTest)
+    eventEngine.register(EVENT_REALTIME_DATA, eventTest)
+    eventEngine.register(EVENT_TICK_LAST_DATA, eventTest)
+    eventEngine.register(EVENT_TICK_BIDASK_DATA, eventTest)
+    eventEngine.register(EVENT_PORTFOLIO, eventTest)
+    eventEngine.register(EVENT_ORDER_STATUS, eventTest)
+    eventEngine.register(EVENT_ACCOUNT, eventTest)    
+    eventEngine.register_general(eventTest)
+
+    # gw.api.._eventEngine = eventEngine
     
-asyncio.run(gatewayTest())
+    # gw._app.reqHistoricalData(2, gw._app.currentContract,"","1 D", "1 min", "MIDPOINT",0,1,True, [] )
+    # gw._app.reqTickByTickData(2,gw._app.currentContract, "AllLast", 0, True)
+    gw.api.client.reqMatchingSymbols(211, "RR.L")
+    # gw.api.client.reqMatchingSymbols(222, "BMW")
+    gw.api.add_contract("RR.", Exchange.LSE)
+
+    await asyncio.sleep(10)
+
+    # gw._app.cancelTickByTickData(2)
+    eventEngine.stop()
+    gw.close()
+    
+asyncio.run(gatewayTest1())
 
 
 # print(f"equal {"abc" != "abcd"}")

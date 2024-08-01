@@ -1393,7 +1393,7 @@ class CandleChartDialog(QtWidgets.QDialog):
             candle_plot.removeItem(item)
         self.items.clear()
 
-        self.chart.clear_all()
+        self.chart.clearAll()
 
         self.dt_ix_map.clear()
         self.ix_bar_map.clear()

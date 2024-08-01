@@ -5,13 +5,13 @@ from enum import Enum
 from tzlocal import get_localzone_name
 from dataclasses import dataclass
 
-from vnpy.trader.object import (
+from datatypes import (
     HistoryRequest, TickData, PositionData, TradeData, ContractData, BarData
 )
-from vnpy.trader.constant import Direction, Offset, Exchange, Interval, Status
-from vnpy.trader.utility import floor_to, ceil_to, round_to, extract_vt_symbol, ZoneInfo
-from vnpy.trader.database import BaseDatabase, get_database
-from vnpy.trader.datafeed import BaseDatafeed, get_datafeed
+from constant import Direction, Offset, Exchange, Interval, Status
+from utility import floor_to, ceil_to, round_to, extract_vt_symbol, ZoneInfo
+from database import BaseDatabase, get_database
+from datafeed import BaseDatafeed, get_datafeed
 
 
 EVENT_SPREAD_DATA = "eSpreadData"

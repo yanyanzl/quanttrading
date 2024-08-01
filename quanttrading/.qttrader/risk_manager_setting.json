@@ -1,1 +1,14 @@
-{}
+{
+    "active": true,
+    "freeze": true,
+    "order_flow_limit": 10,
+    "order_flow_clear": 1,
+    "order_size_limit": 100,
+    "trade_limit": 2000,
+    "active_order_limit": 50,
+    "order_cancel_limit": 1000,
+    "total_profit_limit": 1000,
+    "realised_profit_limit": 1000,
+    "total_loss_limit": -150,
+    "realised_loss_limit": -100
+}

@@ -7,7 +7,7 @@ from typing import List
 
 # from .locale import _
 
-
+LOCAL_TZ = ZoneInfo(get_localzone_name())
 def _(name):
     """
     use _() as a function to translate the locale.
@@ -230,6 +230,8 @@ class Exchange(Enum):
     KRX = "KRX"             # Korean Exchange
     OTC = "OTC"             # OTC Product (Forex/CFD/Pink Sheet Equity)
     IBKRATS = "IBKRATS"     # Paper Trading Exchange of IB
+    IBIS = "IBIS"           # for Europe
+    LSE = "LSE"             # for UK
 
     # Special Function
     LOCAL = "LOCAL"         # For local generated data

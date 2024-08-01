@@ -1,0 +1,16 @@
+{
+    "tick": {
+        "TSLA": {
+            "symbol": "TSLA",
+            "exchange": "SMART",
+            "gateway_name": "ibkrgateway"
+        }
+    },
+    "bar": {
+        "TSLA": {
+            "symbol": "TSLA",
+            "exchange": "SMART",
+            "gateway_name": "ibkrgateway"
+        }
+    }
+}

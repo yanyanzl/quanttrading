@@ -163,6 +163,7 @@ class BaseGateway(ABC):
         """
         Contract event push.
         """
+        print(f"gateway on_contract =========================== {contract=}")
         self.on_event(EVENT_CONTRACT, contract)
 
     def write_log(self, msg: str) -> None:
@@ -203,6 +204,13 @@ class BaseGateway(ABC):
 
     @abstractmethod
     def subscribe(self, req: SubscribeRequest) -> None:
+        """
+        Subscribe tick data update.
+        """
+        pass
+
+    @abstractmethod
+    def unsubscribe(self, req: SubscribeRequest) -> None:
         """
         Subscribe tick data update.
         """

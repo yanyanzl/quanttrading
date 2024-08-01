@@ -23,37 +23,24 @@
 from pathlib import Path
 
 import importlib_metadata
-from datatypes import (
-    OrderData,
-    TradeData,
-    TickData,
-    BarData,
-    BaseApp
-)
+from datatypes import BaseApp
 
-from .engine import (
-    SpreadEngine,
-    APP_NAME,
-    SpreadData,
-    LegData,
-    SpreadStrategyTemplate,
-    SpreadAlgoTemplate
-)
+from .engine import APP_NAME, ManagerEngine
 
 
 try:
-    __version__ = importlib_metadata.version("vnpy_spreadtrading")
+    __version__ = importlib_metadata.version("vnpy_datamanager")
 except importlib_metadata.PackageNotFoundError:
     __version__ = "dev"
 
 
-class SpreadTradingApp(BaseApp):
+class DataManagerApp(BaseApp):
     """"""
 
     app_name: str = APP_NAME
     app_module: str = __module__
     app_path: Path = Path(__file__).parent
-    display_name: str = "价差交易"
-    engine_class: SpreadEngine = SpreadEngine
-    widget_name: str = "SpreadManager"
-    icon_name: str = str(app_path.joinpath("ui", "spread.ico"))
+    display_name: str = "数据管理"
+    engine_class: ManagerEngine = ManagerEngine
+    widget_name: str = "ManagerWidget"
+    icon_name: str = str(app_path.joinpath("ui", "manager.ico"))

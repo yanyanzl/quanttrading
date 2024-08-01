@@ -157,6 +157,7 @@ class Chart(QtWidgets.QWidget):
         self.add_plot = self._chartGraph.add_plot
         self.add_cursor = self._chartGraph.add_cursor
         self.add_item = self._chartGraph.add_item
+        self.get_plot = self._chartGraph.get_plot
 
 class ChartGraph(pg.PlotWidget):
     """

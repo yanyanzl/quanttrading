@@ -442,6 +442,7 @@ class SubscribeRequest:
     symbol: str
     exchange: Exchange
     tickType: Literal['Last', 'AllLast', 'BidAsk', 'MidPoint'] = "AllLast"
+    realTime: bool = True  # real time market data or not.
 
     def __post_init__(self) -> None:
         """"""
@@ -564,6 +565,8 @@ class QuoteRequest:
 class TradeBook:
     """
     long/short trades for a single symbol
+    the trade.symbolName should be same as the
+    tradeBook's vt_symbol
     calculate the PnL based on the trades
     """
 
@@ -596,7 +599,7 @@ class TradeBook:
 
     def update_trades(self, trade: TradeData) -> None:
         """update the trades information."""
-        if trade is not None and isinstance(trade, TradeData) and trade.vt_symbol == self.vt_symbol:
+        if trade is not None and isinstance(trade, TradeData) and trade.symbolName == self.vt_symbol:
             self.exchange = trade.exchange
             self.gateway_name = trade.gateway_name
 

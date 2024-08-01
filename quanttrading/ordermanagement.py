@@ -236,6 +236,13 @@ class MainEngine:
             return gateway.add_contract(symbol, exchange)
         else:
             return ""
+    
+    def unsubscribe(self, req: SubscribeRequest, gateway_name: str) -> None:
+        """
+        """
+        gateway: BaseGateway = self.get_gateway(gateway_name)
+        if gateway:
+            gateway.unsubscribe(req)
         
     def send_order(self, req: OrderRequest, gateway_name: str) -> str:
         """
@@ -243,7 +250,7 @@ class MainEngine:
         """
         
         gateway: BaseGateway = self.get_gateway(gateway_name)
-        self.write_log(f"main engine send_order: {gateway_name=} and {req.symbol=}  ")
+        # self.write_log(f"main engine send_order: {gateway_name=} and {req.symbol=}  ")
         if gateway:
             return gateway.send_order(req)
         else:
@@ -299,7 +306,7 @@ class MainEngine:
                    self.write_log(f"cancel_all_orders: {_.symbol} and {_.vt_symbol}")
                    tempOrders.append(_)
             orders = tempOrders
-        self.write_log(f"order list to be cancelled: {orders}")
+        self.write_log(f"order number to be cancelled: {len(orders)}")
 
         if not orders:
             return
@@ -350,16 +357,16 @@ class MainEngine:
             else:
                 trades:list[TradeData] = self.get_all_trades()
             self.write_log(f"covering all trades opened by this trading platform now ... ")
-            self.write_log(f"{symbol=} and {trades=} ") 
+            self.write_log(f"{symbol=} and trade number:{len(trades)} ") 
             if trades:
                 # get a map from symbol to all trades to a symbol
                 tempTrades: dict[str, list[TradeData]] = {}
                 for trade in trades:
                     self.write_log(f"{trade}")
-                    if trade.symbol in tempTrades:
-                        tempTrades.get(trade.symbol).append(trade)
+                    if trade.symbolName in tempTrades:
+                        tempTrades.get(trade.symbolName).append(trade)
                     else:
-                        tempTrades[trade.symbol] = [trade]
+                        tempTrades[trade.symbolName] = [trade]
 
                 for symbol, trades1 in tempTrades.items():
                     direction = Direction.LONG
@@ -381,7 +388,7 @@ class MainEngine:
                     req: OrderRequest = OrderRequest(symbol, trades1[0].exchange, direction, orderType, abs(volume))
 
                     req.offset = Offset.COVER
-                    self.write_log(f"{req=}, {trades1[0].gateway_name=}")
+                    self.write_log(f"{req.symbol=}, {trades1[0].gateway_name=}")
                     self.send_order(req, trades1[0].gateway_name)
 
         return None
@@ -681,7 +688,7 @@ class OrderManagement(BaseManagement):
         """"""
         contract: ContractData = event.data
         self.contracts[contract.vt_symbol] = contract
-        print(f"process_contract_event =========================== {contract=}")
+        # print(f"process_contract_event =========================== {contract=}")
         # Initialize offset converter for each gateway
         if contract.gateway_name not in self.offset_converters:
             self.offset_converters[contract.gateway_name] = OffsetConverter(self)

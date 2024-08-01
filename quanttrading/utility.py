@@ -63,7 +63,7 @@ def setUpLogger(loggingLevel) ->str:
     ch = logging.StreamHandler()
     # create formatter and add it to the handlers
 
-    formatter = logging.Formatter(bcolors.WARNING+' ===> %(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s'+ bcolors.ENDC)
+    formatter = logging.Formatter(bcolors.WARNING+' ===> %(asctime)s -%(threadName)s-%(filename)s-%(funcName)s- %(message)s'+ bcolors.ENDC)
     fh.setFormatter(formatter)
     ch.setFormatter(formatter)
     handlers = [fh, ch]

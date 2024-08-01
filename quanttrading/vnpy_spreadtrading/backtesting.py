@@ -9,15 +9,15 @@ from pandas import DataFrame
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from vnpy.trader.constant import (
+from constant import (
     Direction,
     Offset,
     Exchange,
     Interval,
     Status
 )
-from vnpy.trader.object import TradeData, BarData, TickData
-from vnpy.trader.optimize import (
+from datatypes import TradeData, BarData, TickData
+from optimize import (
     OptimizationSetting,
     check_optimization_setting,
     run_bf_optimization,

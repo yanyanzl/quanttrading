@@ -217,12 +217,12 @@ class RiskEngine(BaseEngine):
         trade: TradeData = event.data
         self.trade_count += trade.volume
 
-        activeTrade: TradeBook = self.active_trades.get(trade.symbol, None)
+        symbol = trade.symbolName
+        activeTrade: TradeBook = self.active_trades.get(symbol, None)
 
         # if no trade data for this symbol yet. create it.
         if not activeTrade:
-            self.active_trades[trade.symbol] = TradeBook(trade.symbol)
-            activeTrade = self.active_trades[trade.symbol]
+            activeTrade = self.active_trades[symbol] = TradeBook(symbol)
 
         # update trade related numbers.
         activeTrade.update_trades(trade)
@@ -249,6 +249,8 @@ class RiskEngine(BaseEngine):
             self.update_pnl_risk()
             riskLevel = self.check_pnl_risk()
             if self.freeze and riskLevel in [RiskLevel.LevelWarning, RiskLevel.LevelCritical]:
+                self.write_log(f"riskLevel:{riskLevel}, trigger risk control to cover all trades")
+                self.write_log(f"pnl={self.total_profit}, realised={self.realised_profit}, losslimit{self.total_loss_limit}, realisedLosslimit:{self.realised_loss_limit}")
                 self.main_engine.cancel_all_orders()
                 self.main_engine.cover_all_trades()
                 # cover all outstanding positions to be added.
@@ -260,6 +262,12 @@ class RiskEngine(BaseEngine):
         self.event_engine.put(event)
 
     def update_pnl_risk(self) -> bool:
+        """
+        update realised_profit and total_profit based on the 
+        lastest trades or 
+        update total_profit only based on the lastest tick 
+        price.
+        """
         if not self.active or not self.active_trades:
             return True
         
@@ -268,8 +276,12 @@ class RiskEngine(BaseEngine):
         for symbol, activeTrade in self.active_trades.items():
             realised += activeTrade.realised_pnl
             total += activeTrade.total_pnl
+        
+        if total != 0 and (self.total_profit != total or self.realised_profit != realised):
+            self.write_log(f"Total.PnL={round(self.total_profit, 1)}, Realised={round(self.realised_profit, 1)}")
         self.realised_profit = realised
         self.total_profit = total
+        
 
     def check_pnl_risk(self) -> int:
         """ 

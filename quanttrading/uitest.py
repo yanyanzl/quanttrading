@@ -14,6 +14,8 @@ from vnpy_algotrading import AlgoTradingApp
 from riskmanager import RiskManagerApp
 from backtester import CtaBacktesterApp
 from vnpy_ctastrategy import CtaStrategyApp
+from vnpy_datamanager import DataManagerApp
+from vnpy_datarecorder import DataRecorderApp
 
 import logging
 import tracemalloc, os
@@ -52,6 +54,12 @@ async def main():
 
         # add CTA strategy application
         main_engine.add_app(CtaStrategyApp)
+
+        # add data recorder Application
+        main_engine.add_app(DataRecorderApp)
+
+        # add data manage application
+        main_engine.add_app(DataManagerApp)
 
         try:
 

@@ -67,13 +67,11 @@ from typing import get_args
 from data.yfdatafeed import YfDatafeed
 from datatypes import HistoryRequest
 from utility import dateToLocal, LOCAL_TZ
+from vnpy_algotrading.algos.hft_direction_algo import TradingStatus
 
-x = 3
-y = 6
-x = y = 8
-if x == y == 8:
+status = TradingStatus.OpeningOrder
 
-    print(f"this is a test. But now it's a new one!! {x=} and {y=}")
+print(f"this is a test. But now it's a new one!! {status=}")
 
 def yfTest():
     df = YfDatafeed()

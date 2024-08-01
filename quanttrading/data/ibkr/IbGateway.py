@@ -119,6 +119,8 @@ EXCHANGE_VT2IB: dict[Exchange, str] = {
     Exchange.OTC: "PINK",
     Exchange.SGX: "SGX",
     Exchange.EUREX: "EUREX",
+    Exchange.IBIS: "IBIS",
+    Exchange.LSE: "LSE"
 }
 EXCHANGE_IB2VT: dict[str, Exchange] = {v: k for k, v in EXCHANGE_VT2IB.items()}
 
@@ -168,7 +170,12 @@ TICKFIELD_IB2VT: dict[int, str] = {
     12: "last",
     13: "model",
     14: "open_price",
-    86: "open_interest"
+    86: "open_interest",
+    66: "bid",
+    67: "ask",
+    68: "last_price",
+
+
 }
 
 # 账户类型映射
@@ -178,6 +185,9 @@ ACCOUNTFIELD_IB2VT: dict[str, str] = {
     "UnrealizedPnL": "positionProfit",
     "AvailableFunds": "available",
     "MaintMarginReq": "margin",
+    "BuyingPower": "buyingpower",
+    "MaintMarginReq": "marginreq",
+    "RealizedPnL": "realisedpnl"
 }
 
 # 数据频率映射
@@ -253,6 +263,9 @@ class IbGateway(BaseGateway):
     def subscribe(self, req: SubscribeRequest) -> None:
         """订阅行情"""
         self.api.subscribe(req)
+
+    def unsubscribe(self, req: SubscribeRequest) -> None:
+        self.api.unsubscribe(req)
 
     def send_order(self, req: OrderRequest) -> str:
         """委托下单"""
@@ -897,6 +910,7 @@ class IbApi(EWrapper):
     # ! [pnl] app.reqPnL(102, "U123456", "")
     def pnl(self, reqId: int, dailyPnL: float,
             unrealizedPnL: float, realizedPnL: float):
+        """ receive real time daily PnL and unrealized PnL updates."""
         super().pnl(reqId, dailyPnL, unrealizedPnL, realizedPnL)
         print("Daily PnL. ReqId:", reqId, "DailyPnL:", floatMaxString(dailyPnL),
               "UnrealizedPnL:", floatMaxString(unrealizedPnL), "RealizedPnL:", floatMaxString(realizedPnL))
@@ -910,6 +924,44 @@ class IbApi(EWrapper):
               "DailyPnL:", floatMaxString(dailyPnL), "UnrealizedPnL:", floatMaxString(unrealizedPnL),
               "RealizedPnL:", floatMaxString(realizedPnL), "Value:", floatMaxString(value))
     # ! [pnlsingle]
+
+
+    # ! [symbolSamples]
+    def symbolSamples(self, reqId: int,
+                      contractDescriptions: list):
+        """
+        # self.client.reqMatchingSymbols(211, "IBM");
+        # a function IBApi::EClient::reqMatchingSymbols is available to
+        # search for stock contracts. The input can be either the first
+        #  few letters of the ticker symbol, or for longer strings, a 
+        # character sequence matching a word in the security name. 
+        # For instance to search for the stock symbol 'IBKR', 
+        # the input 'I' or 'IB' can be used, as well as the word 
+        # 'Interactive'. Up to 16 matching results are returned.
+        # Matching stock contracts are returned to 
+        # IBApi::EWrapper::symbolSamples with information about types 
+        # of derivative contracts which exist (warrants, options, 
+        # dutch warrants, futures).
+        """
+        super().symbolSamples(reqId, contractDescriptions)
+        print("Symbol Samples. Request Id: ", reqId)
+
+        for contractDescription in contractDescriptions:
+            derivSecTypes = ""
+            for derivSecType in contractDescription.derivativeSecTypes:
+                derivSecTypes += " "
+                derivSecTypes += derivSecType
+            print("Contract: conId:%s, symbol:%s, secType:%s primExchange:%s, "
+                  "currency:%s, derivativeSecTypes:%s, description:%s, issuerId:%s" % (
+                contractDescription.contract.conId,
+                contractDescription.contract.symbol,
+                contractDescription.contract.secType,
+                contractDescription.contract.primaryExchange,
+                contractDescription.contract.currency, derivSecTypes,
+                contractDescription.contract.description,
+                contractDescription.contract.issuerId))
+    # ! [symbolSamples]
+
 
     def connect(
         self,
@@ -1009,6 +1061,13 @@ class IbApi(EWrapper):
         if "-" in req.symbol:
             self.reqid_symbol_map[self.reqid] = req.symbol
 
+
+        # patch for Europe market delayed data. to be removed
+        if req.exchange in [Exchange.LSE, Exchange.IBIS]:
+            self.client.reqMarketDataType(3)
+        else:
+            self.client.reqMarketDataType(1)
+
         #  订阅tick数据并创建tick对象缓冲区
         self.reqid += 1
         self.client.reqMktData(self.reqid, ib_contract, "", False, False, [])
@@ -1023,7 +1082,6 @@ class IbApi(EWrapper):
         tick.extra = {}
 
         self.ticks[self.reqid] = tick
-    
 
     def send_order(self, req: OrderRequest) -> str:
         """委托下单"""
@@ -1063,7 +1121,7 @@ class IbApi(EWrapper):
         elif req.type == OrderType.STOP:
             ib_order.auxPrice = req.price
 
-        self.gateway.write_log(f"ibgateway send_order: {self.orderid=},  {ib_contract.symbol=},  {ib_order.totalQuantity=}, {ib_order.action=}  ")
+        self.gateway.write_log(f"ibgateway send_order: order:{self.orderid} :{ib_contract.symbol}, num:{ib_order.totalQuantity}, {ib_order.action}  ")
         self.client.placeOrder(self.orderid, ib_contract, ib_order)
         self.client.reqIds(1)
 
@@ -1277,6 +1335,7 @@ class IbApi(EWrapper):
         self.client.cancelMktData(cancel_id)
 
 
+
 def generate_ib_contract(symbol: str, exchange: Exchange) -> Optional[Contract]:
     """生产IB合约"""
     # 字符串代码
@@ -1310,8 +1369,12 @@ def generate_ib_contract(symbol: str, exchange: Exchange) -> Optional[Contract]:
             ib_contract.exchange = EXCHANGE_VT2IB[exchange]
             ib_contract.symbol = symbol
             ib_contract.secType = 'STK'
-            ib_contract.currency = 'USD'
-            # ib_contract.conId = symbol
+            if exchange in [Exchange.EUREX, Exchange.EUNX, Exchange.IBIS]:
+                ib_contract.currency = 'EUR'
+            elif exchange in [Exchange.LSE]:
+                ib_contract.currency = 'GBP'
+            else:
+                ib_contract.currency = 'USD'
         else:
             ib_contract = None
 
