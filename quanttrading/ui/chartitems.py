@@ -348,7 +348,7 @@ class DataManager():
         """
         return the last element's index in the data list (DataFrame)
         """
-        if self._data is not None and not self._data.empty:
+        if not self.isEmpty():
             return self._data.last_valid_index()
         
         return None

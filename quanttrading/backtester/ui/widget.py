@@ -1004,14 +1004,14 @@ class OptimizationResultMonitor(QtWidgets.QDialog):
         table.setColumnCount(2)
         table.setRowCount(len(self.result_values))
         table.setHorizontalHeaderLabels([_("参数"), self.target_display])
-        table.setEditTriggers(table.NoEditTriggers)
+        table.setEditTriggers(table.EditTrigger.NoEditTriggers)
         table.verticalHeader().setVisible(False)
 
         table.horizontalHeader().setSectionResizeMode(
-            0, QtWidgets.QHeaderView.ResizeToContents
+            0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents
         )
         table.horizontalHeader().setSectionResizeMode(
-            1, QtWidgets.QHeaderView.Stretch
+            1, QtWidgets.QHeaderView.ResizeMode.Stretch
         )
 
         for n, tp in enumerate(self.result_values):
@@ -1019,8 +1019,8 @@ class OptimizationResultMonitor(QtWidgets.QDialog):
             setting_cell: QtWidgets.QTableWidgetItem = QtWidgets.QTableWidgetItem(str(setting))
             target_cell: QtWidgets.QTableWidgetItem = QtWidgets.QTableWidgetItem(f"{target_value:.2f}")
 
-            setting_cell.setTextAlignment(QtCore.Qt.AlignCenter)
-            target_cell.setTextAlignment(QtCore.Qt.AlignCenter)
+            setting_cell.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+            target_cell.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
             table.setItem(n, 0, setting_cell)
             table.setItem(n, 1, target_cell)

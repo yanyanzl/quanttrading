@@ -543,6 +543,8 @@ class ChartGraph(pg.PlotWidget):
         Update the x-axis range of plots.
         """
         # set a margin in the right for the paint with 20
+        if not self._right_ix:
+            self._right_ix = self.MIN_BAR_COUNT
         max_ix: int = int(self._right_ix) + 20
         min_ix: int = int(self._right_ix - self._bar_count)
         logger.debug(f"ChartGraph:: _update_x_range:: self._right_ix is {self._right_ix} and self._bar_count is {self._bar_count}, min_ix is {min_ix}")

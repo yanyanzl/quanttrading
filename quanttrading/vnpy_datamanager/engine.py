@@ -204,7 +204,7 @@ class ManagerEngine(BaseEngine):
         contract: Optional[ContractData] = self.main_engine.get_contract(symbol)
 
         # If history data provided in gateway, then query
-        print(f"here in download_bar_data in datamanager engine.{contract.history_data=}")
+        # print(f"here in download_bar_data in datamanager engine.{contract.history_data=}")
         if contract and contract.history_data:
             data: List[BarData] = self.main_engine.query_history(
                 req, contract.gateway_name

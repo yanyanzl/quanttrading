@@ -171,8 +171,8 @@ TICKFIELD_IB2VT: dict[int, str] = {
     13: "model",
     14: "open_price",
     86: "open_interest",
-    66: "bid",
-    67: "ask",
+    66: "bid_price_1",
+    67: "ask_price_1",
     68: "last_price",
 
 
@@ -1238,15 +1238,22 @@ class IbApi(EWrapper):
     
     def load_contract_data(self) -> None:
         """加载本地合约数据"""
-        # f = shelve.open(self.data_filepath)
-        # self.contracts = f.get("contracts", {})
-        # self.ib_contracts = f.get("ib_contracts", {})
-        # f.close()
+        f = shelve.open(self.data_filepath)
+        contracts = f.get("contracts", {})
+        ib_contracts = f.get("ib_contracts", {})
+        
+        if contracts and len(contracts) > 0:
+            self.contracts = contracts
 
-        # for contract in self.contracts.values():
-        #     self.gateway.on_contract(contract)
+        if ib_contracts and len(ib_contracts) > 0:
+            self.ib_contracts = ib_contracts
 
-        # self.gateway.write_log("本地缓存合约信息加载成功")
+        f.close()
+
+        for contract in self.contracts.values():
+            self.gateway.on_contract(contract)
+
+        self.gateway.write_log("本地缓存合约信息加载成功")
         pass
 
     def save_contract_data(self) -> None:
@@ -1257,7 +1264,8 @@ class IbApi(EWrapper):
             c: ContractData = copy(contract)
             c.gateway_name = "IB"
             contracts[vt_symbol] = c
-
+        if not contracts:
+            return
         f = shelve.open(self.data_filepath)
         f["contracts"] = contracts
         f["ib_contracts"] = self.ib_contracts

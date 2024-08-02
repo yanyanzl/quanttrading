@@ -68,6 +68,10 @@ from data.yfdatafeed import YfDatafeed
 from datatypes import HistoryRequest
 from utility import dateToLocal, LOCAL_TZ
 from vnpy_algotrading.algos.hft_direction_algo import TradingStatus
+from datatypes import OrderType
+type: OrderType = OrderType.LIMIT
+
+print(f"{type.value}")
 
 status = TradingStatus.OpeningOrder
 

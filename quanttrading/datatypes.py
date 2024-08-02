@@ -3,7 +3,7 @@ Basic data structure used for general trading function in the trading platform.
 define all types of data object in this module
 
 """
-
+from PySide6 import QtGui
 from dataclasses import dataclass, field
 from datetime import datetime
 from logging import INFO
@@ -248,7 +248,7 @@ class OrderData(BaseData):
     exchange: Exchange
     orderid: str
 
-    type: OrderType = OrderType
+    type: OrderType = OrderType.LIMIT
     direction: Direction = None
     offset: Offset = Offset.NONE
     price: float = 0
@@ -646,3 +646,11 @@ class TradeBook:
             direction = Direction.SHORT
         self.cover_req = OrderRequest(self.vt_symbol, self.exchange, direction, OrderType.MARKET, abs(volume), offset=Offset.COVER)
         return self.cover_req
+
+
+class Validator(QtGui.QValidator):
+    def validate(self, string:str, pos):
+        return QtGui.QValidator.Acceptable, string.upper(), pos
+        # for old code still using QString, use this instead
+        # string.replace(0, string.count(), string.toUpper())
+        # return QtGui.QValidator.Acceptable, pos
