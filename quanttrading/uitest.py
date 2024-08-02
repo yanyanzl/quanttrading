@@ -41,7 +41,7 @@ async def main():
 
         main_engine = MainEngine(event_engine)
         
-        main_engine.add_gateway(IbGateway,"ibkrgateway")
+        main_engine.add_gateway(IbGateway,"IB")
         
         # add algo trading app
         main_engine.add_app(AlgoTradingApp)

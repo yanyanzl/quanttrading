@@ -1,10 +1,10 @@
 {
-    "strategy1": {
-        "pos": 0.0,
+    "sig": {
+        "pos": 0,
         "signal_pos": {
             "rsi": 0,
-            "cci": -1,
-            "ma": 1
+            "cci": 0,
+            "ma": 0
         },
         "target_pos": 0
     }

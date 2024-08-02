@@ -218,7 +218,7 @@ class CtaEngine(BaseEngine):
         for stop_order in list(self.stop_orders.values()):
             if stop_order.vt_symbol != tick.vt_symbol:
                 continue
-
+            
             long_triggered = (
                 stop_order.direction == Direction.LONG and tick.last_price >= stop_order.price
             )
@@ -946,6 +946,13 @@ class CtaEngine(BaseEngine):
         """
         data: dict = strategy.get_data()
         event: Event = Event(EVENT_CTA_STRATEGY, data)
+        self.event_engine.put(event)
+
+
+    def put_event(self, event: Event) -> None:
+        """
+        put the signal event to the queue.
+        """
         self.event_engine.put(event)
 
     def write_log(self, msg: str, strategy: CtaTemplate = None) -> None:

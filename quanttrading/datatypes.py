@@ -15,7 +15,8 @@ import sys
 from typing import Union, List, Optional, Any as PythonAny
 from decimal import Decimal
 
-from constant import Direction, Exchange, Offset, Status, Product, OptionType, OrderType
+from constant import Direction, Exchange, Offset, Status, Product, OptionType, OrderType, SignalType
+
 
 ACTIVE_STATUSES = set([Status.SUBMITTING, Status.NOTTRADED, Status.PARTTRADED])
 
@@ -50,6 +51,14 @@ Bool = Optional[bool]
 MarketType = Literal['spot', 'margin', 'swap', 'future', 'option']
 SubType = Literal['linear', 'inverse']
 Interval = Literal["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "1wk"]
+
+class TradingSignal(TypedDict):
+    # type of the signal. could be SIGNAL_CCI, SIGNAL_RSI etc.
+    type: SignalType
+    # signal for which symbol. example: TSLA, NVDA, BMW
+    symbol: str
+    # value of the signal.
+    value: Any
 
 
 class FeeInterface(TypedDict):
@@ -613,6 +622,7 @@ class TradeBook:
             self.total_pnl = (trade.price * self.long_size - self.long_cost) + (self.short_cost - trade.price * self.short_size)
             if self.long_size >= self.short_size > 0:
                 self.realised_pnl = self.short_size * (self.short_cost/self.short_size - self.long_cost/self.long_size)
+                
             elif self.short_size > self.long_size > 0:
                 self.realised_pnl = self.long_size * (self.short_cost/self.short_size - self.long_cost/self.long_size)
 

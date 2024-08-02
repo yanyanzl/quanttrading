@@ -95,6 +95,17 @@ EVENT_PORTFOLIO = "ePortfolio"
 EVENT_ORDER_STATUS = "eOrderStatus"
 EVENT_OPEN_ORDER = "eOpenOrder"
 
+EVENT_SIGNAL = "eSIGNAL"
+
+class SignalType(Enum):
+    """
+    trading signal type.
+    """
+    SIGNAL_RSI = "signalRSI"
+    SIGNAL_CCI = "signalCCI"
+    SIGNAL_MA = "signalMA"
+
+
 class RiskLevel(Enum):
     """
     risk levels

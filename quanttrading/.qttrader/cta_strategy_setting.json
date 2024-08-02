@@ -1,9 +1,9 @@
 {
-    "strategy1": {
-        "class_name": "MultiSignalStrategy",
-        "vt_symbol": "TSLA.SMART",
+    "sig": {
+        "class_name": "Signals",
+        "vt_symbol": "AAPL.SMART",
         "setting": {
-            "class_name": "MultiSignalStrategy",
+            "class_name": "Signals",
             "rsi_window": 14,
             "rsi_level": 20,
             "cci_window": 30,
