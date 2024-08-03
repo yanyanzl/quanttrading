@@ -1,3 +1,10 @@
+"""
+Back test Engine. 
+this is the interface or manager of the back test. 
+The engine will load all strategies (subclass of CtaTemplate) under
+vnpy_ctastrategy/strategies and current working directory/strategies
+
+"""
 from ast import List
 import importlib
 import traceback
@@ -21,10 +28,11 @@ from database import BaseDatabase, get_database
 import vnpy_ctastrategy
 from vnpy_ctastrategy import CtaTemplate, TargetPosTemplate
 from vnpy_ctastrategy.backtesting import (
-    BacktestingEngine,
+    BacktestingEngine, #to be changed to import from .backtestbase
     OptimizationSetting,
     BacktestingMode
 )
+from .template import BacktestTemplate
 from .locale import _
 
 APP_NAME = "CtaBacktester"
@@ -36,7 +44,33 @@ EVENT_BACKTESTER_OPTIMIZATION_FINISHED = "eBacktesterOptimizationFinished"
 
 class BacktesterEngine(BaseEngine):
     """
-    For running CTA strategy backtesting.
+    For running strategy backtesting.
+    Back test Engine. 
+    this is the interface or manager of the back test. It mainly do:
+    1. the engine will create BacktestingEngine for the strategies to
+    be tested. BacktestingEngine is specific for different strategies.
+
+    2. The engine will load all strategies (subclass of CtaTemplate or
+    BacktestTemplate) under vnpy_ctastrategy/strategies and current 
+    working directory/strategies.
+
+    3. call (by UI widget) start_backtesting with parameters including
+    strategy class, symbol, start/end, interval and other settings.
+    This will create a thread to start a back testing task. which will
+    run run_backtesting which will do the following:
+        a. call backtesingengine to clear_data, add_strategy, 
+        load_data
+        b. call backtestingengine to run_backtesting
+        c. call backtestingengine to calculate_result, calculate_statistics
+        d. Trigger finished event
+
+    4. it could also download data for the backtesting. by call datafeed, 
+    mainengine in a thread.
+
+    5. it could also optimize the parameters for those strategies by 
+    start_optimization then run_optimization then call backtestingengine's
+    run_ga_optimization etc.
+
     """
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
@@ -120,7 +154,7 @@ class BacktesterEngine(BaseEngine):
                 value = getattr(module, name)
                 if (
                     isinstance(value, type)
-                    and issubclass(value, CtaTemplate)
+                    and (issubclass(value, CtaTemplate) or issubclass(value, BacktestTemplate))
                     and value not in {CtaTemplate, TargetPosTemplate}
                 ):
                     self.classes[value.__name__] = value
