@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from copy import copy
 from typing import Any, Callable, List
 
-from constant import Interval, Direction, Offset
+# from constant import Interval, Direction, Offset
 from datatypes import BarData, TickData, OrderData, TradeData
 from utility import virtual
 
@@ -22,13 +22,37 @@ class BacktestTemplate(ABC):
 
     def __init__(
         self,
-        cta_engine: Any,
         strategy_name: str,
         vt_symbol: str,
         setting: dict,
     ) -> None:
-        """"""
-        self.cta_engine: Any = cta_engine
+        """
+        these are all the all the parameters needed to initialise a 
+        instance of the strategy by back test engine.
+        every strategy should inherite from this class to be able to do
+        the back test. make sure the strategy could be created by:
+        strategy_class(
+            engine, strategy_class.__name__, symbol, settings
+        )
+        plus one more requirement: the strategy should call it's own
+        engine's send_order method for every single order. for back test,
+        the backtestingEngine will create the strategy with it self as
+        the strategy's engine (also baseengine type). So the backtestingengine
+        will get all orders from the strategy.
+        the send_order method should compatible with the following 
+        parameter sequence. :
+        def send_order(
+            self,
+            strategy: BacktestTemplate,
+            direction: Direction,
+            offset: Offset,
+            price: float,
+            volume: float,
+            stop: bool = False,
+            lock: bool = False,
+            net: bool = False
+        )
+        """
 
         # used by backtesting engine also.
         self.strategy_name: str = strategy_name
@@ -55,6 +79,8 @@ class BacktestTemplate(ABC):
 
         self.update_setting(setting)
 
+    # ========== this part is used to be called to create strategy
+    # instances. So that it could setting those parameters.
     def update_setting(self, setting: dict) -> None:
         """
         Update strategy parameter wtih value in setting dict.
@@ -172,198 +198,6 @@ class BacktestTemplate(ABC):
         """
         pass
     
-    # =============== this part is action to take receiving those
-    # callbacks.
-    def buy(
-        self,
-        price: float,
-        volume: float,
-        stop: bool = False,
-        lock: bool = False,
-        net: bool = False
-    ) -> list:
-        """
-        Send buy order to open a long position.
-        """
-        return self.send_order(
-            Direction.LONG,
-            Offset.OPEN,
-            price,
-            volume,
-            stop,
-            lock,
-            net
-        )
-
-    def sell(
-        self,
-        price: float,
-        volume: float,
-        stop: bool = False,
-        lock: bool = False,
-        net: bool = False
-    ) -> list:
-        """
-        Send sell order to close a long position.
-        """
-        return self.send_order(
-            Direction.SHORT,
-            Offset.CLOSE,
-            price,
-            volume,
-            stop,
-            lock,
-            net
-        )
-
-    def short(
-        self,
-        price: float,
-        volume: float,
-        stop: bool = False,
-        lock: bool = False,
-        net: bool = False
-    ) -> list:
-        """
-        Send short order to open as short position.
-        """
-        return self.send_order(
-            Direction.SHORT,
-            Offset.OPEN,
-            price,
-            volume,
-            stop,
-            lock,
-            net
-        )
-
-    def cover(
-        self,
-        price: float,
-        volume: float,
-        stop: bool = False,
-        lock: bool = False,
-        net: bool = False
-    ) -> list:
-        """
-        Send cover order to close a short position.
-        """
-        return self.send_order(
-            Direction.LONG,
-            Offset.CLOSE,
-            price,
-            volume,
-            stop,
-            lock,
-            net
-        )
-
-    def send_order(
-        self,
-        direction: Direction,
-        offset: Offset,
-        price: float,
-        volume: float,
-        stop: bool = False,
-        lock: bool = False,
-        net: bool = False
-    ) -> list:
-        """
-        Send a new order.
-        """
-        if self.trading:
-            vt_orderids: list = self.cta_engine.send_order(
-                self, direction, offset, price, volume, stop, lock, net
-            )
-            return vt_orderids
-        else:
-            return []
-
-    def cancel_order(self, vt_orderid: str) -> None:
-        """
-        Cancel an existing order.
-        """
-        if self.trading:
-            self.cta_engine.cancel_order(self, vt_orderid)
-
-    def cancel_all(self) -> None:
-        """
-        Cancel all orders sent by strategy.
-        """
-        if self.trading:
-            self.cta_engine.cancel_all(self)
-
-    def write_log(self, msg: str) -> None:
-        """
-        Write a log message.
-        """
-        self.cta_engine.write_log(msg, self)
-
-    def get_engine_type(self) -> EngineType:
-        """
-        Return whether the cta_engine is backtesting or live trading.
-        """
-        return self.cta_engine.get_engine_type()
-
-    def get_pricetick(self) -> float:
-        """
-        Return pricetick data of trading contract.
-        """
-        return self.cta_engine.get_pricetick(self)
-
-    def get_size(self) -> int:
-        """
-        Return size data of trading contract.
-        """
-        return self.cta_engine.get_size(self)
-
-    def load_bar(
-        self,
-        days: int,
-        interval: Interval = Interval.MINUTE,
-        callback: Callable = None,
-        use_database: bool = False
-    ) -> None:
-        """
-        Load historical bar data for initializing strategy.
-        """
-        if not callback:
-            callback: Callable = self.on_bar
-
-        bars: List[BarData] = self.cta_engine.load_bar(
-            self.vt_symbol,
-            days,
-            interval,
-            callback,
-            use_database
-        )
-
-        for bar in bars:
-            callback(bar)
-
-    def load_tick(self, days: int) -> None:
-        """
-        Load historical tick data for initializing strategy.
-        """
-        ticks: List[TickData] = self.cta_engine.load_tick(self.vt_symbol, days, self.on_tick)
-
-        for tick in ticks:
-            self.on_tick(tick)
-
-    def put_event(self) -> None:
-        """
-        Put an strategy data event for ui update.
-        """
-        if self.inited:
-            self.cta_engine.put_strategy_event(self)
-
-    def sync_data(self) -> None:
-        """
-        Sync strategy variables value into disk storage.
-        """
-        if self.trading:
-            self.cta_engine.sync_strategy_data(self)
-
 
 class BackTestExampleStrategy(BacktestTemplate):
     """"""
@@ -373,9 +207,9 @@ class BackTestExampleStrategy(BacktestTemplate):
     last_bar: BarData = None
     target_pos = 0
 
-    def __init__(self, cta_engine, strategy_name, vt_symbol, setting) -> None:
+    def __init__(self, engine, strategy_name, vt_symbol, setting) -> None:
         """"""
-        super().__init__(cta_engine, strategy_name, vt_symbol, setting)
+        super().__init__(engine, strategy_name, vt_symbol, setting)
 
         self.active_orderids: list = []
         self.cancel_orderids: list = []

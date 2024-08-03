@@ -1,11 +1,12 @@
 """
-This is the BacktestingEngine for all back test to be use.
+This is the BacktestEngine for all back test to be use.
 it will stimulate the send/receive order/trades as a module
 for any strategy inherited from BacktestTemplate. 
 it will be called by the BacktesterEngine to:
         a. clear_data, add_strategy, load_data
         b. run_backtesting
         c. calculate_result, calculate_statistics
+
 """
 from collections import defaultdict
 from datetime import date, datetime, timedelta
@@ -18,7 +19,7 @@ from pandas import DataFrame, Series
 from pandas.core.window import ExponentialMovingWindow
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-
+from ordermanagement import BaseManagement as BaseEngine
 from constant import (
     Direction,
     Offset,
@@ -27,7 +28,7 @@ from constant import (
     Status
 )
 from database import get_database, BaseDatabase
-from datatypes import OrderData, TradeData, BarData, TickData
+from datatypes import OrderData, TradeData, BarData, TickData, OrderType
 from utility import round_to, extract_vt_symbol
 from optimize import (
     OptimizationSetting,
@@ -48,10 +49,20 @@ from .template import BacktestTemplate
 from .locale import _
 
 
-class BacktestingEngine:
-    """ Backtesting Engine 
+class BacktestEngine(BaseEngine):
+    """ 
+    Backtesting Engine 
     excute all the actions for back testing.
-    
+    1. Load data.
+    2. create strategy instance with paramters received from backtesterEngine.
+    This step, the strategy instance's engine will be the BacktestEngine.
+    this will make sure the strategy instance will call the send_order method
+    of this engine wheneven a order is triggered there.
+    3. then run_backtesting by:
+        a. self.strategy.on_init()
+        b. self.strategy.on_start()
+        c. for all loaded data. call self.strategy.on_bar() or on_tick()
+        d. self.strategy.on_stop()
     """
 
     engine_type: EngineType = EngineType.BACKTESTING
@@ -59,6 +70,9 @@ class BacktestingEngine:
 
     def __init__(self) -> None:
         """"""
+        # just initialise but never used.
+        super().__init__(None, None, "BACK_TESTING_ENGINE")
+
         self.vt_symbol: str = ""
         self.symbol: str = ""
         self.exchange: Exchange = None
@@ -842,17 +856,19 @@ class BacktestingEngine:
         offset: Offset,
         price: float,
         volume: float,
-        stop: bool,
-        lock: bool,
-        net: bool
+        order_type: OrderType = OrderType.LIMIT,
+        stop: bool = False,
+        lock: bool = False,
+        net: bool = False
     ) -> list:
-        """"""
+        """ one type of send_order: with stop/limit, lock, net parameters."""
         price: float = round_to(price, self.pricetick)
         if stop:
             vt_orderid: str = self.send_stop_order(direction, offset, price, volume)
         else:
             vt_orderid: str = self.send_limit_order(direction, offset, price, volume)
         return [vt_orderid]
+    
 
     def send_stop_order(
         self,
@@ -1138,7 +1154,7 @@ def evaluate(
     """
     Function for running in multiprocessing.pool
     """
-    engine: BacktestingEngine = BacktestingEngine()
+    engine: BacktestEngine = BacktestEngine()
 
     engine.set_parameters(
         vt_symbol=vt_symbol,
@@ -1163,7 +1179,7 @@ def evaluate(
     return (setting, target_value, statistics)
 
 
-def wrap_evaluate(engine: BacktestingEngine, target_name: str) -> callable:
+def wrap_evaluate(engine: BacktestEngine, target_name: str) -> callable:
     """
     Wrap evaluate function with given setting from backtesting engine.
     """

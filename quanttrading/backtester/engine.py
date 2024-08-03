@@ -33,6 +33,7 @@ from vnpy_ctastrategy.backtesting import (
     BacktestingMode
 )
 from .template import BacktestTemplate
+from backtestbase import BacktestEngine
 from .locale import _
 
 APP_NAME = "CtaBacktester"
@@ -45,7 +46,7 @@ EVENT_BACKTESTER_OPTIMIZATION_FINISHED = "eBacktesterOptimizationFinished"
 class BacktesterEngine(BaseEngine):
     """
     For running strategy backtesting.
-    Back test Engine. 
+    Back test Engine.
     this is the interface or manager of the back test. It mainly do:
     1. the engine will create BacktestingEngine for the strategies to
     be tested. BacktestingEngine is specific for different strategies.
@@ -95,7 +96,8 @@ class BacktesterEngine(BaseEngine):
         """"""
         self.write_log(_("初始化CTA回测引擎"))
 
-        self.backtesting_engine = BacktestingEngine()
+        # self.backtesting_engine = BacktestingEngine()
+        self.backtesting_engine = BacktestEngine()
         # Redirect log from backtesting engine outside.
         self.backtesting_engine.output = self.write_log
 
