@@ -9,7 +9,7 @@ from utility import virtual
 from .base import StopOrder, EngineType
 
 
-class BacktestTemplate(ABC):
+class Testable(ABC):
     """ 
     This is the base class for every strategy to inherite from
     So we could do the back test for the strategy implement those
@@ -43,7 +43,7 @@ class BacktestTemplate(ABC):
         parameter sequence. :
         def send_order(
             self,
-            strategy: BacktestTemplate,
+            strategy: Testable,
             direction: Direction,
             offset: Offset,
             price: float,
@@ -199,7 +199,7 @@ class BacktestTemplate(ABC):
         pass
     
 
-class BackTestExampleStrategy(BacktestTemplate):
+class BackTestExampleStrategy(Testable):
     """"""
     tick_add = 1
 

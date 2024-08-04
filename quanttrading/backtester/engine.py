@@ -25,15 +25,15 @@ from datatypes import HistoryRequest, TickData, ContractData, BarData
 from datafeed import BaseDatafeed, get_datafeed
 from database import BaseDatabase, get_database
 
-import vnpy_ctastrategy
+import vnpy_ctastrategy, vnpy_algotrading
 from vnpy_ctastrategy import CtaTemplate, TargetPosTemplate
 from vnpy_ctastrategy.backtesting import (
     BacktestingEngine, #to be changed to import from .backtestbase
     OptimizationSetting,
     BacktestingMode
 )
-from .template import BacktestTemplate
-from backtestbase import BacktestEngine
+from .template import Testable
+from .backtestbase import BacktestEngine
 from .locale import _
 
 APP_NAME = "CtaBacktester"
@@ -52,7 +52,7 @@ class BacktesterEngine(BaseEngine):
     be tested. BacktestingEngine is specific for different strategies.
 
     2. The engine will load all strategies (subclass of CtaTemplate or
-    BacktestTemplate) under vnpy_ctastrategy/strategies and current 
+    Testable) under vnpy_ctastrategy/strategies and current 
     working directory/strategies.
 
     3. call (by UI widget) start_backtesting with parameters including
@@ -131,6 +131,10 @@ class BacktesterEngine(BaseEngine):
         path2: Path = Path.cwd().joinpath("strategies")
         self.load_strategy_class_from_folder(path2, "strategies")
 
+        algo_path: Path = Path(vnpy_algotrading.__file__).parent
+        path3: Path = algo_path.joinpath("algos")
+        self.load_strategy_class_from_folder(path3, "vnpy_algotrading.algos")
+
     def load_strategy_class_from_folder(self, path: Path, module_name: str = "") -> None:
         """
         Load strategy class from certain folder.
@@ -156,7 +160,7 @@ class BacktesterEngine(BaseEngine):
                 value = getattr(module, name)
                 if (
                     isinstance(value, type)
-                    and (issubclass(value, CtaTemplate) or issubclass(value, BacktestTemplate))
+                    and (issubclass(value, CtaTemplate) or issubclass(value, Testable))
                     and value not in {CtaTemplate, TargetPosTemplate}
                 ):
                     self.classes[value.__name__] = value

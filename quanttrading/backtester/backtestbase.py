@@ -1,7 +1,7 @@
 """
 This is the BacktestEngine for all back test to be use.
 it will stimulate the send/receive order/trades as a module
-for any strategy inherited from BacktestTemplate. 
+for any strategy inherited from Testable. 
 it will be called by the BacktesterEngine to:
         a. clear_data, add_strategy, load_data
         b. run_backtesting
@@ -45,7 +45,7 @@ from .base import (
     StopOrderStatus,
     INTERVAL_DELTA_MAP
 )
-from .template import BacktestTemplate
+from .template import Testable
 from .locale import _
 
 
@@ -88,8 +88,8 @@ class BacktestEngine(BaseEngine):
         self.half_life: int = 120
         self.mode: BacktestingMode = BacktestingMode.BAR
 
-        self.strategy_class: Type[BacktestTemplate] = None
-        self.strategy: BacktestTemplate = None
+        self.strategy_class: Type[Testable] = None
+        self.strategy: Testable = None
         self.tick: TickData
         self.bar: BarData
         self.datetime: datetime = None
@@ -178,7 +178,7 @@ class BacktestEngine(BaseEngine):
         self.annual_days = annual_days
         self.half_life = half_life
 
-    def add_strategy(self, strategy_class: Type[BacktestTemplate], setting: dict) -> None:
+    def add_strategy(self, strategy_class: Type[Testable], setting: dict) -> None:
         """"""
         self.strategy_class = strategy_class
         self.strategy = strategy_class(
@@ -851,7 +851,7 @@ class BacktestEngine(BaseEngine):
 
     def send_order(
         self,
-        strategy: BacktestTemplate,
+        strategy: Testable,
         direction: Direction,
         offset: Offset,
         price: float,
@@ -924,7 +924,7 @@ class BacktestEngine(BaseEngine):
 
         return order.vt_orderid
 
-    def cancel_order(self, strategy: BacktestTemplate, vt_orderid: str) -> None:
+    def cancel_order(self, strategy: Testable, vt_orderid: str) -> None:
         """
         Cancel order by vt_orderid.
         """
@@ -933,7 +933,7 @@ class BacktestEngine(BaseEngine):
         else:
             self.cancel_limit_order(strategy, vt_orderid)
 
-    def cancel_stop_order(self, strategy: BacktestTemplate, vt_orderid: str) -> None:
+    def cancel_stop_order(self, strategy: Testable, vt_orderid: str) -> None:
         """"""
         if vt_orderid not in self.active_stop_orders:
             return
@@ -942,7 +942,7 @@ class BacktestEngine(BaseEngine):
         stop_order.status = StopOrderStatus.CANCELLED
         self.strategy.on_stop_order(stop_order)
 
-    def cancel_limit_order(self, strategy: BacktestTemplate, vt_orderid: str) -> None:
+    def cancel_limit_order(self, strategy: Testable, vt_orderid: str) -> None:
         """"""
         if vt_orderid not in self.active_limit_orders:
             return
@@ -951,7 +951,7 @@ class BacktestEngine(BaseEngine):
         order.status = Status.CANCELLED
         self.strategy.on_order(order)
 
-    def cancel_all(self, strategy: BacktestTemplate) -> None:
+    def cancel_all(self, strategy: Testable) -> None:
         """
         Cancel all orders, both limit and stop.
         """
@@ -963,20 +963,20 @@ class BacktestEngine(BaseEngine):
         for vt_orderid in stop_orderids:
             self.cancel_stop_order(strategy, vt_orderid)
 
-    def write_log(self, msg: str, strategy: BacktestTemplate = None) -> None:
+    def write_log(self, msg: str, strategy: Testable = None) -> None:
         """
         Write log message.
         """
         msg: str = f"{self.datetime}\t{msg}"
         self.logs.append(msg)
 
-    def send_email(self, msg: str, strategy: BacktestTemplate = None) -> None:
+    def send_email(self, msg: str, strategy: Testable = None) -> None:
         """
         Send email to default receiver.
         """
         pass
 
-    def sync_strategy_data(self, strategy: BacktestTemplate) -> None:
+    def sync_strategy_data(self, strategy: Testable) -> None:
         """
         Sync strategy data into json file.
         """
@@ -988,19 +988,19 @@ class BacktestEngine(BaseEngine):
         """
         return self.engine_type
 
-    def get_pricetick(self, strategy: BacktestTemplate) -> float:
+    def get_pricetick(self, strategy: Testable) -> float:
         """
         Return contract pricetick data.
         """
         return self.pricetick
 
-    def get_size(self, strategy: BacktestTemplate) -> int:
+    def get_size(self, strategy: Testable) -> int:
         """
         Return contract size data.
         """
         return self.size
 
-    def put_strategy_event(self, strategy: BacktestTemplate) -> None:
+    def put_strategy_event(self, strategy: Testable) -> None:
         """
         Put an event to update strategy status.
         """
@@ -1138,7 +1138,7 @@ def load_tick_data(
 
 def evaluate(
     target_name: str,
-    strategy_class: BacktestTemplate,
+    strategy_class: Testable,
     vt_symbol: str,
     interval: Interval,
     start: datetime,
