@@ -68,14 +68,12 @@ from data.yfdatafeed import YfDatafeed
 from datatypes import HistoryRequest
 from utility import dateToLocal, LOCAL_TZ
 from vnpy_algotrading.algos.hft_direction_algo import TradingStatus
-from datatypes import OrderType
-type: OrderType = OrderType.LIMIT
+from constant import OrderType, Direction, Offset
 
-print(f"{type.value}")
+dt = datetime.now(LOCAL_TZ).second
 
-status = TradingStatus.OpeningOrder
 
-print(f"this is a test. But now it's a new one!! {status=}")
+print(f"{dt=} ")
 
 def yfTest():
     df = YfDatafeed()

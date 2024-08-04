@@ -115,6 +115,9 @@ class BacktestEngine(BaseEngine):
         self.daily_results: Dict[date, DailyResult] = {}
         self.daily_df: DataFrame = None
 
+        self.counter = 0
+        self.last_second = 0
+
     def clear_data(self) -> None:
         """
         Clear all data of last backtesting.
@@ -624,6 +627,8 @@ class BacktestEngine(BaseEngine):
         self.bar = bar
         self.datetime = bar.datetime
 
+        self.update_timer(bar.datetime)
+
         self.cross_limit_order()
         self.cross_stop_order()
         self.strategy.on_bar(bar)
@@ -634,12 +639,27 @@ class BacktestEngine(BaseEngine):
         """"""
         self.tick = tick
         self.datetime = tick.datetime
+        self.counter += 1
+        if self.counter < 100:
+            print(f"new tick{self.datetime}: last: {tick.last_price}, ask: {tick.ask_price_1}, bid:{tick.bid_price_1}")
+        
+        self.update_timer(tick.datetime)
 
         self.cross_limit_order()
         self.cross_stop_order()
         self.strategy.on_tick(tick)
 
         self.update_daily_close(tick.last_price)
+
+    def update_timer(self, time:datetime) -> None:
+        """ 
+        simulate the timer (second) based on the datetime of the tick 
+        or bar
+        """
+        second = time.second
+        if second != self.last_second:
+            self.last_second = second
+            self.strategy.on_timer()
 
     def cross_limit_order(self) -> None:
         """
@@ -659,6 +679,7 @@ class BacktestEngine(BaseEngine):
             long_best_price = long_cross_price
             short_best_price = short_cross_price
 
+        # print(f"{self.mode=} and {long_cross_price=} {short_cross_price=}")
         for order in list(self.active_limit_orders.values()):
             # Push order update with status "not traded" (pending).
             if order.status == Status.SUBMITTING:
@@ -677,6 +698,7 @@ class BacktestEngine(BaseEngine):
                 and order.price <= short_cross_price
                 and short_cross_price > 0
             )
+            # print(f"{self.mode=} and {order.direction=} and {order.price=}  {short_cross_price=}, {short_cross=} {long_cross_price=}")
 
             if not long_cross and not short_cross:
                 continue
@@ -710,6 +732,7 @@ class BacktestEngine(BaseEngine):
                 volume=order.volume,
                 datetime=self.datetime,
                 gateway_name=self.gateway_name,
+                symbolName=order.symbol,
             )
 
             self.strategy.pos += pos_change
@@ -787,6 +810,7 @@ class BacktestEngine(BaseEngine):
                 volume=order.volume,
                 datetime=self.datetime,
                 gateway_name=self.gateway_name,
+                symbolName=order.symbol,
             )
 
             self.trades[trade.vt_tradeid] = trade
@@ -860,14 +884,15 @@ class BacktestEngine(BaseEngine):
         stop: bool = False,
         lock: bool = False,
         net: bool = False
-    ) -> list:
+    ) -> str:
         """ one type of send_order: with stop/limit, lock, net parameters."""
+        print(f"")
         price: float = round_to(price, self.pricetick)
-        if stop:
+        if order_type != OrderType.LIMIT or stop:
             vt_orderid: str = self.send_stop_order(direction, offset, price, volume)
         else:
             vt_orderid: str = self.send_limit_order(direction, offset, price, volume)
-        return [vt_orderid]
+        return vt_orderid
     
 
     def send_stop_order(
@@ -1004,6 +1029,10 @@ class BacktestEngine(BaseEngine):
         """
         Put an event to update strategy status.
         """
+        pass
+
+    def put_algo_event(self, strategy:Testable, data) -> None:
+        # print(f"put_algo_event {data=}")
         pass
 
     def output(self, msg) -> None:

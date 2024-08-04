@@ -15,6 +15,15 @@ def _(name):
     """
     return str(name)
 
+class XEnum(Enum):
+
+    @classmethod
+    def values(cls) -> list:
+        return list(cls._value2member_map_.keys())
+    
+    @classmethod
+    def names(cls) -> list:
+        return cls._member_names_
 
 class ChartInterval(Enum):
     """
@@ -115,7 +124,7 @@ class RiskLevel(Enum):
     LevelWarning = 2
     LevelCritical = 3
 
-class Direction(Enum):
+class Direction(XEnum):
     """
     Direction of order/trade/position.
     """
@@ -124,7 +133,7 @@ class Direction(Enum):
     NET = _("净")
 
 
-class Offset(Enum):
+class Offset(XEnum):
     """
     Offset of order/trade.
     """

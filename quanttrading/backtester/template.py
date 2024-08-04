@@ -17,7 +17,11 @@ class Testable(ABC):
     """
 
     author: str = "Steven J"
-    parameters: list = []
+    # these are the parameters/attribute the subclasses would like to
+    # have. they will be added by update_setting --> 
+    # setattr(self, name, setting[name])
+    # parameters: list = []
+    default_setting: dict = {}      # 默认参数
     variables: list = []
 
     def __init__(
@@ -86,7 +90,7 @@ class Testable(ABC):
         Update strategy parameter wtih value in setting dict.
         add those parameters to be attributes of the strategy.
         """
-        for name in self.parameters:
+        for name in self.default_setting.keys():
             if name in setting:
                 setattr(self, name, setting[name])
 
@@ -95,19 +99,27 @@ class Testable(ABC):
         """
         Get default parameters dict of strategy class.
         """
-        class_parameters: dict = {}
-        for name in cls.parameters:
-            class_parameters[name] = getattr(cls, name)
-        return class_parameters
+        # class_parameters: dict = {}
+        # for name in cls.default_setting.keys():
+        #     class_parameters[name] = getattr(cls, name)
+        # return class_parameters
+        return cls.default_setting
 
     def get_parameters(self) -> dict:
-        """
-        Get strategy parameters dict.
-        """
+        """获取算法参数"""
         strategy_parameters: dict = {}
-        for name in self.parameters:
+        for name in self.default_setting.keys():
             strategy_parameters[name] = getattr(self, name)
         return strategy_parameters
+
+    # def get_parameters(self) -> dict:
+    #     """
+    #     Get strategy parameters dict.
+    #     """
+    #     strategy_parameters: dict = {}
+    #     for name in self.parameters:
+    #         strategy_parameters[name] = getattr(self, name)
+    #     return strategy_parameters
 
     def get_variables(self) -> dict:
         """
@@ -197,7 +209,14 @@ class Testable(ABC):
         Callback of stop order update.
         """
         pass
-    
+
+    @abstractmethod
+    def on_timer(self) -> None:
+        """
+        for back testing
+        Callback when timer event triggered.
+        """
+        pass    
 
 class BackTestExampleStrategy(Testable):
     """"""

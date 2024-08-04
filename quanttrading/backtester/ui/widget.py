@@ -8,7 +8,7 @@ import numpy as np
 import pyqtgraph as pg
 from pandas import DataFrame
 
-from constant import Interval, Direction, Exchange
+from constant import Interval, Direction, Exchange, Offset
 from ordermanagement import MainEngine, BaseManagement as BaseEngine
 from ui.uiapp import QtCore, QtWidgets, QtGui
 from ui.widget import BaseMonitor, BaseCell, DirectionCell, EnumCell
@@ -75,9 +75,10 @@ class BacktesterManager(QtWidgets.QWidget):
         # Setting Part
         self.class_combo: QtWidgets.QComboBox = QtWidgets.QComboBox()
 
-        self.symbol_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("IF88.CFFEX")
+        self.symbol_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("TSLA.SMART")
 
         self.interval_combo: QtWidgets.QComboBox = QtWidgets.QComboBox()
+        self.interval_combo.setMinimumWidth(90)
         for interval in Interval:
             self.interval_combo.addItem(interval.value)
 
@@ -669,6 +670,16 @@ class BacktestingSettingEditor(QtWidgets.QDialog):
             elif type_ is float:
                 validator: QtGui.QDoubleValidator = QtGui.QDoubleValidator()
                 edit.setValidator(validator)
+            elif type_ is Direction:
+                edit: QtWidgets.QComboBox = QtWidgets.QComboBox()
+                combolist = [member for member in Direction.values()]
+                edit.addItems(combolist)
+                edit.setMinimumWidth(100)
+            elif type_ is Offset:
+                edit: QtWidgets.QComboBox = QtWidgets.QComboBox()
+                combolist = [member for member in Offset.values()]
+                edit.addItems(combolist)
+                edit.setMinimumWidth(100)
 
             form.addRow(f"{name} {type_}", edit)
 
@@ -695,15 +706,26 @@ class BacktestingSettingEditor(QtWidgets.QDialog):
 
         for name, tp in self.edits.items():
             edit, type_ = tp
-            value_text = edit.text()
 
-            if type_ == bool:
-                if value_text == "True":
-                    value = True
-                else:
-                    value = False
-            else:
+            if type_ in [Direction, Offset]:
+                value_text = edit.currentText()
                 value = type_(value_text)
+                # if name == "direction":
+                #     value = Direction(value_text)
+                # elif name == "offset":
+                #     value = Offset(value_text)
+                # else:
+                #     value = value_text
+            else:
+                value_text = edit.text()
+
+                if type_ == bool:
+                    if value_text == "True":
+                        value = True
+                    else:
+                        value = False
+                else:
+                    value = type_(value_text)
 
             setting[name] = value
 

@@ -303,7 +303,7 @@ class BacktesterEngine(BaseEngine):
 
     def get_default_setting(self, class_name: str) -> dict:
         """"""
-        strategy_class: type = self.classes[class_name]
+        strategy_class: Testable = self.classes[class_name]
         return strategy_class.get_class_parameters()
 
     def run_optimization(
