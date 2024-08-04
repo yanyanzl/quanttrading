@@ -639,9 +639,9 @@ class BacktestEngine(BaseEngine):
         """"""
         self.tick = tick
         self.datetime = tick.datetime
-        self.counter += 1
-        if self.counter < 100:
-            print(f"new tick{self.datetime}: last: {tick.last_price}, ask: {tick.ask_price_1}, bid:{tick.bid_price_1}")
+        # self.counter += 1
+        # if self.counter < 100:
+        #     print(f"new tick{self.datetime}: last: {tick.last_price}, ask: {tick.ask_price_1}, bid:{tick.bid_price_1}")
         
         self.update_timer(tick.datetime)
 
