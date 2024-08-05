@@ -62,18 +62,45 @@ from constant import _, Exchange
 from types import ModuleType
 
 from database import get_database
-from datatypes import Interval
+from datatypes import Interval, TradingSignal, SignalType
 from typing import get_args
 from data.yfdatafeed import YfDatafeed
-from datatypes import HistoryRequest
+from datatypes import HistoryRequest, TickManager, TickData
+import numpy as np
 from utility import dateToLocal, LOCAL_TZ
 from vnpy_algotrading.algos.hft_direction_algo import TradingStatus
 from constant import OrderType, Direction, Offset
 
-dt = datetime.now(LOCAL_TZ).second
+from random import randrange
+# USED_SIGNAL_TYPES = [SignalType.SIGNAL_SLOW_OPEN, SignalType.SIGNAL_SLOW_CLOSE, SignalType.SIGNAL_RSI]
+
+# signal = TradingSignal(type=SignalType.SIGNAL_SLOW_CLOSE,symbol="TSLA",value=1)
+# if signal:
+#     print(f" {signal["symbol"] == "TSLA"},  {signal["type"] in USED_SIGNAL_TYPES} , {USED_SIGNAL_TYPES=}")
+#     if signal["symbol"] == "TSLA" and signal["type"] in USED_SIGNAL_TYPES:
+#         print(f" {signal["symbol"] == "TSLA"},  {signal["type"] in USED_SIGNAL_TYPES} , {USED_SIGNAL_TYPES=}")
 
 
-print(f"{dt=} ")
+def tickManage():
+    tickmanager = TickManager(100)
+
+    a = np.random.random(200) + 50
+    a = np.arange(50,60,0.05)
+    for num in a:
+        # print(f"num={num}")
+        tick = TickData("", "tsla", Exchange.SMART, datetime.now(LOCAL_TZ), last_price=num)
+        tickmanager.on_tick(tick)
+
+    rsi_result = tickmanager.rsi(10)
+
+    print(f"rsi = {rsi_result} and {np.isnan(rsi_result)}")
+    
+
+tickManage()
+
+# print(f"{a=}")
+# dt = datetime.now(LOCAL_TZ).second
+# print(f"{dt=} ")
 
 def yfTest():
     df = YfDatafeed()

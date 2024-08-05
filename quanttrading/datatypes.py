@@ -664,3 +664,83 @@ class Validator(QtGui.QValidator):
         # for old code still using QString, use this instead
         # string.replace(0, string.count(), string.toUpper())
         # return QtGui.QValidator.Acceptable, pos
+
+import numpy as np
+class TickManager(object):
+    """
+    For:
+    1. calculating technical indicator value for ticks
+    """
+
+    def __init__(self, size: int = 100) -> None:
+        """Constructor"""
+        self.count: int = 0
+        self.size: int = size
+        self.inited: bool = False
+
+        self.min_move:float = 1/1000
+
+        self.ticks_array: np.ndarray = np.zeros(size)
+
+    def on_tick(self, tick: TickData) -> None:
+        """
+        Update new tick data into tick manager.
+        """
+        if tick and tick.last_price and tick.last_price > 0:
+            self.count += 1
+            if not self.inited and self.count >= self.size:
+                self.inited = True
+
+            self.ticks_array[:-1] = self.ticks_array[1:]
+
+            self.ticks_array[-1] = tick.last_price
+
+    def rsi(self, rsi_window:int) -> float:
+        """
+        calculate the rsi for the specified rsi_window.
+        """
+        result = None
+        if self.ticks_array[0]:
+            move_range = self.min_move * self.ticks_array[0]
+            move_range = max(0.05, move_range)
+        else:
+            move_range = 0.05
+
+        if self.inited:
+            result = 50
+            start = max(0, self.size-rsi_window)
+            delta = np.diff(self.ticks_array[start:])
+            delta  = delta[1:]
+            # print(f"start:{start}, array is {self.ticks_array[start:]} \n delta={delta}")
+            up, down = delta.clip(min=0), delta.clip(max=0)
+            up, down = up[up!=0], down[down!=0]
+
+            # print(f"{up.any()}, {up.all()}, {down.any()}, {down.all()}")
+
+            if not up.any() and not down.any():
+                return None
+            elif not up.any():
+                down_range = down.sum()
+                if abs(down_range) >= move_range:
+                    return 10
+                else:
+                    return 50
+            elif not down.any():
+                up_range = up.sum()
+                # print(f"uprange is {up_range} and up is {up}, {move_range=}")
+                if up_range >= move_range:
+                    return 90
+                else:
+                    return 50
+            
+            roll_up, roll_down = np.average(up), np.average(down)
+            # roll_up, roll_down = np.nanmean(up), np.nanmean(down)
+            # print(f"roll_up is {roll_up} and \n roll_down is {roll_down}")
+            # print(f"roll_up1 is {roll_up1} and \n roll_down1 is {roll_down1}")
+            rs = roll_up/abs(roll_down)
+            result = 100.0 - (100.0 / (1.0 + rs))
+
+            if np.isnan(result):
+                result = None
+
+        return result

@@ -216,6 +216,15 @@ class Testable(ABC):
         for back testing
         Callback when timer event triggered.
         """
+        pass
+
+    @abstractmethod
+    def on_signal(self) -> None:
+        """
+        for back testing
+        Callback when signal generated. It needs to be implemented
+        in backtestengine for nessissary signals.
+        """
         pass    
 
 class BackTestExampleStrategy(Testable):

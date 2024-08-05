@@ -106,13 +106,18 @@ EVENT_OPEN_ORDER = "eOpenOrder"
 
 EVENT_SIGNAL = "eSIGNAL"
 
-class SignalType(Enum):
+class SignalType(XEnum):
     """
     trading signal type.
     """
     SIGNAL_RSI = "signalRSI"
     SIGNAL_CCI = "signalCCI"
     SIGNAL_MA = "signalMA"
+
+    # when the order to open a position is not filled on time
+    SIGNAL_SLOW_OPEN = "signal_SLOW_OPEN"
+    # when the order to close a position is not filled on time
+    SIGNAL_SLOW_CLOSE = "signal_SLOW_CLOSE"
 
 
 class RiskLevel(Enum):

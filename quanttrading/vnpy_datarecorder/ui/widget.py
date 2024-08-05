@@ -50,7 +50,7 @@ class RecorderManager(QtWidgets.QWidget):
         self.interval_spin.valueChanged.connect(self.set_interval)
 
         contracts: list[ContractData] = self.main_engine.get_all_contracts()
-        self.vt_symbols: list = [contract.vt_symbol for contract in contracts]
+        self.vt_symbols: list = [contract.symbolName for contract in contracts]
 
         self.symbol_completer: QtWidgets.QCompleter = QtWidgets.QCompleter(self.vt_symbols)
         self.symbol_completer.setFilterMode(QtCore.Qt.MatchFlag.MatchContains)
