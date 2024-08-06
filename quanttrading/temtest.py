@@ -72,6 +72,32 @@ from vnpy_algotrading.algos.hft_direction_algo import TradingStatus
 from constant import OrderType, Direction, Offset
 
 from random import randrange
+import csv
+
+def load_modules() -> list[str]:
+    symbols:list[str] = []
+    for filepath in glob("**/*.py", recursive=True):
+        filename = filepath.removesuffix(".py")
+        modulename = filename.replace("/",".")
+
+        symbols.append(modulename)
+    print(symbols)
+    return symbols
+
+
+load_modules()
+
+def readCSV():
+    dataPath = Path(__file__).parent.joinpath("data/symbols.csv")
+    # dataPath = dataPath
+    # dataPath = dataPath
+    # print(f"{dataPath=}")
+    with open(dataPath, newline='') as csvfile:
+        spamreader = csv.reader(csvfile)
+        for row in spamreader:
+            symbol = row.pop()
+            print(f"{symbol} and {type(symbol)}")
+
 # USED_SIGNAL_TYPES = [SignalType.SIGNAL_SLOW_OPEN, SignalType.SIGNAL_SLOW_CLOSE, SignalType.SIGNAL_RSI]
 
 # signal = TradingSignal(type=SignalType.SIGNAL_SLOW_CLOSE,symbol="TSLA",value=1)
@@ -80,6 +106,7 @@ from random import randrange
 #     if signal["symbol"] == "TSLA" and signal["type"] in USED_SIGNAL_TYPES:
 #         print(f" {signal["symbol"] == "TSLA"},  {signal["type"] in USED_SIGNAL_TYPES} , {USED_SIGNAL_TYPES=}")
 
+# print(f"{Direction.values()[0] == Direction.LONG.value}")
 
 def tickManage():
     tickmanager = TickManager(100)

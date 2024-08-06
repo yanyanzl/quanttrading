@@ -3,7 +3,14 @@ Basic data structure used for general trading function in the trading platform.
 define all types of data object in this module
 
 """
+from PySide6.QtWidgets import QCompleter
+from PySide6.QtCore import Qt
 from PySide6 import QtGui
+
+import csv
+import numpy as np
+from glob import glob
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from logging import INFO
@@ -11,12 +18,10 @@ from abc import ABC
 from pathlib import Path
 from typing import Type, TYPE_CHECKING
 import sys
-# import types
 from typing import Union, List, Optional, Any as PythonAny
 from decimal import Decimal
 
 from constant import Direction, Exchange, Offset, Status, Product, OptionType, OrderType, SignalType
-
 
 ACTIVE_STATUSES = set([Status.SUBMITTING, Status.NOTTRADED, Status.PARTTRADED])
 
@@ -665,7 +670,48 @@ class Validator(QtGui.QValidator):
         # string.replace(0, string.count(), string.toUpper())
         # return QtGui.QValidator.Acceptable, pos
 
-import numpy as np
+
+def load_symbols() -> list[str]:
+    symbols:list[str] = []
+    dataPath = Path(__file__).parent.joinpath("data/symbols.csv")
+    if dataPath.exists():
+        try:
+            with open(dataPath, newline='') as csvfile:
+                spamreader = csv.reader(csvfile)
+                for row in spamreader:
+                    symbols.append(row.pop())
+                
+                return symbols
+        except Exception as e:
+            raise Exception(f"can't load_symbols from file {dataPath}")
+    else:
+        raise FileExistsError(f"file {dataPath} doesn't exsits. please add file firstly.")
+
+class SymbolCompleter(QCompleter):
+    symbols = load_symbols()
+
+    def __init__(self):
+            super().__init__(self.symbols)
+            self.setFilterMode(Qt.MatchFlag.MatchContains)
+            self.setCompletionMode(self.CompletionMode.PopupCompletion)
+
+def load_modules() -> list[str]:
+    symbols:list[str] = []
+    for filepath in glob("**/*.py", recursive=True):
+        filename = filepath.removesuffix(".py")
+        modulename = filename.replace("/",".")
+
+        symbols.append(modulename)
+    # print(symbols)
+    return symbols
+
+class ModuleCompleter(QCompleter):
+    modules = load_modules()
+    def __init__(self):
+            super().__init__(self.modules)
+            self.setFilterMode(Qt.MatchFlag.MatchContains)
+            self.setCompletionMode(self.CompletionMode.PopupCompletion)    
+
 class TickManager(object):
     """
     For:

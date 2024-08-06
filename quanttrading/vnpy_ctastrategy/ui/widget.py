@@ -1,6 +1,7 @@
 from typing import Dict
 
 from constant import Exchange
+from datatypes import SymbolCompleter, Validator
 from event import Event, EventEngine
 from ordermanagement import MainEngine
 from ui.uiapp import QtCore, QtGui, QtWidgets
@@ -479,11 +480,11 @@ class SettingEditor(QtWidgets.QDialog):
 
             edit: QtWidgets.QLineEdit = QtWidgets.QLineEdit(str(value))
             if type_ is int:
-                validator: QtGui.QIntValidator = QtGui.QIntValidator()
-                edit.setValidator(validator)
+                int_validator: QtGui.QIntValidator = QtGui.QIntValidator()
+                edit.setValidator(int_validator)
             elif type_ is float:
-                validator: QtGui.QDoubleValidator = QtGui.QDoubleValidator()
-                edit.setValidator(validator)
+                float_validator: QtGui.QDoubleValidator = QtGui.QDoubleValidator()
+                edit.setValidator(float_validator)
             if name is "exchange":
                 edit : QtWidgets.QComboBox = QtWidgets.QComboBox()
                 edit.setMinimumWidth(100)
@@ -491,6 +492,10 @@ class SettingEditor(QtWidgets.QDialog):
                 if type_ is Exchange:
                     value = value.value
                 edit.setCurrentText(value)
+            elif name == "vt_symbol":
+
+                edit.setCompleter(SymbolCompleter())
+                edit.setValidator(Validator(edit))
 
             form.addRow(f"{name} {type_}", edit)
 

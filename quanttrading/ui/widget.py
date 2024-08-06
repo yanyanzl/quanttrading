@@ -34,7 +34,9 @@ from datatypes import (
     PositionData,
     OrderData,
     QuoteData,
-    TickData
+    TickData,
+    Validator,
+    SymbolCompleter,
 )
 from utility import load_json, save_json, get_digits, ZoneInfo
 from setting import SETTINGS, load_settings, save_settings
@@ -319,6 +321,7 @@ class BaseMonitor(QtWidgets.QTableWidget):
             cell: QtWidgets.QTableWidgetItem = setting["cell"](content, data)
             self.setItem(0, column, cell)
 
+            
             if setting["update"]:
                 row_cells[header] = cell
 
@@ -706,6 +709,9 @@ class TradingWidget(QtWidgets.QWidget):
 
         self.symbol_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit()
         self.symbol_line.returnPressed.connect(self.set_vt_symbol)
+        self.symbol_line.setValidator((Validator(self.symbol_line)))
+
+        self.symbol_line.setCompleter(SymbolCompleter())
 
         self.name_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit()
         self.name_line.setReadOnly(True)
@@ -1331,7 +1337,10 @@ class ReloadDialog(QtWidgets.QDialog):
         form: QtWidgets.QFormLayout = QtWidgets.QFormLayout()
 
 
-        widget: QtWidgets.QLineEdit = QtWidgets.QLineEdit("Module")
+        widget: QtWidgets.QLineEdit = QtWidgets.QLineEdit()
+        from datatypes import ModuleCompleter
+        widget.setCompleter(ModuleCompleter())
+        widget.setMinimumWidth(200)
 
         form.addRow(f"Module", widget)
         self.widgets["Module"] = widget
