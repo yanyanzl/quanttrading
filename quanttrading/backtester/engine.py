@@ -79,7 +79,7 @@ class BacktesterEngine(BaseEngine):
         super().__init__(main_engine, event_engine, APP_NAME)
 
         self.classes: dict = {}
-        self.backtesting_engine: BacktestingEngine = None
+        self.backtesting_engine: BacktestEngine = None
         self.thread: Thread = None
 
         self.datafeed: BaseDatafeed = get_datafeed()
@@ -198,7 +198,7 @@ class BacktesterEngine(BaseEngine):
         self.result_df = None
         self.result_statistics = None
 
-        engine: BacktestingEngine = self.backtesting_engine
+        engine: BacktestEngine = self.backtesting_engine
         engine.clear_data()
 
         if interval == Interval.TICK.value:
@@ -249,6 +249,9 @@ class BacktesterEngine(BaseEngine):
         # Put backtesting done event
         event: Event = Event(EVENT_BACKTESTER_BACKTESTING_FINISHED)
         self.event_engine.put(event)
+
+
+
 
     def start_backtesting(
         self,
@@ -320,7 +323,8 @@ class BacktesterEngine(BaseEngine):
         capital: int,
         optimization_setting: OptimizationSetting,
         use_ga: bool,
-        max_workers: int
+        max_workers: int,
+        general_settings: dict,
     ) -> None:
         """"""
         self.result_values = None
@@ -349,7 +353,7 @@ class BacktesterEngine(BaseEngine):
         strategy_class: type = self.classes[class_name]
         engine.add_strategy(
             strategy_class,
-            {}
+            general_settings
         )
 
         # 0则代表不限制
@@ -391,7 +395,8 @@ class BacktesterEngine(BaseEngine):
         capital: int,
         optimization_setting: OptimizationSetting,
         use_ga: bool,
-        max_workers: int
+        max_workers: int,
+        general_settings: dict,
     ) -> bool:
         if self.thread:
             self.write_log(_("已有任务在运行中，请等待完成"))
@@ -413,7 +418,8 @@ class BacktesterEngine(BaseEngine):
                 capital,
                 optimization_setting,
                 use_ga,
-                max_workers
+                max_workers,
+                general_settings,
             )
         )
         self.thread.start()

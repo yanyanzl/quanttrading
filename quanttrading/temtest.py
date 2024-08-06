@@ -73,6 +73,13 @@ from constant import OrderType, Direction, Offset
 
 from random import randrange
 import csv
+from itertools import product
+
+setting = [[3,5,7,9,10],[3,5,7,9,10]]
+settings = product(*setting)
+for _ in settings:
+
+    print(f"{_=}")
 
 def load_modules() -> list[str]:
     symbols:list[str] = []
@@ -85,7 +92,7 @@ def load_modules() -> list[str]:
     return symbols
 
 
-load_modules()
+# load_modules()
 
 def readCSV():
     dataPath = Path(__file__).parent.joinpath("data/symbols.csv")

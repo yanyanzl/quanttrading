@@ -14,26 +14,6 @@
             "symbol": "AAPL",
             "exchange": "SMART",
             "gateway_name": "ibkrgateway"
-        },
-        "RR.": {
-            "symbol": "RR.",
-            "exchange": "LSE",
-            "gateway_name": "IB"
-        },
-        "SHEL": {
-            "symbol": "SHEL",
-            "exchange": "LSE",
-            "gateway_name": "IB"
-        },
-        "VOD": {
-            "symbol": "VOD",
-            "exchange": "LSE",
-            "gateway_name": "IB"
-        },
-        "GLEN": {
-            "symbol": "GLEN",
-            "exchange": "LSE",
-            "gateway_name": "IB"
         }
     },
     "bar": {
@@ -51,26 +31,6 @@
             "symbol": "AAPL",
             "exchange": "SMART",
             "gateway_name": "ibkrgateway"
-        },
-        "RR.": {
-            "symbol": "RR.",
-            "exchange": "LSE",
-            "gateway_name": "IB"
-        },
-        "SHEL": {
-            "symbol": "SHEL",
-            "exchange": "LSE",
-            "gateway_name": "IB"
-        },
-        "VOD": {
-            "symbol": "VOD",
-            "exchange": "LSE",
-            "gateway_name": "IB"
-        },
-        "GLEN": {
-            "symbol": "GLEN",
-            "exchange": "LSE",
-            "gateway_name": "IB"
         }
     }
 }

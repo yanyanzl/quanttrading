@@ -73,6 +73,8 @@ class Testable(ABC):
         # position already hold for this strategy. add when long
         # subtract when short. By engine or backtest engine
         self.pos: int = 0
+        
+        self.volume = 0
 
         # Copy a new variables list here to avoid duplicate insert when multiple
         # strategy instances are created with the same strategy class.
@@ -108,9 +110,13 @@ class Testable(ABC):
     def get_parameters(self) -> dict:
         """获取算法参数"""
         strategy_parameters: dict = {}
-        for name in self.default_setting.keys():
-            strategy_parameters[name] = getattr(self, name)
-        return strategy_parameters
+        try:
+            for name in self.default_setting.keys():
+                strategy_parameters[name] = getattr(self, name)
+            return strategy_parameters
+        except Exception as e:
+            print(f"Attribute is not set by setattr yet!")
+            return {}
 
     # def get_parameters(self) -> dict:
     #     """

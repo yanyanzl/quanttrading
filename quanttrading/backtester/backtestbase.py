@@ -315,7 +315,8 @@ class BacktestEngine(BaseEngine):
                 results[key].append(value)
 
         self.daily_df = DataFrame.from_dict(results).set_index("date")
-
+        print(f"{self.daily_df=}")
+        
         self.output(_("逐日盯市盈亏计算完成"))
         return self.daily_df
 
@@ -1185,6 +1186,12 @@ def evaluate(
     """
     engine: BacktestEngine = BacktestEngine()
 
+    engine.clear_data()
+    if interval == Interval.TICK.value:
+            mode: BacktestingMode = BacktestingMode.TICK
+    else:
+            mode: BacktestingMode = BacktestingMode.BAR
+
     engine.set_parameters(
         vt_symbol=vt_symbol,
         interval=interval,
@@ -1199,14 +1206,28 @@ def evaluate(
     )
 
     engine.add_strategy(strategy_class, setting)
+
     engine.load_data()
-    engine.run_backtesting()
-    engine.calculate_result()
+    if not engine.history_data:
+            engine.write_log(_("optimization: 策略回测失败，历史数据为空"))
+            return
+    
+    try:
+        engine.run_backtesting()
+    except Exception:
+            msg: str = _("optimization: 策略回测失败，触发异常：\n{}").format(traceback.format_exc())
+            engine.write_log(msg)
+            return
+    
+    engine.result_df = engine.calculate_result()
     statistics: dict = engine.calculate_statistics(output=False)
 
     target_value: float = statistics[target_name]
     return (setting, target_value, statistics)
 
+
+        # self.result_df = engine.calculate_result()
+        # self.result_statistics = engine.calculate_statistics(output=False)
 
 def wrap_evaluate(engine: BacktestEngine, target_name: str) -> callable:
     """

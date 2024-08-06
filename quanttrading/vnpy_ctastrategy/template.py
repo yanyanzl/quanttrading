@@ -4,12 +4,13 @@ from typing import Any, Callable, List
 
 from constant import Interval, Direction, Offset
 from datatypes import BarData, TickData, OrderData, TradeData
+from backtester.template import Testable
 from utility import virtual
 
 from .base import StopOrder, EngineType
 
 
-class CtaTemplate(ABC):
+class CtaTemplate(Testable):
     """"""
 
     author: str = ""
@@ -152,6 +153,18 @@ class CtaTemplate(ABC):
         Callback of stop order update.
         """
         pass
+
+    def on_signal(self) -> None:
+        """
+        to be overwrite if need signal
+        """
+        return super().on_signal()
+    
+    def on_timer(self) -> None:
+        """
+        to be overwrite if need timer
+        """
+        return super().on_timer()
 
     def buy(
         self,

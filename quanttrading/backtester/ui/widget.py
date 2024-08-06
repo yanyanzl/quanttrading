@@ -403,11 +403,11 @@ class BacktesterManager(QtWidgets.QWidget):
         parameters: dict = self.settings[class_name]
         dialog: OptimizationSettingEditor = OptimizationSettingEditor(class_name, parameters)
         i: int = dialog.exec()
-        print(f"{i=} and {dialog.DialogCode.Accepted} and {i == dialog.DialogCode.Accepted}")
+        # print(f"{i=} and {dialog.DialogCode.Accepted} and {i == dialog.DialogCode.Accepted}")
         if i != dialog.DialogCode.Accepted:
             return
 
-        optimization_setting, use_ga, max_workers = dialog.get_setting()
+        optimization_setting, use_ga, max_workers, general_settings = dialog.get_setting()
         self.target_display: str = dialog.target_display
 
         self.backtester_engine.start_optimization(
@@ -423,7 +423,8 @@ class BacktesterManager(QtWidgets.QWidget):
             capital,
             optimization_setting,
             use_ga,
-            max_workers
+            max_workers,
+            general_settings,
         )
 
         self.result_button.setEnabled(False)
@@ -879,6 +880,11 @@ class OptimizationSettingEditor(QtWidgets.QDialog):
         self.parameters: dict = parameters
         self.edits: dict = {}
 
+        # general settings except int/float
+        # name to {type:value} map
+        self.general_edits: dict = {}
+        self.generalSettings: dict = {}
+
         self.optimization_setting: OptimizationSetting = None
         self.use_ga: bool = False
 
@@ -888,7 +894,7 @@ class OptimizationSettingEditor(QtWidgets.QDialog):
         """"""
         QLabel: QtWidgets.QLabel = QtWidgets.QLabel
 
-        self.target_combo: QtWidgets.QComboBox = QtWidgets.QComboBox()
+        self.target_combo: QtWidgets.QComboBox = QtWidgets.QComboBox(self)
         self.target_combo.addItems(list(self.DISPLAY_NAME_MAP.keys()))
 
         self.worker_spin: QtWidgets.QSpinBox = QtWidgets.QSpinBox()
@@ -914,7 +920,19 @@ class OptimizationSettingEditor(QtWidgets.QDialog):
 
         for name, value in self.parameters.items():
             type_ = type(value)
-            if type_ not in [int, float]:
+            if type_ in [Direction]:
+                # direction:Direction = Direction.LONG
+                edit: QtWidgets.QComboBox = QtWidgets.QComboBox()
+                edit.addItems(Direction.values())
+                edit.setMinimumWidth(90)
+                edit.setCurrentText(value.value)
+                self.general_edits[name] = {"type":type_, "value":edit}
+                grid.addWidget(QLabel(name), row, 0)
+                grid.addWidget(edit, row, 1, 1, 3)
+                row += 1
+                continue
+
+            elif type_ not in [int, float]:
                 continue
 
             start_edit: QtWidgets.QLineEdit = QtWidgets.QLineEdit(str(value))
@@ -991,12 +1009,16 @@ class OptimizationSettingEditor(QtWidgets.QDialog):
                     end_value,
                     step_value
                 )
+        for name, d in self.general_edits.items():
+            type_ = d["type"]
+            if type_ in [Direction]:
+                self.generalSettings[name] = type_(d["value"].currentText())
 
         self.accept()
 
-    def get_setting(self) -> Tuple[OptimizationSetting, bool, int]:
+    def get_setting(self) -> Tuple[OptimizationSetting, bool, int, dict]:
         """"""
-        return self.optimization_setting, self.use_ga, self.worker_spin.value()
+        return self.optimization_setting, self.use_ga, self.worker_spin.value(), self.generalSettings
 
 
 class OptimizationResultMonitor(QtWidgets.QDialog):
