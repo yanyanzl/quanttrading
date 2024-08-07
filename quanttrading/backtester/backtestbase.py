@@ -210,7 +210,7 @@ class BacktestEngine(BaseEngine):
         start: datetime = self.start
         end: datetime = self.start + progress_delta
         progress = 0
-
+        # print(f"=======load_data now: {self.interval=} {self.mode=}, {total_days=} ")
         while start < self.end:
             progress_bar: str = "#" * int(progress * 10 + 1)
             self.output(_("加载进度：{} [{:.0%}]").format(progress_bar, progress))
@@ -316,7 +316,7 @@ class BacktestEngine(BaseEngine):
 
         self.daily_df = DataFrame.from_dict(results).set_index("date")
         print(f"{self.daily_df=}")
-        
+
         self.output(_("逐日盯市盈亏计算完成"))
         return self.daily_df
 
@@ -561,7 +561,7 @@ class BacktestEngine(BaseEngine):
         self,
         optimization_setting: OptimizationSetting,
         output: bool = True,
-        max_workers: int = None
+        max_workers: int = None,
     ) -> list:
         """"""
         if not check_optimization_setting(optimization_setting):
@@ -590,7 +590,8 @@ class BacktestEngine(BaseEngine):
         optimization_setting: OptimizationSetting,
         output: bool = True,
         max_workers: int = None,
-        ngen_size: int = 30
+        ngen_size: int = 30,
+        general_settings:dict = None,
     ) -> list:
         """"""
         if not check_optimization_setting(optimization_setting):
@@ -1187,7 +1188,7 @@ def evaluate(
     engine: BacktestEngine = BacktestEngine()
 
     engine.clear_data()
-    if interval == Interval.TICK.value:
+    if interval == Interval.TICK:
             mode: BacktestingMode = BacktestingMode.TICK
     else:
             mode: BacktestingMode = BacktestingMode.BAR
@@ -1206,6 +1207,7 @@ def evaluate(
     )
 
     engine.add_strategy(strategy_class, setting)
+    print(f"=========evaluate settings: {setting}")
 
     engine.load_data()
     if not engine.history_data:
@@ -1219,7 +1221,7 @@ def evaluate(
             engine.write_log(msg)
             return
     
-    engine.result_df = engine.calculate_result()
+    result_df = engine.calculate_result()
     statistics: dict = engine.calculate_statistics(output=False)
 
     target_value: float = statistics[target_name]

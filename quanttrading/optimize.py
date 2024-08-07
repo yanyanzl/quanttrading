@@ -30,6 +30,7 @@ class OptimizationSetting:
     def __init__(self) -> None:
         """"""
         self.params: Dict[str, List] = {}
+        # self.general_params: dict = {}
         self.target_name: str = ""
 
     def add_parameter(
@@ -69,6 +70,21 @@ class OptimizationSetting:
         """"""
         self.target_name = target_name
 
+    def add_general_parameter(self, name:str, values:list) ->None:
+        """
+        add general parameter to the settings. Those parameters
+        are the one has fixed values but not int or float.
+        example: Direction, Offset. 
+        name: the name of the parameter. str
+        values: the values of the parameter, only one value if the
+        parameter is fixed for this strategy.
+        """
+        if name and values:
+            self.params[name] = values
+            return True, f"gereral parameter added. number {len(values)}"
+        else:
+            return False, f"invalid general params: name: {name}, values:{values} "
+        
     def generate_settings(self) -> List[dict]:
         """
         generate settings by algorithm

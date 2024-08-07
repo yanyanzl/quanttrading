@@ -407,7 +407,7 @@ class BacktesterManager(QtWidgets.QWidget):
         if i != dialog.DialogCode.Accepted:
             return
 
-        optimization_setting, use_ga, max_workers, general_settings = dialog.get_setting()
+        optimization_setting, use_ga, max_workers = dialog.get_setting()
         self.target_display: str = dialog.target_display
 
         self.backtester_engine.start_optimization(
@@ -424,7 +424,6 @@ class BacktesterManager(QtWidgets.QWidget):
             optimization_setting,
             use_ga,
             max_workers,
-            general_settings,
         )
 
         self.result_button.setEnabled(False)
@@ -1009,16 +1008,20 @@ class OptimizationSettingEditor(QtWidgets.QDialog):
                     end_value,
                     step_value
                 )
+
         for name, d in self.general_edits.items():
             type_ = d["type"]
             if type_ in [Direction]:
-                self.generalSettings[name] = type_(d["value"].currentText())
+                # self.generalSettings[name] = type_(d["value"].currentText())
+                values:list = []
+                values.append(type_(d["value"].currentText()))
+                self.optimization_setting.add_general_parameter(name, values)
 
         self.accept()
 
-    def get_setting(self) -> Tuple[OptimizationSetting, bool, int, dict]:
+    def get_setting(self) -> Tuple[OptimizationSetting, bool, int]:
         """"""
-        return self.optimization_setting, self.use_ga, self.worker_spin.value(), self.generalSettings
+        return self.optimization_setting, self.use_ga, self.worker_spin.value()
 
 
 class OptimizationResultMonitor(QtWidgets.QDialog):

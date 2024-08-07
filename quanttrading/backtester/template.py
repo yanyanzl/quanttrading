@@ -3,7 +3,7 @@ from copy import copy
 from typing import Any, Callable, List
 
 # from constant import Interval, Direction, Offset
-from datatypes import BarData, TickData, OrderData, TradeData
+from datatypes import BarData, TickData, OrderData, TradeData, Offset, Direction
 from utility import virtual
 
 from .base import StopOrder, EngineType
@@ -75,6 +75,9 @@ class Testable(ABC):
         self.pos: int = 0
         
         self.volume = 0
+        self.offset:Offset = Offset.NONE
+        self.direction:Direction = None
+        self.price = 0
 
         # Copy a new variables list here to avoid duplicate insert when multiple
         # strategy instances are created with the same strategy class.
@@ -92,9 +95,11 @@ class Testable(ABC):
         Update strategy parameter wtih value in setting dict.
         add those parameters to be attributes of the strategy.
         """
+        print(f"update_setting: {setting=}")
         for name in self.default_setting.keys():
             if name in setting:
                 setattr(self, name, setting[name])
+                print(f"seattr {name} with {setting[name]} successfully")
 
     @classmethod
     def get_class_parameters(cls) -> dict:
@@ -115,7 +120,7 @@ class Testable(ABC):
                 strategy_parameters[name] = getattr(self, name)
             return strategy_parameters
         except Exception as e:
-            print(f"Attribute is not set by setattr yet!")
+            print(f"Attribute is not set by setattr yet! {e.args}")
             return {}
 
     # def get_parameters(self) -> dict:

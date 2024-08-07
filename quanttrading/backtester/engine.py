@@ -324,12 +324,11 @@ class BacktesterEngine(BaseEngine):
         optimization_setting: OptimizationSetting,
         use_ga: bool,
         max_workers: int,
-        general_settings: dict,
     ) -> None:
         """"""
         self.result_values = None
 
-        engine: BacktestingEngine = self.backtesting_engine
+        engine: BacktestEngine = self.backtesting_engine
         engine.clear_data()
 
         if interval == Interval.TICK.value:
@@ -351,10 +350,11 @@ class BacktesterEngine(BaseEngine):
         )
 
         strategy_class: type = self.classes[class_name]
-        engine.add_strategy(
-            strategy_class,
-            general_settings
-        )
+        engine.strategy_class = self.classes[class_name]
+        # engine.add_strategy(
+        #     strategy_class,
+        #     general_settings,
+        # )
 
         # 0则代表不限制
         if max_workers == 0:
@@ -370,7 +370,7 @@ class BacktesterEngine(BaseEngine):
             self.result_values = engine.run_bf_optimization(
                 optimization_setting,
                 output=False,
-                max_workers=max_workers
+                max_workers=max_workers,
             )
 
         # Clear thread object handler.
@@ -396,7 +396,6 @@ class BacktesterEngine(BaseEngine):
         optimization_setting: OptimizationSetting,
         use_ga: bool,
         max_workers: int,
-        general_settings: dict,
     ) -> bool:
         if self.thread:
             self.write_log(_("已有任务在运行中，请等待完成"))
@@ -419,7 +418,6 @@ class BacktesterEngine(BaseEngine):
                 optimization_setting,
                 use_ga,
                 max_workers,
-                general_settings,
             )
         )
         self.thread.start()
