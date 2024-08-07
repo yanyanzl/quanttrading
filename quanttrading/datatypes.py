@@ -716,15 +716,20 @@ class TickManager(object):
     """
     For:
     1. calculating technical indicator value for ticks
+    2. currently support RSI
     """
 
-    def __init__(self, size: int = 100) -> None:
-        """Constructor"""
+    def __init__(self, size: int = 100, min_move_range:float=0.1) -> None:
+        """
+        Constructor, size is the ticks will be saved for the tickmanager
+        move_range is the range 
+        """
         self.count: int = 0
         self.size: int = size
         self.inited: bool = False
 
-        self.min_move:float = 1/1000
+        self.min_move_relative:float = 1/1000
+        self.min_move_range: float = min_move_range
 
         self.ticks_array: np.ndarray = np.zeros(size)
 
@@ -747,10 +752,10 @@ class TickManager(object):
         """
         result = None
         if self.ticks_array[0]:
-            move_range = self.min_move * self.ticks_array[0]
-            move_range = max(0.05, move_range)
+            move_range = self.min_move_relative * self.ticks_array[0]
+            move_range = max(self.min_move_range, move_range)
         else:
-            move_range = 0.05
+            move_range = self.min_move_range
 
         if self.inited:
             result = 50
@@ -763,14 +768,19 @@ class TickManager(object):
 
             # print(f"{up.any()}, {up.all()}, {down.any()}, {down.all()}")
 
+            # price not moving (up or down). return.
             if not up.any() and not down.any():
                 return None
+            
+            # no upward moving for the past period.
             elif not up.any():
                 down_range = down.sum()
                 if abs(down_range) >= move_range:
                     return 10
                 else:
                     return 50
+            
+            # no downward moving for the past period.
             elif not down.any():
                 up_range = up.sum()
                 # print(f"uprange is {up_range} and up is {up}, {move_range=}")
@@ -779,14 +789,81 @@ class TickManager(object):
                 else:
                     return 50
             
-            roll_up, roll_down = np.average(up), np.average(down)
-            # roll_up, roll_down = np.nanmean(up), np.nanmean(down)
-            # print(f"roll_up is {roll_up} and \n roll_down is {roll_down}")
-            # print(f"roll_up1 is {roll_up1} and \n roll_down1 is {roll_down1}")
-            rs = roll_up/abs(roll_down)
-            result = 100.0 - (100.0 / (1.0 + rs))
+            converge_range = abs(up.sum() - abs(down.sum()))
+            if converge_range >= move_range:
+
+                roll_up, roll_down = np.average(up), np.average(down)
+                # roll_up, roll_down = np.nanmean(up), np.nanmean(down)
+                # print(f"roll_up is {roll_up} and \n roll_down is {roll_down}")
+                rs = roll_up/abs(roll_down)
+                result = 100.0 - (100.0 / (1.0 + rs))
+            else:
+                result = 50
 
             if np.isnan(result):
                 result = None
 
         return result
+    
+    def realRange(self, period:int = 20, period_num:int = 5) -> float:
+        """
+        calculate the real price moving range in the last period_num
+        periods.
+        period is the number of ticks that moved the range.
+        period_num is used to average the range in those periods so to
+        have a smooth range.
+        period * period_num should <= size of the Tickmanager.
+        otherwise, will return the max num of period's average based on
+        the full size of the tick manager.
+        """
+
+        real_ranges:np.ndarray = np.zeros(period_num)
+        periods = 0
+
+        for i in range(0, self.size, period):
+            end_index = self.size - i
+            up, down = self.up_and_downs(period, end_index)
+            # print(f"{up=} and {down=}")
+
+            # price not moving (up or down). return.
+            if up.any() and down.any():
+                real_ranges[periods] = ( abs(up.sum() - abs(down.sum())) )
+            
+            # no upward moving for the past period.
+            elif not up.any():
+                real_ranges[periods] = (abs(down.sum()))
+            
+            # no downward moving for the past period.
+            elif not down.any():
+                real_ranges[periods] = (up.sum())
+            
+            periods += 1
+            if periods >= period_num:
+                break
+        
+        # print(f"{real_ranges=}")
+        real_range = (real_ranges.sum() / periods)
+
+        return real_range
+    
+
+    def up_and_downs(self, range:int, end_index:int = -1) -> tuple[list,list]:
+        """
+        list of price ups and price downs in the last range ticks
+        end_index: end index of the ticks in self.ticks_array.
+        default -1, will start from the last index. 
+        """
+        if self.inited and end_index >= -1:
+            if end_index == -1:
+                end_index = self.size
+
+            start = max(0, end_index-range)
+
+            delta = np.diff(self.ticks_array[start:end_index])
+            delta  = delta[1:]
+            # print(f"start:{start}, array is {self.ticks_array[start:]} \n delta={delta}")
+            up, down = delta.clip(min=0), delta.clip(max=0)
+            up, down = up[up!=0], down[down!=0]
+            return up, down
+        else:
+            return [],[]

@@ -55,7 +55,7 @@ import tzlocal
 import inspect
 from riskmanager.engine import TradeBook, RiskLevel
 from pathlib import Path
-from vnpy_ctastrategy import CtaTemplate, TargetPosTemplate
+# from vnpy_ctastrategy import CtaTemplate, TargetPosTemplate
 from glob import glob
 import importlib, traceback
 from constant import _, Exchange
@@ -74,12 +74,29 @@ from constant import OrderType, Direction, Offset
 from random import randrange
 import csv
 from itertools import product
+from pandas import DataFrame, Series
 
-setting = [[3,5,7,9,10],[3,5,7,9,10]]
-settings = product(*setting)
-for _ in settings:
 
-    print(f"{_=}")
+newarray = np.zeros(10)
+newarray[5] = 10
+newarray[6] = 100
+newarray[0:4] = 100
+print(f"{newarray=} and {newarray.sum()}")
+
+for i in range(0,100,5):
+    print(f"{100-i}")
+
+def seriesTest():
+    r = [1,3,5,6]
+    ser = pd.Series(r)
+
+    print(f"{ser.iloc[-2]}")
+
+    setting = [[3,5,7,9,10],[3,5,7,9,10]]
+    settings = product(*setting)
+    for _ in settings:
+
+        print(f"{_=}")
 
 def load_modules() -> list[str]:
     symbols:list[str] = []
@@ -119,7 +136,7 @@ def tickManage():
     tickmanager = TickManager(100)
 
     a = np.random.random(200) + 50
-    a = np.arange(50,60,0.05)
+    # a = np.arange(50,60,0.05)
     for num in a:
         # print(f"num={num}")
         tick = TickData("", "tsla", Exchange.SMART, datetime.now(LOCAL_TZ), last_price=num)
@@ -127,7 +144,12 @@ def tickManage():
 
     rsi_result = tickmanager.rsi(10)
 
+    realrange20 = tickmanager.realRange(20, 5)
+    realrange10 = tickmanager.realRange(10, 5)
+
     print(f"rsi = {rsi_result} and {np.isnan(rsi_result)}")
+
+    print(f"{realrange10=} and {realrange20=}")
     
 
 tickManage()
@@ -145,6 +167,7 @@ def yfTest():
     data = df.query_bar_history(req)
 
     print(f"{data}")
+# yfTest()
 # from pandas import Timestamp
 
 # dates = data['Datetime']
