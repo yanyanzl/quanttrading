@@ -1,3 +1,49 @@
+"""
+optimization module which provide the optimization functions 
+for the stratigies developed. The strategy developed may contain some
+parameters to 
+DEAP is a novel evolutionary computation framework for rapid prototyping
+ and testing of ideas. It seeks to make algorithms explicit and data 
+ structures transparent. It works in perfect harmony with 
+ parallelisation mechanisms such as multiprocessing and SCOOP.
+The first thing to do is to think of the appropriate type for your 
+problem. Then, instead of looking in the list of available types, 
+DEAP enables you to build your own. This is done with the creator module.
+
+For example, the following creates a FitnessMin class for a 
+minimization problem and an Individual class that is derived from a 
+list with a fitness attribute set to the just created fitness.
+    
+    from deap import base, creator
+    creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+    creator.create("Individual", list, fitness=creator.FitnessMin)
+
+The create() function takes at least two arguments, a name for the newly
+ created class and a base class. Any subsequent argument becomes an 
+ attribute of the class. As specified in the Fitness documentation, the
+   weights attribute must be a tuple so that multi-objective and single
+     objective fitnesses can be treated the same way. A FitnessMulti 
+     would be created the same way but using:
+creator.create("FitnessMulti", base.Fitness, weights=(-1.0, 1.0))
+This code produces a fitness that minimizes the first objective and 
+maximize the second one. The weights can also be used to vary the 
+importance of each objective one against another.
+
+
+The fitness is a measure of quality of a solution. If values are 
+provided as a tuple, the fitness is initialized using those values,
+ otherwise it is empty (or invalid).
+The provided Fitness class is an abstract class that needs a weights
+attribute in order to be functional. A minimizing fitness is built
+using negatives weights, while a maximizing fitness has positive weights
+
+Individual
+Simply by thinking about the different flavors of evolutionary 
+algorithms (GA, GP, ES, PSO, DE, …)
+
+
+"""
+
 from typing import Dict, List, Callable, Tuple
 from itertools import product
 from concurrent.futures import ProcessPoolExecutor
@@ -20,7 +66,6 @@ KEY_FUNC = Callable[[list], float]
 # Create individual class used in genetic algorithm optimization
 creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 creator.create("Individual", list, fitness=creator.FitnessMax)
-
 
 class OptimizationSetting:
     """
@@ -142,6 +187,7 @@ def run_bf_optimization(
     asynchronously executing callables. The asynchronous execution can
       be performed with threads, using ThreadPoolExecutor, or separate
         processes, using ProcessPoolExecutor
+    return: (setting, target_value, statistics, settings)
     """
     settings: List[Dict] = optimization_setting.generate_settings()
 
@@ -213,8 +259,9 @@ def run_bf_optimization(
             total=len(settings)
         )
         
+        # results are: (setting, target_value, statistics, settings)
         results: List[Tuple] = list(it)
-        print(f"{results=} and {results[0]=}")
+        # print(f"{results=} and {results[0]=}")
         if results[0]:
             results.sort(reverse=True, key=key_func)
         else:
@@ -223,7 +270,7 @@ def run_bf_optimization(
         end: int = perf_counter()
         cost: int = int((end - start))
         output(_("穷举算法优化完成，耗时{}秒").format(cost))
-
+        # print(f"results are: {results}")
         return results
 
 

@@ -376,6 +376,7 @@ class BacktesterEngine(BaseEngine):
         # Clear thread object handler.
         self.thread = None
         self.write_log(_("多进程参数优化完成"))
+        # self.write_log(f"{self.result_values=}")
 
         # Put optimization done event
         event: Event = Event(EVENT_BACKTESTER_OPTIMIZATION_FINISHED)

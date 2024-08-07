@@ -315,7 +315,7 @@ class BacktestEngine(BaseEngine):
                 results[key].append(value)
 
         self.daily_df = DataFrame.from_dict(results).set_index("date")
-        print(f"{self.daily_df=}")
+        # print(f"{self.daily_df=}")
 
         self.output(_("逐日盯市盈亏计算完成"))
         return self.daily_df

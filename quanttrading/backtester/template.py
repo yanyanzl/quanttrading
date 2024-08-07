@@ -99,7 +99,7 @@ class Testable(ABC):
         for name in self.default_setting.keys():
             if name in setting:
                 setattr(self, name, setting[name])
-                print(f"seattr {name} with {setting[name]} successfully")
+                # print(f"seattr {name} with {setting[name]} successfully")
 
     @classmethod
     def get_class_parameters(cls) -> dict:
