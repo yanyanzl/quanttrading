@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 def eventTest(event:Event):
     # logger.info(f"this is successful now=============================")
-    logger.info(f"{event.type=}, and {event.data=}")
+    logger.info(f"========={event.type=}, and {event.data=}")
 
 async def gatewayTest():
     engine = EventEngine(10)
@@ -68,6 +68,8 @@ async def gatewayTest():
     # gw._app.cancelTickByTickData(2)
     eventEngine.stop()
     gw.close()
+
+
 from constant import Exchange
 async def gatewayTest1():
     engine = EventEngine(10)
@@ -81,10 +83,11 @@ async def gatewayTest1():
     # gwSetting = {"TWS地址":"192.168.1.127", "PORT":7497}
     gw.connect(gwSetting)
     logger.info("connect completed!==================================================")
-
+    
+    gw.api.add_contract("TSLA", Exchange.SMART)
     eventEngine = EventEngine()
     eventEngine.start()
-    eventEngine.register(EVENT_HISDATA, eventTest)
+    eventEngine.register(EVENT_TICK, eventTest)
     eventEngine.register(EVENT_HISDATA_UPDATE, eventTest)
     eventEngine.register(EVENT_REALTIME_DATA, eventTest)
     eventEngine.register(EVENT_TICK_LAST_DATA, eventTest)
@@ -98,11 +101,13 @@ async def gatewayTest1():
     
     # gw._app.reqHistoricalData(2, gw._app.currentContract,"","1 D", "1 min", "MIDPOINT",0,1,True, [] )
     # gw._app.reqTickByTickData(2,gw._app.currentContract, "AllLast", 0, True)
-    gw.api.client.reqMatchingSymbols(211, "RR.L")
+    # gw.api.client.reqMatchingSymbols(211, "RR.L")
     # gw.api.client.reqMatchingSymbols(222, "BMW")
-    gw.api.add_contract("RR.", Exchange.LSE)
+    # gw.api.add_contract("RR.", Exchange.LSE)
+    # gw.api.add_contract("TSLA", Exchange.SMART)
 
-    await asyncio.sleep(10)
+
+    await asyncio.sleep(30)
 
     # gw._app.cancelTickByTickData(2)
     eventEngine.stop()

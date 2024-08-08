@@ -167,10 +167,6 @@ class MainWindow(QtWidgets.QMainWindow):
         # Help menu
         help_menu: QtWidgets.QMenu = bar.addMenu(_("帮助"))
 
-        # reloadAction: QtGui.QAction = QtWidgets.QAction("Reload Module", self)
-        # reloadAction.triggered.connect(self.reload_module)
-    
-
         self.add_action(
             help_menu,
             _("查询合约"),

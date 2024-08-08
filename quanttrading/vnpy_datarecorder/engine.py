@@ -210,6 +210,7 @@ class RecorderEngine(BaseEngine):
         # print(f"update_tick {tick_delta=} {self.filter_delta=}")
         if abs(tick_delta) >= self.filter_delta:
             return
+        
         # print(f"{tick.vt_symbol=} and {tick.symbol=}")
         if tick.symbol in self.tick_recordings:
             self.record_tick(copy(tick))

@@ -65,26 +65,90 @@ from database import get_database
 from datatypes import Interval, TradingSignal, SignalType
 from typing import get_args
 from data.yfdatafeed import YfDatafeed
-from datatypes import HistoryRequest, TickManager, TickData
+from datatypes import HistoryRequest, TickManager, TickData, PlotData
 import numpy as np
 from utility import dateToLocal, LOCAL_TZ
 from vnpy_algotrading.algos.hft_direction_algo import TradingStatus
-from constant import OrderType, Direction, Offset
+from constant import OrderType, Direction, Offset, EVENT_PLOT
 
 from random import randrange
 import csv
 from itertools import product
 from pandas import DataFrame, Series
+from ui.mat_chart import DataPlot
+from event import EventEngine, Event
+from threading import Thread
+
+# date = datetime.now().strftime("%H:%M:%S.%f")
+# origin_data_x: np.ndarray = np.array([date for _ in range(20)], dtype=object)
+# origin_data_x.fill()
+# print(origin_data_x)
+eventengine = EventEngine(1)
+eventengine.start()
+
+def dataplot():
+    for i in range(20):
+        x = datetime.now().strftime('%H:%M:%S.%f')
+        y = np.random.randint(1, 10)
+        eventengine.put(Event(EVENT_PLOT, PlotData(desc="Tick",x_data=x, y_data=y)))
+
+        time.sleep(1)
+
+dataplot_thread = Thread(target=dataplot)
+dataplot_thread.start()
+
+dataPlot = DataPlot(eventengine, 30)
+
+eventengine.stop()
+dataplot_thread.join()
 
 
-newarray = np.zeros(10)
-newarray[5] = 10
-newarray[6] = 100
-newarray[0:4] = 100
-print(f"{newarray=} and {newarray.sum()}")
+# x,y = np.random.randint(1, 5, 2)
+# print(f"{x=}")
 
-for i in range(0,100,5):
-    print(f"{100-i}")
+# import numpy as np
+# import matplotlib.pyplot as plt
+# from matplotlib.animation import FuncAnimation
+
+# fig, ax = plt.subplots()
+# xdata, ydata = [], []
+# ln, = ax.plot([], [], 'ro')
+
+# def init():
+#     ax.set_xlim(0, 2*np.pi)
+#     ax.set_ylim(-1, 1)
+#     return ln,
+
+# def update(frame):
+#     xdata.append(frame)
+#     ydata.append(np.sin(frame))
+#     ln.set_data(xdata, ydata)
+#     return ln,
+
+# ani = FuncAnimation(fig, update, frames=np.linspace(0, 2*np.pi, 128),
+#                     init_func=init, blit=True)
+# plt.show()
+
+
+
+def arrayTest():
+    newarray = np.zeros(10)
+    newarray[5] = 10
+    newarray[6] = 100
+    newarray[0:4] = 100
+    # print(f"{newarray=} and {newarray.sum()}")
+
+    data: np.ndarray = np.zeros((3,2),dtype= float)
+    data[-2] = (1,3)
+    data[-1] = (3,3)
+    offset1 = 2
+    offset = - offset1
+    print(f"{data=}, {data[:,0]=}, {data[:,1]=}, {offset=} {data[offset,1]=}, {data[offset][1]=}")
+
+    for i in range(0,100,5):
+        print(f"{100-i}")
+
+# arrayTest()
 
 def seriesTest():
     r = [1,3,5,6]
@@ -152,7 +216,7 @@ def tickManage():
     print(f"{realrange10=} and {realrange20=}")
     
 
-tickManage()
+# tickManage()
 
 # print(f"{a=}")
 # dt = datetime.now(LOCAL_TZ).second

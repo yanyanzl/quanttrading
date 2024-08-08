@@ -761,19 +761,19 @@ class OrderManagement(BaseManagement):
         """
         return self.accounts.get(vt_accountid, None)
 
-    def get_contract(self, vt_symbol: str) -> Optional[ContractData]:
+    def get_contract(self, symbol: str) -> Optional[ContractData]:
         """
         Get contract data by vt_symbol.
         """
-        logger.info(f"--------------get_contract {vt_symbol=}")
-        contract = self.contracts.get(vt_symbol, None)
+        logger.info(f"--------------get_contract {symbol=}")
+        contract = self.contracts.get(symbol, None)
         if not contract:
             if not self.contracts:
                 pass
             else:
                 for _ in self.contracts.values():
                     # logger.info(f"{_.symbolName=}")
-                    if _.symbolName == vt_symbol:
+                    if _.symbolName == symbol:
                         contract = _
                         break
         return contract

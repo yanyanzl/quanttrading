@@ -106,6 +106,8 @@ EVENT_OPEN_ORDER = "eOpenOrder"
 
 EVENT_SIGNAL = "eSIGNAL"
 
+EVENT_PLOT = "ePlotData"
+
 class SignalType(XEnum):
     """
     trading signal type.

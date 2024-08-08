@@ -65,6 +65,10 @@ class TradingSignal(TypedDict):
     # value of the signal.
     value: Any
 
+class PlotData(TypedDict):
+    desc: str
+    x_data: int|float|datetime|str
+    y_data: int|float
 
 class FeeInterface(TypedDict):
     currency: Str
@@ -867,3 +871,4 @@ class TickManager(object):
             return up, down
         else:
             return [],[]
+        
