@@ -75,14 +75,17 @@ from random import randrange
 import csv
 from itertools import product
 from pandas import DataFrame, Series
-from ui.mat_chart import DataPlot
+from ui.dataplot import DataPlot
 from event import EventEngine, Event
 from threading import Thread
+import pyqtgraph as pg
 
 # date = datetime.now().strftime("%H:%M:%S.%f")
 # origin_data_x: np.ndarray = np.array([date for _ in range(20)], dtype=object)
 # origin_data_x.fill()
 # print(origin_data_x)
+app = pg.mkQApp("Plotting Example")
+
 eventengine = EventEngine(1)
 eventengine.start()
 
@@ -90,7 +93,7 @@ def dataplot():
     for i in range(20):
         x = datetime.now().strftime('%H:%M:%S.%f')
         y = np.random.randint(1, 10)
-        eventengine.put(Event(EVENT_PLOT, PlotData(desc="Tick",x_data=x, y_data=y)))
+        eventengine.put(Event(EVENT_PLOT, PlotData(desc="Tick",x_data=i, y_data=y)))
 
         time.sleep(1)
 
@@ -98,6 +101,8 @@ dataplot_thread = Thread(target=dataplot)
 dataplot_thread.start()
 
 dataPlot = DataPlot(eventengine, 30)
+
+app.exec()
 
 eventengine.stop()
 dataplot_thread.join()

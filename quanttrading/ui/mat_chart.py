@@ -10,6 +10,7 @@ from matplotlib import style
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from matplotlib.lines import Line2D
+from matplotlib.ticker import MaxNLocator
 from datetime import datetime as dt
 from event import Event, EventEngine
 from constant import EVENT_PLOT
@@ -22,7 +23,6 @@ x = np.linspace(0, 2, 100)  # Sample data.
 data1, data2, data3, data4 = np.random.randn(4, 100)
 
 
-
 class DataPlot():
 
     def __init__(self, eventEngine:EventEngine, dataSize:int = 500):
@@ -33,7 +33,8 @@ class DataPlot():
         self.fig: Figure = None
 
         self.line: Line2D = None
-        date = dt.now().strftime("%H:%M:%S.%f")
+        # date = dt.now().strftime("%H:%M:%S.%f")
+        date = " "
         self.origin_data_x: np.ndarray = np.array([date for _ in range(dataSize)], dtype=object)
 
         print(f"{self.origin_data_x}")
@@ -100,13 +101,15 @@ class DataPlot():
         # print(f".......... 2 {self.origin_data_x=}")
         # plt.xticks(range(0,len(self.x_data)), self.x_data)
         # self.ax.set_xticks(self.x_data)
-        ticks = [t for t in range(0,self.size)]
+        # ticks = [t for t in range(0,self.size)]
         # self.ax.get_xticks()
-        self.ax.set_xticks(ticks, self.origin_data_x)
+        # self.ax.set_xticks(ticks, self.origin_data_x)
 
         self.x_tick = [x for x in range(0, len(self.x_data))]
         self.line.set_data(self.x_tick, self.y_data)
-        return (self.line, self.ax.xaxis)
+
+        # self.ax.set_ylim(float(self.origin_data_y.min())-1, self.origin_data_y.max()+1)
+        return (self.line, self.ax.xaxis, self.ax.yaxis)
 
     def func_animation_draw(self) -> None:
         """
@@ -139,20 +142,31 @@ class DataPlot():
         self.fig, self.ax = plt.subplots(figsize=(10,10))
         
         plt.xticks(rotation=45, ha='right')
-        plt.subplots_adjust(bottom=0.30)
+        plt.subplots_adjust(bottom=0.20)
 
         self.line = self.ax.plot([], [], label=f'realRange')[0]
         # plt.xticks(range(0,len(self.x_data)), self.x_data)
         # self.ani = animation.FuncAnimation(fig=fig, func=self.update_data, frames=30, interval=30, blit = True)
-        self.ani = animation.FuncAnimation(fig=self.fig, func=self.update_data, frames=30, init_func=self.init_ax, interval=30, blit = True, save_count=50)
+        self.ani = animation.FuncAnimation(fig=self.fig, func=self.update_data, frames=30, init_func=self.init_ax, interval=10, blit = True, save_count=self.size)
         # plt.xticks(range(0,len(self.x_data)), self.x_data)
         plt.show()
 
     def init_ax(self) -> list:
         # self.ax.set(xlim=[0, 100], ylim=[-10, 10], xlabel='Time [s]', ylabel='Range')
         self.ax.set(xlim=[0, self.size],ylim=[0, 10], xlabel='Time [s]', ylabel='Range')
+
+        # A FuncFormatter is created automatically.
+        self.ax.xaxis.set_major_formatter(self.format_fn)
+        self.ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         self.ax.legend()
         return self.line,
+
+    def format_fn(self, tick_val, tick_pos):
+        index = int(tick_val)
+        if  index < self.size and self.origin_data_x[index]:
+            return self.origin_data_x[index]
+        else:
+            return ''
 
 def multi_plot() -> None:
 
