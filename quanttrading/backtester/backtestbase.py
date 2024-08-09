@@ -36,7 +36,7 @@ from optimize import (
     run_bf_optimization,
     run_ga_optimization
 )
-
+from event import Event
 from .base import (
     BacktestingMode,
     EngineType,
@@ -1037,6 +1037,10 @@ class BacktestEngine(BaseEngine):
     def put_algo_event(self, strategy:Testable, data) -> None:
         # print(f"put_algo_event {data=}")
         pass
+
+    def put_event(self, event: Event) -> None:
+        """ """
+        self.event_engine.put(event)
 
     def output(self, msg) -> None:
         """

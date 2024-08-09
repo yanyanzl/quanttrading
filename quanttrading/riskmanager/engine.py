@@ -1,13 +1,17 @@
 from collections import defaultdict
 from typing import Callable, Dict, Optional
+from time import time
+from datetime import datetime
 
 from event import Event, EventEngine
-from datatypes import OrderData, OrderRequest, LogData, TradeData, TickData, TradeBook
+from datatypes import OrderData, OrderRequest, LogData, TradeData, TickData, TradeBook, PlotData
 from ordermanagement import MainEngine, BaseManagement as BaseEngine
-from constant import EVENT_TRADE, EVENT_ORDER, EVENT_LOG, EVENT_TIMER, EVENT_TICK, RiskLevel
+from constant import EVENT_TRADE, EVENT_ORDER, EVENT_LOG, EVENT_TIMER, EVENT_TICK, EVENT_PLOT, RiskLevel
 from constant import Direction, Status, Offset
 from utility import load_json, save_json
 
+from database import get_database, BaseDatabase
+from vnpy_sqlite.sqlite_database import DbDailyProfit, SqliteDatabase
 
 APP_NAME = "RiskManager"
 
@@ -87,6 +91,8 @@ class RiskEngine(BaseEngine):
         # symbol to tradebook map
         self.active_trades: Dict[str, TradeBook] = {}
         self.all_trades: list[TradeData] = []
+
+        self.database: SqliteDatabase = get_database()
 
         self.load_setting()
         self.register_event()
@@ -279,6 +285,9 @@ class RiskEngine(BaseEngine):
         
         if total != 0 and (self.total_profit != total or self.realised_profit != realised):
             self.write_log(f"Total.PnL={round(self.total_profit, 1)}, Realised={round(self.realised_profit, 1)}")
+            event: Event = Event(EVENT_PLOT, PlotData(desc="Total PnL", x_data=time(), y_data=self.total_profit))
+            self.event_engine.put(event)
+                                  
         self.realised_profit = realised
         self.total_profit = total
         
@@ -387,6 +396,15 @@ class RiskEngine(BaseEngine):
             self.active_order_books[vt_symbol] = order_book
         return order_book
 
+    def save_pnl(self) -> bool:
+        
+        return self.database.save_daily_pnl(datetime.now(),self.total_profit, self.realised_profit)
+
+    def load_pnl(self) -> None:
+        daily_pnl: DbDailyProfit = self.database.load_last_daily_pnl()
+        if daily_pnl:
+            self.total_profit = daily_pnl.total_pnl
+            self.realised_profit = daily_pnl.realised_pnl
 
 class ActiveOrderBook:
     """活动委托簿"""

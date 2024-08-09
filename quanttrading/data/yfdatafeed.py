@@ -23,6 +23,8 @@ csession = requests_cache.CachedSession(
     expire_after=expire_after,
     cache_control=True,
 )
+def Datafeed() -> BaseDatafeed:
+    return YfDatafeed()
 
 class YfDatafeed(BaseDatafeed):
     """

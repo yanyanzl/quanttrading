@@ -29,6 +29,19 @@ from database import (
 path: str = str(get_file_path("database.db"))
 db: PeeweeSqliteDatabase = PeeweeSqliteDatabase(path)
 
+class DbDailyProfit(Model):
+    """ 
+    daily profit data 
+    there could be multiple data for one day. the last one is the latest one.
+    """
+    id: AutoField = AutoField()
+    date: datetime = DateTimeField()
+    realised_pnl: float = FloatField()
+    total_pnl: float = FloatField()
+    class Meta:
+        database: PeeweeSqliteDatabase = db
+        indexes: tuple = ((("id"), True),)
+
 
 class DbBarData(Model):
     """K线数据表映射对象"""
@@ -147,7 +160,7 @@ class SqliteDatabase(BaseDatabase):
         """"""
         self.db: PeeweeSqliteDatabase = db
         self.db.connect()
-        self.db.create_tables([DbBarData, DbTickData, DbBarOverview, DbTickOverview])
+        self.db.create_tables([DbBarData, DbTickData, DbBarOverview, DbTickOverview, DbDailyProfit])
 
     def save_bar_data(self, bars: List[BarData], stream: bool = False) -> bool:
         """保存K线数据"""
@@ -264,6 +277,24 @@ class SqliteDatabase(BaseDatabase):
         overview.save()
 
         return True
+
+    def save_daily_pnl(self,
+                       date:datetime,
+                       totalPnL:float,
+                       realisedPnL:float) -> bool:
+        daily_pnl:DbDailyProfit = DbDailyProfit()
+        daily_pnl.date = date
+        daily_pnl.total_pnl = totalPnL
+        daily_pnl.realised_pnl = realisedPnL
+        daily_pnl.save()
+
+    def load_last_daily_pnl(self) -> DbDailyProfit:
+        daily_pnl:DbDailyProfit = DbDailyProfit.select().order_by(DbDailyProfit.id.desc()).get()
+        if daily_pnl:
+            if daily_pnl.date.date() == datetime.now().date():
+                return daily_pnl
+            
+
 
     def load_bar_data(
         self,

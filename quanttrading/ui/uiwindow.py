@@ -185,6 +185,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.add_action(
             help_menu,
+            _("Data Plot"),
+            get_icon_path(__file__, "contract.ico"),
+            self.data_plot,
+            True
+        )
+
+        self.add_action(
+            help_menu,
             _("还原窗口"),
             get_icon_path(__file__, "restore.ico"),
             self.restore_window_setting
@@ -366,3 +374,9 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         dialog: ReloadDialog = ReloadDialog()
         dialog.exec()
+
+    def data_plot(self) -> None:
+        """
+        """
+        from .dataplot import DataPlot
+        self.dataPlot = DataPlot(self.event_engine, 50)

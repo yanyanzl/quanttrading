@@ -1,3 +1,4 @@
+from PySide6.QtCore import QObject
 from pandas import DataFrame, to_datetime
 import pandas as pd
 from data.finlib import Asset
@@ -89,22 +90,40 @@ app = pg.mkQApp("Plotting Example")
 eventengine = EventEngine(1)
 eventengine.start()
 
+def send_event(i):
+    # x = datetime.now().strftime('%H:%M:%S.%f')
+    x = datetime.now().timestamp()
+    y = np.random.randint(1, 10)
+    eventengine.put(Event(EVENT_PLOT, PlotData(desc="Tick",x_data=x, y_data=y)))
+
+# class WorkerThread(pg.QtCore.QThread):
+#     def __init__(self, parent: QObject | None = None) -> None:
+#         super().__init__(parent)
+#     def run(self):
+#         timer = pg.QtCore.QTimer()
+#         timer.setInterval(1000)
+#         timer.timeout.connect(send_event)
+#         timer.start()
+
+# workerThread = WorkerThread()
+# workerThread.start()
+
 def dataplot():
     for i in range(20):
-        x = datetime.now().strftime('%H:%M:%S.%f')
-        y = np.random.randint(1, 10)
-        eventengine.put(Event(EVENT_PLOT, PlotData(desc="Tick",x_data=i, y_data=y)))
-
+        send_event(i)
         time.sleep(1)
 
+pg.QtCore.QThread()
 dataplot_thread = Thread(target=dataplot)
 dataplot_thread.start()
 
 dataPlot = DataPlot(eventengine, 30)
+# dataplot()
 
 app.exec()
 
 eventengine.stop()
+
 dataplot_thread.join()
 
 
