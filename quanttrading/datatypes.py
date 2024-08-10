@@ -844,7 +844,6 @@ class TickManager(object):
         average_num = total/len(self.atr_hisdata)
         return average_num
 
-
     def realRange(self, ticks_num:int = 20, period_num:int = 5) -> float:
         """ to be improved....
         calculate the real price moving range in the last period_num
