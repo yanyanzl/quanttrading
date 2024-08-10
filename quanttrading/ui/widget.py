@@ -42,8 +42,8 @@ from utility import load_json, save_json, get_digits, ZoneInfo
 from setting import SETTINGS, load_settings, save_settings
 
 
-COLOR_LONG = QtGui.QColor("red")
-COLOR_SHORT = QtGui.QColor("green")
+COLOR_LONG = QtGui.QColor("green")
+COLOR_SHORT = QtGui.QColor("red")
 COLOR_BID = QtGui.QColor(255, 174, 201)
 COLOR_ASK = QtGui.QColor(160, 255, 160)
 COLOR_BLACK = QtGui.QColor("black")
@@ -523,10 +523,14 @@ class PositionMonitor(BaseMonitor):
         "direction": {"display": _("方向"), "cell": DirectionCell, "update": False},
         "volume": {"display": _("数量"), "cell": BaseCell, "update": True},
         "yd_volume": {"display": _("昨仓"), "cell": BaseCell, "update": True},
-        "frozen": {"display": _("冻结"), "cell": BaseCell, "update": True},
+
+        "realised_pnl": {"display": _("RealisedPnL"), "cell": PnlCell, "update": True},
+        "pnl": {"display": _("UnrealsiedPnl"), "cell": PnlCell, "update": True},
+
         "price": {"display": _("均价"), "cell": BaseCell, "update": True},
-        "pnl": {"display": _("盈亏"), "cell": PnlCell, "update": True},
+
         "gateway_name": {"display": _("接口"), "cell": BaseCell, "update": False},
+        "frozen": {"display": _("冻结"), "cell": BaseCell, "update": True},
     }
 
 
@@ -540,11 +544,21 @@ class AccountMonitor(BaseMonitor):
     sorting: bool = True
 
     headers: dict = {
-        "accountid": {"display": _("账号"), "cell": BaseCell, "update": False},
-        "balance": {"display": _("余额"), "cell": BaseCell, "update": True},
-        "frozen": {"display": _("冻结"), "cell": BaseCell, "update": True},
-        "available": {"display": _("可用"), "cell": BaseCell, "update": True},
-        "gateway_name": {"display": _("接口"), "cell": BaseCell, "update": False},
+        "accountid": {"display": _("Account"), "cell": BaseCell, "update": False},
+        "available": {"display": _("Availavble Fund"), "cell": BaseCell, "update": True},
+
+        # added
+        "realisedpnl": {"display": _("RealisedPnL"), "cell": PnlCell, "update": True},
+        "positionProfit": {"display": _("UnrealizedPnL"), "cell": PnlCell, "update": True},
+
+        "margin": {"display": _("MaintMarginReq"), "cell": PnlCell, "update": True},
+        "buyingpower": {"display": _("BuyingPower"), "cell": PnlCell, "update": True},
+        "Leverage": {"display": _("Leverage"), "cell": PnlCell, "update": True},
+
+        "balance": {"display": _("Balance"), "cell": BaseCell, "update": True},
+
+        # "frozen": {"display": _("冻结"), "cell": BaseCell, "update": True},
+        "gateway_name": {"display": _("Gateway"), "cell": BaseCell, "update": False},
     }
 
 

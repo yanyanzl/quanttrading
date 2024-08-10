@@ -33,23 +33,15 @@ class DataPlot(QtCore.QObject):
 
         self.eventEngine = eventEngine
         self.dataSize = dataSize
-        # self.ani = None
-        # self.ax:Axes = None
-        # self.fig: Figure = None
 
-        # date = dt.now().strftime("%H:%M:%S.%f")
-        # self.origin_data_x: np.ndarray = np.array([date for _ in range(dataSize)], dtype=object)
-
-        # # print(f"{self.origin_data_x}")
-        # self.origin_data_y: np.ndarray = np.zeros((dataSize),dtype= float)
-        
         self.count:int = 0
         self.inited:bool = False
-        self.current_index:int = 0
+        # self.current_index:int = 0
 
         self.x_data:dict[str,list] = {}
         self.y_data:dict[str,list] = {}
 
+        self.is_plot:bool = True
         
         self._init_ui()
         self.plot:dict[str, pg.PlotItem] = {}

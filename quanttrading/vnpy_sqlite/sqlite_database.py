@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import List
+import logging
 
 from peewee import (
     AutoField,
@@ -25,11 +26,16 @@ from database import (
     convert_tz
 )
 
+logger = logging.getLogger(__name__)
 
 path: str = str(get_file_path("database.db"))
 db: PeeweeSqliteDatabase = PeeweeSqliteDatabase(path)
 
-class DbDailyProfit(Model):
+class BaseModel(Model):
+    class Meta:
+        database: PeeweeSqliteDatabase = db
+
+class DbDailyProfit(BaseModel):
     """ 
     daily profit data 
     there could be multiple data for one day. the last one is the latest one.
@@ -38,9 +44,6 @@ class DbDailyProfit(Model):
     date: datetime = DateTimeField()
     realised_pnl: float = FloatField()
     total_pnl: float = FloatField()
-    class Meta:
-        database: PeeweeSqliteDatabase = db
-        indexes: tuple = ((("id"), True),)
 
 
 class DbBarData(Model):
@@ -289,11 +292,32 @@ class SqliteDatabase(BaseDatabase):
         daily_pnl.save()
 
     def load_last_daily_pnl(self) -> DbDailyProfit:
-        daily_pnl:DbDailyProfit = DbDailyProfit.select().order_by(DbDailyProfit.id.desc()).get()
-        if daily_pnl:
-            if daily_pnl.date.date() == datetime.now().date():
-                return daily_pnl
+        try:
+
+            daily_pnl:DbDailyProfit = DbDailyProfit.select().order_by(DbDailyProfit.id.desc()).get()
+            if daily_pnl:
+                if daily_pnl.date.date() == datetime.now().date():
+                    return daily_pnl
+        except Exception as e:
+            logger.info(f"load daily pnl failed. {e.args}")
             
+            
+    def delete_daily_pnl(self, date:datetime = None, wholeDay:bool = False) -> int:
+        """ 
+        delete the daily_pnl records. if date provided. delete the record with the same date
+        if wholeDay == True. then delete all day records for the date.
+        return the number of rows deleted
+        """
+        if date and wholeDay:
+            query = DbDailyProfit.delete().where(DbDailyProfit.date.date() == date.date())
+
+        elif date:
+            query = DbDailyProfit.delete().where(DbDailyProfit.date == date)
+
+        else:
+            query = DbDailyProfit.delete()
+        
+        query.execute()
 
 
     def load_bar_data(

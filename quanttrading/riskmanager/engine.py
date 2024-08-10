@@ -4,9 +4,19 @@ from time import time
 from datetime import datetime
 
 from event import Event, EventEngine
-from datatypes import OrderData, OrderRequest, LogData, TradeData, TickData, TradeBook, PlotData
+from datatypes import OrderData, OrderRequest, LogData, TradeData, TickData, TradeBook, PlotData, DailyPnL
 from ordermanagement import MainEngine, BaseManagement as BaseEngine
-from constant import EVENT_TRADE, EVENT_ORDER, EVENT_LOG, EVENT_TIMER, EVENT_TICK, EVENT_PLOT, RiskLevel
+from constant import (
+EVENT_TRADE, 
+EVENT_ORDER, 
+EVENT_LOG, 
+EVENT_TIMER, 
+EVENT_TICK, 
+EVENT_PLOT,
+EVENT_DAILY_PNL,
+RiskLevel,
+)
+
 from constant import Direction, Status, Offset
 from utility import load_json, save_json
 
@@ -87,16 +97,21 @@ class RiskEngine(BaseEngine):
         self.realised_loss_limit: float = -100
         # self.realised_loss: float = 0
 
-
         # symbol to tradebook map
         self.active_trades: Dict[str, TradeBook] = {}
         self.all_trades: list[TradeData] = []
 
-        self.database: SqliteDatabase = get_database()
+        # synchronise the daily pnl with server.
+        self.server_daily_pnl: DailyPnL = DailyPnL(total_pnl=0,realised_pnl=0,unrealised_pnl=0)
+
+        self.database: SqliteDatabase = None
+        self.pnl_loaded = False
 
         self.load_setting()
         self.register_event()
         self.patch_send_order()
+
+        # self.load_pnl()
 
     def patch_send_order(self) -> None:
         """
@@ -192,7 +207,34 @@ class RiskEngine(BaseEngine):
         self.event_engine.register(EVENT_TRADE, self.process_trade_event)
         self.event_engine.register(EVENT_TIMER, self.process_timer_event)
         self.event_engine.register(EVENT_ORDER, self.process_order_event)
-        self.event_engine.register(EVENT_TICK, self.process_tick_event)
+        # self.event_engine.register(EVENT_TICK, self.process_tick_event)
+        self.event_engine.register(EVENT_DAILY_PNL, self.process_dailypnl_event)
+
+    def process_dailypnl_event(self, event:Event) -> None:
+        """
+        synchronize the daily pnl from the server.
+        """
+        print(f"server daily pnl {event.type}")
+        if event and event.data:
+            data: DailyPnL = event.data
+            if (self.server_daily_pnl["total_pnl"] != data["total_pnl"]
+                 or 
+                 self.server_daily_pnl["realised_pnl"] != data["realised_pnl"]
+                 ):
+                
+                self.write_log(f"Total.PnL={round(self.total_profit, 1)}, Realised={round(self.realised_profit, 1)}")
+                self.write_log(f"Server side total pnl = " + 
+                            f"{round(self.server_daily_pnl['total_pnl'], 1)}," +
+                                f"Realised={round(self.server_daily_pnl['realised_pnl'], 1)}" +
+                                f"unrealised= {round(self.server_daily_pnl['unrealised_pnl'], 1)}")
+                
+                event: Event = Event(EVENT_PLOT, PlotData(desc="Total PnL", x_data=time(), y_data=data["total_pnl"]))
+                self.event_engine.put(event)
+
+                self.save_pnl()
+
+                self.server_daily_pnl = data
+
 
     def process_tick_event(self, event: Event) -> None:
         """
@@ -230,6 +272,9 @@ class RiskEngine(BaseEngine):
         if not activeTrade:
             activeTrade = self.active_trades[symbol] = TradeBook(symbol)
 
+        #synchronise daily pnl with server
+        self.main_engine.query_daily_pnl()
+
         # update trade related numbers.
         activeTrade.update_trades(trade)
         self.update_pnl_risk()
@@ -252,6 +297,9 @@ class RiskEngine(BaseEngine):
         
         if self.pnl_check_timer >= self.pnl_check_period:
             self.pnl_check_timer = 0
+            #synchronise daily pnl with server
+            self.main_engine.query_daily_pnl()
+
             self.update_pnl_risk()
             riskLevel = self.check_pnl_risk()
             if self.freeze and riskLevel in [RiskLevel.LevelWarning, RiskLevel.LevelCritical]:
@@ -260,7 +308,7 @@ class RiskEngine(BaseEngine):
                 self.main_engine.cancel_all_orders()
                 self.main_engine.cover_all_trades()
                 # cover all outstanding positions to be added.
-                
+        
     def write_log(self, msg: str) -> None:
         """"""
         log: LogData = LogData(msg=msg, gateway_name="RiskManager")
@@ -285,12 +333,17 @@ class RiskEngine(BaseEngine):
         
         if total != 0 and (self.total_profit != total or self.realised_profit != realised):
             self.write_log(f"Total.PnL={round(self.total_profit, 1)}, Realised={round(self.realised_profit, 1)}")
+            self.write_log(f"Server side total pnl = " + 
+                           f"{round(self.server_daily_pnl['total_pnl'], 1)}," +
+                            f"Realised={round(self.server_daily_pnl['realised_pnl'], 1)}" +
+                            f"unrealised= {round(self.server_daily_pnl['unrealised_pnl'], 1)}")
             event: Event = Event(EVENT_PLOT, PlotData(desc="Total PnL", x_data=time(), y_data=self.total_profit))
+            
             self.event_engine.put(event)
+            self.save_pnl()
                                   
         self.realised_profit = realised
         self.total_profit = total
-        
 
     def check_pnl_risk(self) -> int:
         """ 
@@ -300,20 +353,23 @@ class RiskEngine(BaseEngine):
             LevelNormal/LevelWarning/LevelCritical
         """
         riskLevel = RiskLevel.LevelZero
-        if not self.active or not self.active_trades:
+        if not self.active:
             return riskLevel
         
-        if self.total_profit < self.realised_loss_limit or self.total_profit > self.realised_profit_limit:
+        total_pnl = self.server_daily_pnl["total_pnl"]
+        realised_pnl = self.server_daily_pnl["realised_pnl"]
+
+        if total_pnl < self.realised_loss_limit or total_pnl > self.realised_profit_limit:
             riskLevel = RiskLevel.LevelNormal
         
-        elif (self.realised_profit < self.realised_loss_limit or
-            self.total_profit < self.total_loss_limit or
-            self.realised_profit > self.realised_profit_limit or
-            self.total_profit > self.total_profit_limit
+        elif (realised_pnl < self.realised_loss_limit or
+            total_pnl < self.total_loss_limit or
+            realised_pnl > self.realised_profit_limit or
+            total_pnl > self.total_profit_limit
             ):
             riskLevel = RiskLevel.LevelWarning
         
-        elif self.realised_profit < self.total_loss_limit or self.realised_profit > self.total_profit_limit:
+        elif realised_pnl < self.total_loss_limit or realised_pnl > self.total_profit_limit:
             riskLevel = RiskLevel.LevelCritical
 
         return riskLevel
@@ -397,14 +453,28 @@ class RiskEngine(BaseEngine):
         return order_book
 
     def save_pnl(self) -> bool:
-        
-        return self.database.save_daily_pnl(datetime.now(),self.total_profit, self.realised_profit)
+        """
+        save total_profit and realised_profit to database whenever it changed.
+        so the number will be reloaded when the program restarted.
+        so that the daily pnl will be kept
+        """
+        return self.database.save_daily_pnl(datetime.now(),self.server_daily_pnl["total_pnl"], self.server_daily_pnl["realised_pnl"])
 
     def load_pnl(self) -> None:
-        daily_pnl: DbDailyProfit = self.database.load_last_daily_pnl()
-        if daily_pnl:
-            self.total_profit = daily_pnl.total_pnl
-            self.realised_profit = daily_pnl.realised_pnl
+        """
+        load total_profit and realised_profit from the database when
+        the program restarted everytime. 
+        """
+        if not self.database:
+            self.database = get_database()
+        
+        if self.database:
+            daily_pnl: DbDailyProfit = self.database.load_last_daily_pnl()
+            self.write_log(f"riskmanager loading daily pnl: with database: {self.database}")
+            if daily_pnl:
+                self.total_profit = daily_pnl.total_pnl
+                self.realised_profit = daily_pnl.realised_pnl
+                self.write_log(f"===>current pnl: date: {daily_pnl.date}, total pnl:{self.total_profit}")
 
 class ActiveOrderBook:
     """活动委托簿"""

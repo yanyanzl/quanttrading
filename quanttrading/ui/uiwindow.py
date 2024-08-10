@@ -10,12 +10,14 @@ from importlib import import_module
 from typing import Callable, Dict, List, Tuple
 import sys
 
+
 from pathlib import Path  # if you haven't already done so
 file = Path(__file__).resolve()
 sys.path.append(str(file.parents[1]))
 
-from .chart import Chart
-from .chartwizard import ChartWizardWidget
+from vnpy_algotrading.ui.widget import AlgoManager, APP_NAME
+# from .chart import Chart
+# from .chartwizard import ChartWizardWidget
 from .uiapp import QtCore, QtGui, QtWidgets
 from .widget import (
     BaseMonitor,
@@ -55,8 +57,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.widgets: Dict[str, QtWidgets.QWidget] = {}
         self.monitors: Dict[str, BaseMonitor] = {}
-        # self.chartWidget = pg.PlotWidget()
-        self.chartWidget: Chart = None
+        # self.chartWidget: Chart = None
 
         self.init_ui()
 
@@ -107,12 +108,19 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         initiate the chart graph
         """
+        # central_widget:QtWidgets.QFrame = QtWidgets.QFrame()
+        # central_layout:QtWidgets.QVBoxLayout = QtWidgets.QVBoxLayout()
+        # central_widget.setLayout(central_layout)
+        # self.widgets["central_widget"] = central_widget
+
         # to be changed: ***************
         # self.chartWidget = Chart("Real Time Chart", "TSLA")
         # self.chartWidget = ChartWizardWidget(self.main_engine,self.event_engine)
-        from vnpy_algotrading.ui.widget import AlgoManager, APP_NAME
+
         _central = AlgoManager(self.main_engine, self.event_engine)
         self.widgets[APP_NAME] = _central
+
+        # central_layout.addWidget(_central)
 
         self.setCentralWidget(_central)
 

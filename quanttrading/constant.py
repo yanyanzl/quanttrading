@@ -108,6 +108,8 @@ EVENT_SIGNAL = "eSIGNAL"
 
 EVENT_PLOT = "ePlotData"
 
+EVENT_DAILY_PNL = "eDaily_PnL"
+
 class SignalType(XEnum):
     """
     trading signal type.

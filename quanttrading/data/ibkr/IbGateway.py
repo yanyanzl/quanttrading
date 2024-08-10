@@ -46,6 +46,7 @@ from datatypes import (
     CancelRequest,
     SubscribeRequest,
     HistoryRequest,
+    DailyPnL,
 )
 from constant import (
     Product,
@@ -186,8 +187,9 @@ ACCOUNTFIELD_IB2VT: dict[str, str] = {
     "AvailableFunds": "available",
     "MaintMarginReq": "margin",
     "BuyingPower": "buyingpower",
-    "MaintMarginReq": "marginreq",
-    "RealizedPnL": "realisedpnl"
+    # "MaintMarginReq": "marginreq",
+    "RealizedPnL": "realisedpnl",
+    "Leverage": "leverage"
 }
 
 # 数据频率映射
@@ -292,6 +294,9 @@ class IbGateway(BaseGateway):
         # event = Event(EVENT)
         # self.event_engine.put()
         return self.api.query_history(req)
+    
+    def query_daily_pnl(self) -> None:
+        self.api.query_daily_pnl()
 
     def process_timer_event(self, event: Event) -> None:
         """定时事件处理"""
@@ -683,6 +688,7 @@ class IbApi(EWrapper):
             volume=float(position),
             price=price,
             pnl=unrealizedPNL,
+            realised_pnl=realizedPNL,
             gateway_name=self.gateway_name,
             symbolName=contract.symbol
         )
@@ -907,18 +913,38 @@ class IbApi(EWrapper):
 
         return None
 
+    def query_daily_pnl(self) -> None:
+        """
+        request the server to update the daily pnl information.
+        """
+        if self.status and self.account:
+            self.reqid += 1
+            self.client.reqPnL(self.reqid, self.account, "")
+        else:
+            self.gateway.write_log(f"can't get daily pnl. gateway connected:{self.status}, acount:{self.account}")
+
     # ! [pnl] app.reqPnL(102, "U123456", "")
     def pnl(self, reqId: int, dailyPnL: float,
             unrealizedPnL: float, realizedPnL: float):
-        """ receive real time daily PnL and unrealized PnL updates."""
+        """ 
+        receive real time daily PnL and unrealized PnL updates.
+        after sending reqPnL(reqId,account,modolcode). 
+        example. reqPnL(102, "U123456", "")
+        """
         super().pnl(reqId, dailyPnL, unrealizedPnL, realizedPnL)
         print("Daily PnL. ReqId:", reqId, "DailyPnL:", floatMaxString(dailyPnL),
               "UnrealizedPnL:", floatMaxString(unrealizedPnL), "RealizedPnL:", floatMaxString(realizedPnL))
+        self.gateway.on_daily_pnl(DailyPnL(total_pnl=dailyPnL, realised_pnl=realizedPnL, unrealised_pnl=unrealizedPnL))
     # ! [pnl]
 
     # ! [pnlsingle] app.reqPnLSingle(101, "U123456", "", 8314) #IBM conId: 8314
     def pnlSingle(self, reqId: int, pos: Decimal, dailyPnL: float,
                   unrealizedPnL: float, realizedPnL: float, value: float):
+        """
+        receive real time pnl for a single contract/symbol's pnl 
+        after send reqPnLSingle(reqId=, account=,modelCode=, conid=)
+        example: reqPnLSingle(101, "U123456", "", 8314) #IBM conId: 8314
+        """
         super().pnlSingle(reqId, pos, dailyPnL, unrealizedPnL, realizedPnL, value)
         print("Daily PnL Single. ReqId:", reqId, "Position:", decimalMaxString(pos),
               "DailyPnL:", floatMaxString(dailyPnL), "UnrealizedPnL:", floatMaxString(unrealizedPnL),
@@ -1139,7 +1165,7 @@ class IbApi(EWrapper):
 
     def query_history(self, req: HistoryRequest) -> list[BarData]:
         """查询历史数据"""
-        print(f"=============== {req=} and {self.contracts=}")
+        # print(f"=============== {req=} and {self.contracts=}")
         if not self.status:
             return
         # contract: ContractData = self.contracts[req.vt_symbol]

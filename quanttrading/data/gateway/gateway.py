@@ -13,7 +13,8 @@ from constant import (
     EVENT_CONTRACT,
     EVENT_LOG,
     EVENT_QUOTE,
-    EVENT_TICK_LAST_DATA
+    EVENT_TICK_LAST_DATA, 
+    EVENT_DAILY_PNL,
 )
 from datatypes import (
     TickData,
@@ -30,7 +31,8 @@ from datatypes import (
     HistoryRequest,
     QuoteRequest,
     Exchange,
-    BarData
+    BarData,
+    DailyPnL
 )
 
 
@@ -163,8 +165,15 @@ class BaseGateway(ABC):
         """
         Contract event push.
         """
-        print(f"gateway on_contract =========================== {contract=}")
+        # print(f"gateway on_contract =========================== {contract=}")
         self.on_event(EVENT_CONTRACT, contract)
+
+    def on_daily_pnl(self, dailypnl:DailyPnL) -> None:
+        """
+        daily pnl data
+        """
+        self.on_event(EVENT_DAILY_PNL, dailypnl)
+
 
     def write_log(self, msg: str) -> None:
         """
@@ -293,6 +302,12 @@ class BaseGateway(ABC):
         Return default setting dict.
         """
         return self.default_setting
+    
+    def query_daily_pnl(self) -> None:
+        """
+        query daily pnl
+        """
+        pass
 
 
 class LocalOrderManager:

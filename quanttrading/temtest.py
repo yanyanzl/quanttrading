@@ -13,6 +13,34 @@ import yfinance as yf
 from zoneinfo import ZoneInfo
 from tzlocal import get_localzone_name
 import tzlocal
+import inspect
+from riskmanager.engine import TradeBook, RiskLevel
+from pathlib import Path
+# from vnpy_ctastrategy import CtaTemplate, TargetPosTemplate
+from glob import glob
+import importlib, traceback
+from constant import _, Exchange
+from types import ModuleType
+
+from database import get_database
+from datatypes import Interval, TradingSignal, SignalType
+from typing import get_args
+from data.yfdatafeed import YfDatafeed
+from datatypes import HistoryRequest, TickManager, TickData, PlotData
+import numpy as np
+from utility import dateToLocal, LOCAL_TZ
+from vnpy_algotrading.algos.hft_direction_algo import TradingStatus
+from constant import OrderType, Direction, Offset, EVENT_PLOT
+
+from random import randrange
+import csv
+from itertools import product
+from pandas import DataFrame, Series
+from ui.dataplot import DataPlot
+from event import EventEngine, Event
+from threading import Thread
+import pyqtgraph as pg
+
 
 # tsla = yf.Ticker("TSLA")
 
@@ -48,119 +76,61 @@ import tzlocal
 # import numpy as np
 # df1[df1.columns] = np.where(df1['Date'] == df2.at[0,'Date'],df2.iloc[0][df2.columns], df1[df1.columns])
 
-
 # for index in df2.index:
 #     print(f"{df2.iloc[[index]]=}")
 #     df1.loc[df1['Date'] == df2.iloc[[index, 'Date']]]
 #     df1.value
-import inspect
-from riskmanager.engine import TradeBook, RiskLevel
-from pathlib import Path
-# from vnpy_ctastrategy import CtaTemplate, TargetPosTemplate
-from glob import glob
-import importlib, traceback
-from constant import _, Exchange
-from types import ModuleType
 
-from database import get_database
-from datatypes import Interval, TradingSignal, SignalType
-from typing import get_args
-from data.yfdatafeed import YfDatafeed
-from datatypes import HistoryRequest, TickManager, TickData, PlotData
-import numpy as np
-from utility import dateToLocal, LOCAL_TZ
-from vnpy_algotrading.algos.hft_direction_algo import TradingStatus
-from constant import OrderType, Direction, Offset, EVENT_PLOT
-
-from random import randrange
-import csv
-from itertools import product
-from pandas import DataFrame, Series
-from ui.dataplot import DataPlot
-from event import EventEngine, Event
-from threading import Thread
-import pyqtgraph as pg
 
 # date = datetime.now().strftime("%H:%M:%S.%f")
 # origin_data_x: np.ndarray = np.array([date for _ in range(20)], dtype=object)
 # origin_data_x.fill()
 # print(origin_data_x)
-app = pg.mkQApp("Plotting Example")
+def dbtest():
+    from database import get_database
+    from vnpy_sqlite.sqlite_database import SqliteDatabase, DbDailyProfit
 
-eventengine = EventEngine(1)
-eventengine.start()
+    db:SqliteDatabase = get_database()
+    # db.save_daily_pnl(datetime.now(), 66, 50)
+    daily_pnl: DbDailyProfit = db.load_last_daily_pnl()
+    print(f"{daily_pnl.date},{daily_pnl.total_pnl} {type(daily_pnl)}")
 
-def send_event(i):
-    # x = datetime.now().strftime('%H:%M:%S.%f')
-    x = datetime.now().timestamp()
-    y = np.random.randint(1, 10)
-    eventengine.put(Event(EVENT_PLOT, PlotData(desc="Tick",x_data=x, y_data=y)))
+def testDataPlot():
+    app = pg.mkQApp("Plotting Example")
 
-# class WorkerThread(pg.QtCore.QThread):
-#     def __init__(self, parent: QObject | None = None) -> None:
-#         super().__init__(parent)
-#     def run(self):
-#         timer = pg.QtCore.QTimer()
-#         timer.setInterval(1000)
-#         timer.timeout.connect(send_event)
-#         timer.start()
+    eventengine = EventEngine(1)
+    eventengine.start()
 
-# workerThread = WorkerThread()
-# workerThread.start()
+    def send_event(i):
+        # x = datetime.now().strftime('%H:%M:%S.%f')
+        x = datetime.now().timestamp()
+        y = np.random.randint(1, 10)
+        eventengine.put(Event(EVENT_PLOT, PlotData(desc="Tick",x_data=x, y_data=y)))
 
-def dataplot():
-    for i in range(20):
-        send_event(i)
-        time.sleep(1)
+    def dataplot():
+        for i in range(20):
+            send_event(i)
+            time.sleep(1)
 
-pg.QtCore.QThread()
-dataplot_thread = Thread(target=dataplot)
-dataplot_thread.start()
+    pg.QtCore.QThread()
+    dataplot_thread = Thread(target=dataplot)
+    dataplot_thread.start()
 
-dataPlot = DataPlot(eventengine, 30)
-# dataplot()
+    dataPlot = DataPlot(eventengine, 30)
 
-app.exec()
-
-eventengine.stop()
-
-dataplot_thread.join()
-
-
-# x,y = np.random.randint(1, 5, 2)
-# print(f"{x=}")
-
-# import numpy as np
-# import matplotlib.pyplot as plt
-# from matplotlib.animation import FuncAnimation
-
-# fig, ax = plt.subplots()
-# xdata, ydata = [], []
-# ln, = ax.plot([], [], 'ro')
-
-# def init():
-#     ax.set_xlim(0, 2*np.pi)
-#     ax.set_ylim(-1, 1)
-#     return ln,
-
-# def update(frame):
-#     xdata.append(frame)
-#     ydata.append(np.sin(frame))
-#     ln.set_data(xdata, ydata)
-#     return ln,
-
-# ani = FuncAnimation(fig, update, frames=np.linspace(0, 2*np.pi, 128),
-#                     init_func=init, blit=True)
-# plt.show()
-
+    app.exec()
+    eventengine.stop()
+    dataplot_thread.join()
 
 
 def arrayTest():
     newarray = np.zeros(10)
     newarray[5] = 10
-    newarray[6] = 100
+    newarray[6] = 106
     newarray[0:4] = 100
     # print(f"{newarray=} and {newarray.sum()}")
+
+    print(f"{newarray.max()=} and {type(newarray.min())}")
 
     data: np.ndarray = np.zeros((3,2),dtype= float)
     data[-2] = (1,3)
@@ -172,7 +142,7 @@ def arrayTest():
     for i in range(0,100,5):
         print(f"{100-i}")
 
-# arrayTest()
+arrayTest()
 
 def seriesTest():
     r = [1,3,5,6]
@@ -232,15 +202,19 @@ def tickManage():
 
     rsi_result = tickmanager.rsi(10)
 
-    realrange20 = tickmanager.realRange(20, 5)
-    realrange10 = tickmanager.realRange(10, 5)
+    realrange20 = tickmanager.realRange(100, 1)
+    realrange10 = tickmanager.realRange(150, 1)
+    # atr_1 = tickmanager.atr(14, 100)
+    # atr_1 = tickmanager.atr(14, 100)
+    atr_1 = tickmanager.atr(14, 50)
 
     print(f"rsi = {rsi_result} and {np.isnan(rsi_result)}")
 
     print(f"{realrange10=} and {realrange20=}")
+    print(f"{atr_1=}")
     
 
-# tickManage()
+tickManage()
 
 # print(f"{a=}")
 # dt = datetime.now(LOCAL_TZ).second

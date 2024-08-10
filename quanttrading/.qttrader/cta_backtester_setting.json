@@ -2,7 +2,7 @@
     "class_name": "HFTDirectionAlgo",
     "vt_symbol": "NVDA.SMART",
     "interval": "tick",
-    "start": "2023-08-01",
+    "start": "2023-08-04",
     "rate": 2.5e-05,
     "slippage": 0.0,
     "size": 20.0,

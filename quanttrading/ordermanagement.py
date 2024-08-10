@@ -292,6 +292,18 @@ class MainEngine:
         else:
             return None
         
+    def query_daily_pnl(self) -> None:
+        """
+        send request to Query daily Pnl
+        """
+        gateways = self.get_all_gateway_names()
+        if gateways:
+            for name in gateways:
+                gateway = self.get_gateway(name)
+                if gateway:
+                    return gateway.query_daily_pnl()
+ 
+        
     def cancel_all_orders(self, symbol:str=None) -> None:
         """
         cancel all active orders for a specified Symbol. 
