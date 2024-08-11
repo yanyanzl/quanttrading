@@ -41,7 +41,7 @@ if sys.version_info.minor >= 11:
 else:
     from typing_extensions import NotRequired
 
-
+Minutes_DAYS = Literal["1d", "5d"]
 OrderSide = Literal['buy', 'sell']
 # OrderType = Literal['limit', 'market']
 PositionSide = Literal['long', 'short']

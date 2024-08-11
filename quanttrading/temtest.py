@@ -40,9 +40,112 @@ from ui.dataplot import DataPlot
 from event import EventEngine, Event
 from threading import Thread
 import pyqtgraph as pg
+from datetime import timedelta
+import logging
+
+from data.base import TickerData, TICKER_DATA_KEYS
+from datatypes import Minutes_DAYS
+logger = logging.getLogger(__name__)
+
+symbol = "TSLA"
+ticker = TickerData({"symbol":symbol})
+tsla = yf.Ticker(symbol)
+
+basic_info:dict = tsla.basic_info
+for info in basic_info.keys():
+
+    # print(f"{info=}")
+    if info in TICKER_DATA_KEYS:
+        ticker[info] = basic_info[info]
+
+# print(f"{ticker=} and {ticker.keys()}")
 
 
-# tsla = yf.Ticker("TSLA")
+def _true_range(high:float, low:float, pervious_close:float) -> float:
+    """
+    single period true range.
+    True Range =  max[(high -low), abs(high - previous close),
+      abs (low - previous close)
+    """
+    if high and low and pervious_close and high >= low:
+        return max((high-low), abs(high-pervious_close), abs(low-pervious_close))
+    return 0
+from typing import get_args
+def ATR_minite_summary(period:int=14, days:Minutes_DAYS = "5d") -> dict[datetime, list]:
+    """
+    Valid days: 1d,5d
+    return datetime to the list of ATRs for that time range (per hour)
+    """
+    assert days in get_args(Minutes_DAYS)
+    
+    data = tsla.history(period=days, interval="1m")
+
+    last_date:pd.Timestamp = data.loc[data.last_valid_index()].name.replace(hour=23)
+
+    if days == "1d":
+        days = 1
+    else:
+        days = 5
+    for i in range(days):
+
+        current_data = data.loc[last_date - timedelta(days=i, hours=23) : last_date - timedelta(days=i)]
+        # print(f"{current_data}")
+
+        current_data.reset_index(inplace=True)
+        close = data["Close"]
+        high = data["High"]
+        low = data["Low"]
+        print(f"{ATR_by_datas(high, low, close, period)}")
+
+
+def ATR_by_datas(high:pd.Series, low:pd.Series, close:pd.Series, period:int=14) -> list[float]:
+    """
+    get the day/hour/minite/second level ATR by providing the highs, lows, closes and period.
+    return all available ATR series based on these data.
+    for lasest one, get the last data from the returned list.
+    """
+    if (high is not None and low is not None and close is not None
+         and high.count() >= low.count() >= close.count() > period+1
+         ):
+
+        true_ranges:np.ndarray = np.zeros(period)
+        datacount = close.count()
+        average_TRs:list = []
+
+        current_range:int = 0
+        last_average_TR:float = 0
+
+        for i in range(1, datacount):
+
+            true_range = _true_range(high[i], low[i],close[i-1])
+
+            if current_range >= period:
+                # start to calculate the Average True Range.
+                average_TR = (last_average_TR * (period - 1) + true_range) / period
+                average_TRs.append(average_TR)
+                last_average_TR = average_TR
+                # print(f"round start {i}: {average_TR=} with true{true_range} high:{high[i]} low:{low[i]}, close: {close[i-1]}")
+
+            else:
+                true_ranges[current_range] = true_range
+                current_range += 1
+                if current_range == period:
+                    last_average_TR = true_ranges.sum()/period
+                    # print(f"{last_average_TR=}")
+        return average_TRs
+    else:
+        logger.info(f"invalid input for ATR_minite: high {high}, low: {low}, close:{close}")
+        return []
+
+
+ATR_minite_summary(14)
+
+# tartget = tsla.get_upgrades_downgrades()
+# print(f"{tsla.actions=}")
+
+# print(f"{tsla.info=}")
+# print(f"{tsla.fast_info=}")
+# print(f"{tsla.trend_details=}")
 
 # df1 = tsla.history(period="1mo")
 # df1.reset_index(inplace=True)
@@ -142,7 +245,7 @@ def arrayTest():
     for i in range(0,100,5):
         print(f"{100-i}")
 
-arrayTest()
+# arrayTest()
 
 def seriesTest():
     r = [1,3,5,6]
@@ -214,7 +317,7 @@ def tickManage():
     print(f"{atr_1=}")
     
 
-tickManage()
+# tickManage()
 
 # print(f"{a=}")
 # dt = datetime.now(LOCAL_TZ).second
