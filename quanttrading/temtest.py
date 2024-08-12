@@ -43,23 +43,33 @@ import pyqtgraph as pg
 from datetime import timedelta
 import logging
 
+from typing import get_args
 from data.base import TickerData, TICKER_DATA_KEYS
 from datatypes import Minutes_DAYS
 logger = logging.getLogger(__name__)
+
+from data.techanalysis import TechAnalysis
+
+ta: TechAnalysis = TechAnalysis("AAPL")
+basicinfo:TickerData = ta.getBasicInfo()
+print(f"{basicinfo}")
+print(f"{basicinfo.__getattribute__("symbol")=}")
+print(f"{basicinfo.__getattribute__("xxx")=}")
+# print(f"{ta.ATR_minite_summary(days="1d")}")
+
+
 
 symbol = "TSLA"
 ticker = TickerData({"symbol":symbol})
 tsla = yf.Ticker(symbol)
 
-basic_info:dict = tsla.basic_info
-for info in basic_info.keys():
+def getBasicInfo():
+    basic_info:dict = tsla.basic_info
+    for info in basic_info.keys():
 
-    # print(f"{info=}")
-    if info in TICKER_DATA_KEYS:
-        ticker[info] = basic_info[info]
-
-# print(f"{ticker=} and {ticker.keys()}")
-
+        # print(f"{info=}")
+        if info in TICKER_DATA_KEYS:
+            ticker[info] = basic_info[info]
 
 def _true_range(high:float, low:float, pervious_close:float) -> float:
     """
@@ -70,18 +80,23 @@ def _true_range(high:float, low:float, pervious_close:float) -> float:
     if high and low and pervious_close and high >= low:
         return max((high-low), abs(high-pervious_close), abs(low-pervious_close))
     return 0
-from typing import get_args
-def ATR_minite_summary(period:int=14, days:Minutes_DAYS = "5d") -> dict[datetime, list]:
+
+
+def ATR_minite_summary(period:int=14, days:Minutes_DAYS = "5d", hours:int = 7, count:int = 6) -> dict[datetime, list]:
     """
-    Valid days: 1d,5d
+    Valid days: 1d,5d. get result for last 1 day or 5 days.
+    valid hours: 1 to 7. get result for the last 1 hour or up to 7 hours.
+    count: valid 1 to 60 - period. number of ATRs per hour to be returned.
     return datetime to the list of ATRs for that time range (per hour)
     """
     assert days in get_args(Minutes_DAYS)
+    if hours < 1 or hours > 7:
+        hours = 7
     
     data = tsla.history(period=days, interval="1m")
 
     last_date:pd.Timestamp = data.loc[data.last_valid_index()].name.replace(hour=23)
-
+    ATR_summary:dict[datetime, list] = {}
     if days == "1d":
         days = 1
     else:
@@ -90,12 +105,22 @@ def ATR_minite_summary(period:int=14, days:Minutes_DAYS = "5d") -> dict[datetime
 
         current_data = data.loc[last_date - timedelta(days=i, hours=23) : last_date - timedelta(days=i)]
         # print(f"{current_data}")
+        last_hour:pd.Timestamp = current_data.loc[current_data.last_valid_index()].name
+        last_hour = last_hour.replace(hour=last_hour.hour+1, minute=0)
+        for j in range(hours):
+            hour_data = current_data.loc[last_hour - timedelta(hours=1+j) : last_hour - timedelta(hours=j,minutes=1)]
+            num = min(len(hour_data), (period+count))
 
-        current_data.reset_index(inplace=True)
-        close = data["Close"]
-        high = data["High"]
-        low = data["Low"]
-        print(f"{ATR_by_datas(high, low, close, period)}")
+            hour_data.reset_index(inplace=True)
+            hour_data = hour_data.loc[0:num]
+
+            close = hour_data["Close"]
+            high = hour_data["High"]
+            low = hour_data["Low"]
+            # print(f"{hour_data=}")
+            ATR_summary.update({last_hour - timedelta(hours=1+j): ATR_by_datas(high, low, close, period)})
+        
+    print(f"{ATR_summary}")
 
 
 def ATR_by_datas(high:pd.Series, low:pd.Series, close:pd.Series, period:int=14) -> list[float]:
@@ -138,7 +163,7 @@ def ATR_by_datas(high:pd.Series, low:pd.Series, close:pd.Series, period:int=14) 
         return []
 
 
-ATR_minite_summary(14)
+# ATR_minite_summary(14)
 
 # tartget = tsla.get_upgrades_downgrades()
 # print(f"{tsla.actions=}")

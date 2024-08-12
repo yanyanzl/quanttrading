@@ -24,6 +24,7 @@ if sys.version_info.minor >= 11:
 else:
     from typing_extensions import NotRequired
 
+
 TICKER_DATA_KEYS:list = ["symbol", "dayLow", "dayHigh", "lastPrice",
                          "fiftyDayAverage","twoHundredDayAverage",
                            "marketCap", "shares", "currency", "lastVolume",

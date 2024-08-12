@@ -540,7 +540,8 @@ class AccountMonitor(BaseMonitor):
     """
 
     event_type: str = EVENT_ACCOUNT
-    data_key: str = "vt_accountid"
+    # data_key: str = "vt_accountid"
+    data_key: str = "accountid"
     sorting: bool = True
 
     headers: dict = {
@@ -553,7 +554,7 @@ class AccountMonitor(BaseMonitor):
 
         "margin": {"display": _("MaintMarginReq"), "cell": PnlCell, "update": True},
         "buyingpower": {"display": _("BuyingPower"), "cell": PnlCell, "update": True},
-        "Leverage": {"display": _("Leverage"), "cell": PnlCell, "update": True},
+        "leverage": {"display": _("leverage"), "cell": PnlCell, "update": True},
 
         "balance": {"display": _("Balance"), "cell": BaseCell, "update": True},
 

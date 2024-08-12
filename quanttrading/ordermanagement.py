@@ -777,7 +777,7 @@ class OrderManagement(BaseManagement):
         """
         Get contract data by vt_symbol.
         """
-        logger.info(f"--------------get_contract {symbol=}")
+        logger.debug(f"--------------get_contract {symbol=}")
         contract = self.contracts.get(symbol, None)
         if not contract:
             if not self.contracts:

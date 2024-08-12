@@ -343,6 +343,8 @@ class IbApi(EWrapper):
         self.reqid_symbol_map: dict[int, str] = {}              # reqid: subscribe tick symbol
         self.reqid_underlying_map: dict[int, Contract] = {}     # reqid: query option underlying
 
+        self._dailyPnl_reqid: int = 0
+
         self.client: EClient = EClient(self)
 
         self.ib_contracts: dict[str, Contract] = {}
@@ -696,7 +698,7 @@ class IbApi(EWrapper):
 
     def updateAccountTime(self, timeStamp: str) -> None:
         """账号更新时间回报"""
-        super().updateAccountTime(timeStamp)
+        # super().updateAccountTime(timeStamp)
         for account in self.accounts.values():
             self.gateway.on_account(copy(account))
 
@@ -917,9 +919,11 @@ class IbApi(EWrapper):
         """
         request the server to update the daily pnl information.
         """
-        if self.status and self.account:
+        
+        if self.status and self.account and not self._dailyPnl_reqid:
             self.reqid += 1
             self.client.reqPnL(self.reqid, self.account, "")
+            self._dailyPnl_reqid = self.reqid
         else:
             self.gateway.write_log(f"can't get daily pnl. gateway connected:{self.status}, acount:{self.account}")
 
@@ -931,9 +935,9 @@ class IbApi(EWrapper):
         after sending reqPnL(reqId,account,modolcode). 
         example. reqPnL(102, "U123456", "")
         """
-        super().pnl(reqId, dailyPnL, unrealizedPnL, realizedPnL)
-        print("Daily PnL. ReqId:", reqId, "DailyPnL:", floatMaxString(dailyPnL),
-              "UnrealizedPnL:", floatMaxString(unrealizedPnL), "RealizedPnL:", floatMaxString(realizedPnL))
+        # super().pnl(reqId, dailyPnL, unrealizedPnL, realizedPnL)
+        # print("Daily PnL. ReqId:", reqId, "DailyPnL:", floatMaxString(dailyPnL),
+        #       "UnrealizedPnL:", floatMaxString(unrealizedPnL), "RealizedPnL:", floatMaxString(realizedPnL))
         self.gateway.on_daily_pnl(DailyPnL(total_pnl=dailyPnL, realised_pnl=realizedPnL, unrealised_pnl=unrealizedPnL))
     # ! [pnl]
 

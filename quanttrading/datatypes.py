@@ -362,6 +362,9 @@ class AccountData(BaseData):
 
     balance: float = 0
     frozen: float = 0
+    margin:float = 0
+    leverage: float = 0
+    buyingpower: float = 0
 
     def __post_init__(self) -> None:
         """"""

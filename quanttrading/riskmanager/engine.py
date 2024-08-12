@@ -103,6 +103,8 @@ class RiskEngine(BaseEngine):
 
         # synchronise the daily pnl with server.
         self.server_daily_pnl: DailyPnL = DailyPnL(total_pnl=0,realised_pnl=0,unrealised_pnl=0)
+        self._need_syn_daily_pnl: bool = True
+        self._daily_syn_sent_to_server: bool = False
 
         self.database: SqliteDatabase = None
         self.pnl_loaded = False
@@ -214,8 +216,10 @@ class RiskEngine(BaseEngine):
         """
         synchronize the daily pnl from the server.
         """
-        print(f"server daily pnl {event.type}")
-        if event and event.data:
+        # print(f"server daily pnl {event.type}")
+        if self._need_syn_daily_pnl and event and event.data:
+
+            self._need_syn_daily_pnl = False
             data: DailyPnL = event.data
             if (self.server_daily_pnl["total_pnl"] != data["total_pnl"]
                  or 
@@ -223,6 +227,7 @@ class RiskEngine(BaseEngine):
                  ):
                 
                 self.write_log(f"Total.PnL={round(self.total_profit, 1)}, Realised={round(self.realised_profit, 1)}")
+
                 self.write_log(f"Server side total pnl = " + 
                             f"{round(self.server_daily_pnl['total_pnl'], 1)}," +
                                 f"Realised={round(self.server_daily_pnl['realised_pnl'], 1)}" +
@@ -272,9 +277,6 @@ class RiskEngine(BaseEngine):
         if not activeTrade:
             activeTrade = self.active_trades[symbol] = TradeBook(symbol)
 
-        #synchronise daily pnl with server
-        self.main_engine.query_daily_pnl()
-
         # update trade related numbers.
         activeTrade.update_trades(trade)
         self.update_pnl_risk()
@@ -297,8 +299,12 @@ class RiskEngine(BaseEngine):
         
         if self.pnl_check_timer >= self.pnl_check_period:
             self.pnl_check_timer = 0
+            self._need_syn_daily_pnl = True
+
             #synchronise daily pnl with server
-            self.main_engine.query_daily_pnl()
+            if not self._daily_syn_sent_to_server or self.server_daily_pnl["total_pnl"] == 0:
+                self._daily_syn_sent_to_server = True
+                self.main_engine.query_daily_pnl()
 
             self.update_pnl_risk()
             riskLevel = self.check_pnl_risk()
@@ -358,9 +364,10 @@ class RiskEngine(BaseEngine):
         
         total_pnl = self.server_daily_pnl["total_pnl"]
         realised_pnl = self.server_daily_pnl["realised_pnl"]
+        # print(f"{__name__}:{total_pnl=}, {realised_pnl=} , {self.realised_loss_limit=}, {self.total_loss_limit}")
 
-        if total_pnl < self.realised_loss_limit or total_pnl > self.realised_profit_limit:
-            riskLevel = RiskLevel.LevelNormal
+        if realised_pnl < self.total_loss_limit or realised_pnl > self.total_profit_limit:
+            riskLevel = RiskLevel.LevelCritical 
         
         elif (realised_pnl < self.realised_loss_limit or
             total_pnl < self.total_loss_limit or
@@ -369,8 +376,8 @@ class RiskEngine(BaseEngine):
             ):
             riskLevel = RiskLevel.LevelWarning
         
-        elif realised_pnl < self.total_loss_limit or realised_pnl > self.total_profit_limit:
-            riskLevel = RiskLevel.LevelCritical
+        elif total_pnl < self.realised_loss_limit or total_pnl > self.realised_profit_limit:
+            riskLevel = RiskLevel.LevelNormal
 
         return riskLevel
 
@@ -458,7 +465,10 @@ class RiskEngine(BaseEngine):
         so the number will be reloaded when the program restarted.
         so that the daily pnl will be kept
         """
-        return self.database.save_daily_pnl(datetime.now(),self.server_daily_pnl["total_pnl"], self.server_daily_pnl["realised_pnl"])
+        if self.database is not None:
+            return self.database.save_daily_pnl(datetime.now(),self.server_daily_pnl["total_pnl"], self.server_daily_pnl["realised_pnl"])
+        else:
+            return False
 
     def load_pnl(self) -> None:
         """

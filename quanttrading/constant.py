@@ -113,15 +113,21 @@ EVENT_DAILY_PNL = "eDaily_PnL"
 class SignalType(XEnum):
     """
     trading signal type.
+    :SIGNAL_SLOW_CLOSE when the order to close a position is not filled
+        on time
+    :SIGNAL_SLOW_OPEN when the order to open a position is not filled 
+        on time
+    :SIGNAL_STOP_LOSS when stop loss triggered.
     """
     SIGNAL_RSI = "signalRSI"
     SIGNAL_CCI = "signalCCI"
     SIGNAL_MA = "signalMA"
 
-    # when the order to open a position is not filled on time
     SIGNAL_SLOW_OPEN = "signal_SLOW_OPEN"
-    # when the order to close a position is not filled on time
+    
     SIGNAL_SLOW_CLOSE = "signal_SLOW_CLOSE"
+
+    SIGNAL_STOP_LOSS = "signal_STOP_LOSS"
 
 
 class RiskLevel(Enum):

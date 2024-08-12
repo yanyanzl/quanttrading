@@ -56,6 +56,10 @@ class Testable(ABC):
             lock: bool = False,
             net: bool = False
         )
+
+        :param _slippage: the slippage allowed for the limited order to
+        use.
+        :type _slippage: Float
         """
 
         # used by backtesting engine also.
@@ -78,6 +82,8 @@ class Testable(ABC):
         self.offset:Offset = Offset.NONE
         self.direction:Direction = None
         self.price = 0
+
+        self._slippage: float = 0.05
 
         # Copy a new variables list here to avoid duplicate insert when multiple
         # strategy instances are created with the same strategy class.

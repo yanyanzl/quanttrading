@@ -14,6 +14,16 @@
             "symbol": "AAPL",
             "exchange": "SMART",
             "gateway_name": "ibkrgateway"
+        },
+        "JPM": {
+            "symbol": "JPM",
+            "exchange": "SMART",
+            "gateway_name": "IB"
+        },
+        "COIN": {
+            "symbol": "COIN",
+            "exchange": "SMART",
+            "gateway_name": "IB"
         }
     },
     "bar": {
@@ -31,6 +41,16 @@
             "symbol": "AAPL",
             "exchange": "SMART",
             "gateway_name": "ibkrgateway"
+        },
+        "JPM": {
+            "symbol": "JPM",
+            "exchange": "SMART",
+            "gateway_name": "IB"
+        },
+        "COIN": {
+            "symbol": "COIN",
+            "exchange": "SMART",
+            "gateway_name": "IB"
         }
     }
 }
