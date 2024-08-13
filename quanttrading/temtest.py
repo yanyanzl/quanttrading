@@ -50,11 +50,12 @@ logger = logging.getLogger(__name__)
 
 from data.techanalysis import TechAnalysis, TickManager
 
-ta: TechAnalysis = TechAnalysis("AAPL")
+ta: TechAnalysis = TechAnalysis("TSLA")
 basicinfo:TickerData = ta.getBasicInfo()
-
-print(f"{basicinfo}")
-print(f"{ta.ATR_minite_summary()}")
+print(round(3.3))
+# print(f"{basicinfo}")
+# print(f"{ta.ATR_minite_summary()}")
+print(f"{ta.ATR_days()}")
 # print(f"{basicinfo.__getattribute__("symbol")=}")
 # print(f"{basicinfo.__getattribute__("xxx")=}")
 # print(f"{ta.ATR_minite_summary(days="1d")}")

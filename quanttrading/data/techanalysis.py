@@ -150,7 +150,10 @@ class TechAnalysis(object):
         for i in range(days):
 
             current_data = data.loc[last_date - timedelta(days=i, hours=23) : last_date - timedelta(days=i)]
-            print(f"{current_data}")
+            # print(f"current_data: {current_data}")
+            # skip those non-trading days.
+            if current_data.empty:
+                continue
             last_hour:pd.Timestamp = current_data.loc[current_data.last_valid_index()].name
             last_hour = last_hour.replace(hour=last_hour.hour+1, minute=0)
             for j in range(hours):
@@ -165,8 +168,39 @@ class TechAnalysis(object):
                 low = hour_data["Low"]
                 # print(f"{close=}")
                 ATR_summary.update({last_hour - timedelta(hours=1+j): ATR_by_datas(high, low, close, period)})
-            
-        print(f"{ATR_summary}")
+
+        # print(f"{ATR_summary}")
+        return ATR_summary
+    
+    def ATR_days(self, period:int=14, startDate:str = None) -> float:
+        """
+        Average True Range for days range. 
+
+        :Valid period (int), 2 to 90.
+        :start date string (YYYY-MM-DD), E.g. for start="2020-01-01", 
+            the first data point will be on "2020-01-01". default 
+            start from "period" days ago.
+        :return ATR for the previous period of time.
+        """
+        
+        data = self.ticker.history(period="3mo", start=startDate, interval="1d")
+        data.reset_index(inplace=True)
+
+        num = round(period*9/7)
+        data = data.loc[0:num]
+        # last_date:pd.Timestamp = data.loc[data.last_valid_index()].name.replace(hour=23)
+        ATR_summary:list = []
+
+        # hour_data = hour_data.loc[0:num]
+
+        close = data["Close"]
+        high = data["High"]
+        low = data["Low"]
+        ATR_summary = ATR_by_datas(high, low, close, period)
+        if ATR_summary is not None and len(ATR_summary) > 0:
+            return ATR_summary[0]
+        else:
+            return 0
 
 
 class TickManager(object):
