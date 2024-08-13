@@ -48,15 +48,16 @@ from data.base import TickerData, TICKER_DATA_KEYS
 from datatypes import Minutes_DAYS
 logger = logging.getLogger(__name__)
 
-from data.techanalysis import TechAnalysis
+from data.techanalysis import TechAnalysis, TickManager
 
 ta: TechAnalysis = TechAnalysis("AAPL")
 basicinfo:TickerData = ta.getBasicInfo()
-print(f"{basicinfo}")
-print(f"{basicinfo.__getattribute__("symbol")=}")
-print(f"{basicinfo.__getattribute__("xxx")=}")
-# print(f"{ta.ATR_minite_summary(days="1d")}")
 
+print(f"{basicinfo}")
+print(f"{ta.ATR_minite_summary()}")
+# print(f"{basicinfo.__getattribute__("symbol")=}")
+# print(f"{basicinfo.__getattribute__("xxx")=}")
+# print(f"{ta.ATR_minite_summary(days="1d")}")
 
 
 symbol = "TSLA"

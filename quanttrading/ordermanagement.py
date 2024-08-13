@@ -606,10 +606,8 @@ class OrderManagement(BaseManagement):
         # self.event_engine.register(EVENT_REALTIME_DATA, self.processHisDataUpdate)
         # self.event_engine.register(EVENT_TICK_LAST_DATA, self.process_tick_event)
         # self.event_engine.register(EVENT_TICK_BIDASK_DATA, self.process_tick_event)
-        self.event_engine.register(EVENT_PORTFOLIO, self.eventTest)
-        self.event_engine.register(EVENT_ORDER_STATUS, self.eventTest)
-        # self.event_engine.register(EVENT_ACCOUNT, self.eventTest)
-
+        # self.event_engine.register(EVENT_PORTFOLIO, self.eventTest)
+        # self.event_engine.register(EVENT_ORDER_STATUS, self.eventTest)
 
         # self.event_engine.register_general(self.eventTest)
 
