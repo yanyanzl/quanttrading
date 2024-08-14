@@ -26,7 +26,7 @@ from database import get_database
 from datatypes import Interval, TradingSignal, SignalType
 from typing import get_args
 from data.yfdatafeed import YfDatafeed
-from datatypes import HistoryRequest, TickManager, TickData, PlotData
+from datatypes import HistoryRequest, TickData, PlotData
 import numpy as np
 from utility import dateToLocal, LOCAL_TZ
 from vnpy_algotrading.algos.hft_direction_algo import TradingStatus
@@ -50,20 +50,20 @@ logger = logging.getLogger(__name__)
 
 from data.techanalysis import TechAnalysis, TickManager
 
-ta: TechAnalysis = TechAnalysis("TSLA")
-basicinfo:TickerData = ta.getBasicInfo()
-print(round(3.3))
-# print(f"{basicinfo}")
-# print(f"{ta.ATR_minite_summary()}")
-print(f"{ta.ATR_days()}")
-# print(f"{basicinfo.__getattribute__("symbol")=}")
-# print(f"{basicinfo.__getattribute__("xxx")=}")
-# print(f"{ta.ATR_minite_summary(days="1d")}")
+# ta: TechAnalysis = TechAnalysis("TSLA")
+# basicinfo:TickerData = ta.getBasicInfo()
+# print(round(3.3))
+# # print(f"{basicinfo}")
+# # print(f"{ta.ATR_minite_summary()}")
+# print(f"{ta.ATR_days()}")
+# # print(f"{basicinfo.__getattribute__("symbol")=}")
+# # print(f"{basicinfo.__getattribute__("xxx")=}")
+# # print(f"{ta.ATR_minite_summary(days="1d")}")
 
 
-symbol = "TSLA"
-ticker = TickerData({"symbol":symbol})
-tsla = yf.Ticker(symbol)
+# symbol = "TSLA"
+# ticker = TickerData({"symbol":symbol})
+# tsla = yf.Ticker(symbol)
 
 def getBasicInfo():
     basic_info:dict = tsla.basic_info
@@ -319,32 +319,57 @@ def readCSV():
 #         print(f" {signal["symbol"] == "TSLA"},  {signal["type"] in USED_SIGNAL_TYPES} , {USED_SIGNAL_TYPES=}")
 
 # print(f"{Direction.values()[0] == Direction.LONG.value}")
+import tracemalloc, os
+from profiletools import displayTopMemory, cProfile, displayTopProfile
 
 def tickManage():
-    tickmanager = TickManager(100)
+    from database import get_database
+    db = get_database()
+    # print(f"db is {db}")
+    tickmanager = TickManager(3600)
 
-    a = np.random.random(200) + 50
-    # a = np.arange(50,60,0.05)
-    for num in a:
-        # print(f"num={num}")
-        tick = TickData("", "tsla", Exchange.SMART, datetime.now(LOCAL_TZ), last_price=num)
-        tickmanager.on_tick(tick)
+    today = datetime.now(LOCAL_TZ)
+    today = today.replace(hour=15)
+    tickDatas:list = db.load_tick_data_lastDays("AAPL",Exchange.SMART, today)
+    # print(f"i is {i} days.")
+    if len(tickDatas) > 0:
+        print(f"tickDatas is {len(tickDatas)=}")
 
-    rsi_result = tickmanager.rsi(10)
+        for tick in tickDatas:
+            tickmanager.on_tick(tick)
+        # a = np.random.random(1000) + 50
+        # # a = np.arange(50,60,0.05)
+        # for num in a:
+        #     # print(f"num={num}")
+        #     tick = TickData("", "tsla", Exchange.SMART, datetime.now(LOCAL_TZ), last_price=num)
+        #     tickmanager.on_tick(tick)
 
-    realrange20 = tickmanager.realRange(100, 1)
-    realrange10 = tickmanager.realRange(150, 1)
-    # atr_1 = tickmanager.atr(14, 100)
-    # atr_1 = tickmanager.atr(14, 100)
-    atr_1 = tickmanager.atr(14, 50)
+        rsi_result = tickmanager.rsi(10)
+        atr = tickmanager.ATR_tick(14,200)
 
-    print(f"rsi = {rsi_result} and {np.isnan(rsi_result)}")
+        # realrange20 = tickmanager.realRange(100, 1)
+        # realrange10 = tickmanager.realRange(150, 1)
 
-    print(f"{realrange10=} and {realrange20=}")
-    print(f"{atr_1=}")
+        # print(f"rsi = {rsi_result} and {np.isnan(rsi_result)}")
+
+        # print(f"{realrange10=} and {realrange20=}")
+        print(f"{atr=}")
     
+# =================Testing block for optimization======================
+with cProfile.Profile() as pr:
+    tracemalloc.start()
+# =================Testing block for optimization======================
+    tickManage()
+    # ================Testing block for optimization=======================
+    fp = os.path.dirname(os.path.abspath(__file__)) + "/log/restats"
+    pr.dump_stats(fp)
+    snapshot: tracemalloc.Snapshot = tracemalloc.take_snapshot()
+    displayTopMemory(snapshot,limit=10)
+    
+    displayTopProfile(fp)
+    tracemalloc.stop()
+    # =================Testing block for optimization======================
 
-# tickManage()
 
 # print(f"{a=}")
 # dt = datetime.now(LOCAL_TZ).second

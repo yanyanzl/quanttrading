@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 import logging
 
@@ -366,7 +366,10 @@ class SqliteDatabase(BaseDatabase):
         start: datetime,
         end: datetime
     ) -> List[TickData]:
-        """读取TICK数据"""
+        """
+        get TICK data based on start and end time.
+        tick data is one per second. has OHLCV, time, symbol
+        """
         s: ModelSelect = (
             DbTickData.select().where(
                 (DbTickData.symbol == symbol)
@@ -418,6 +421,76 @@ class SqliteDatabase(BaseDatabase):
                 gateway_name="DB"
             )
             ticks.append(tick)
+
+        return ticks
+
+    def load_tick_data_lastDays(
+        self,
+        symbol: str,
+        exchange: Exchange,
+        dateHour:datetime = datetime.now(DB_TZ)
+    ) -> List[TickData]:
+        """
+        get tick data for the latest available x days.
+        tick data is one per second. has OHLCV, time, symbol
+        """
+        for i in range(1000):
+            # current_date = datetime.now(DB_TZ) - timedelta(i)
+            # current_date = current_date.replace(hour=23)
+
+            s: ModelSelect = (
+                DbTickData.select().where(
+                    (DbTickData.symbol == symbol)
+                    & (DbTickData.exchange == exchange.value)
+                    & (DbTickData.datetime.hour == dateHour.hour)
+                ).order_by(DbTickData.datetime.desc()).limit(10)
+            )
+            if s:
+                break
+
+        ticks: List[TickData] = []
+        for db_tick in s:
+            tick: TickData = TickData(
+                symbol=db_tick.symbol,
+                exchange=Exchange(db_tick.exchange),
+                datetime=datetime.fromtimestamp(db_tick.datetime.timestamp(), DB_TZ),
+                name=db_tick.name,
+                volume=db_tick.volume,
+                turnover=db_tick.turnover,
+                open_interest=db_tick.open_interest,
+                last_price=db_tick.last_price,
+                last_volume=db_tick.last_volume,
+                limit_up=db_tick.limit_up,
+                limit_down=db_tick.limit_down,
+                open_price=db_tick.open_price,
+                high_price=db_tick.high_price,
+                low_price=db_tick.low_price,
+                pre_close=db_tick.pre_close,
+                bid_price_1=db_tick.bid_price_1,
+                bid_price_2=db_tick.bid_price_2,
+                bid_price_3=db_tick.bid_price_3,
+                bid_price_4=db_tick.bid_price_4,
+                bid_price_5=db_tick.bid_price_5,
+                ask_price_1=db_tick.ask_price_1,
+                ask_price_2=db_tick.ask_price_2,
+                ask_price_3=db_tick.ask_price_3,
+                ask_price_4=db_tick.ask_price_4,
+                ask_price_5=db_tick.ask_price_5,
+                bid_volume_1=db_tick.bid_volume_1,
+                bid_volume_2=db_tick.bid_volume_2,
+                bid_volume_3=db_tick.bid_volume_3,
+                bid_volume_4=db_tick.bid_volume_4,
+                bid_volume_5=db_tick.bid_volume_5,
+                ask_volume_1=db_tick.ask_volume_1,
+                ask_volume_2=db_tick.ask_volume_2,
+                ask_volume_3=db_tick.ask_volume_3,
+                ask_volume_4=db_tick.ask_volume_4,
+                ask_volume_5=db_tick.ask_volume_5,
+                localtime=db_tick.localtime,
+                gateway_name="DB"
+            )
+            ticks.append(tick)
+            print(tick.datetime)
 
         return ticks
 

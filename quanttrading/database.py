@@ -95,6 +95,15 @@ class BaseDatabase(ABC):
         """
         pass
 
+    def load_tick_data_lastDays(
+        self,
+        symbol: str,
+        exchange: Exchange,
+        days:int = 1
+    ) -> List[TickData]:
+        """get tick data for the latest available x days."""
+        pass
+    
     @abstractmethod
     def delete_bar_data(
         self,
