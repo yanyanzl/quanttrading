@@ -424,30 +424,39 @@ class SqliteDatabase(BaseDatabase):
 
         return ticks
 
-    def load_tick_data_lastDays(
+    def load_tick_data_byHours(
         self,
         symbol: str,
         exchange: Exchange,
-        dateHour:datetime = datetime.now(DB_TZ)
+        dateHour:datetime = datetime.now(DB_TZ),
+        tick_nums:int = 3600
     ) -> List[TickData]:
         """
         get tick data for the latest available x days.
         tick data is one per second. has OHLCV, time, symbol
+        :dateHour : the hour which we would like to get ticks from
+        :tick_nums: number of tickdata need to be returned.
+        # return only one hour's data --> default 3600 ticks
         """
-        for i in range(1000):
-            # current_date = datetime.now(DB_TZ) - timedelta(i)
-            # current_date = current_date.replace(hour=23)
+        # print(f"{dateHour.hour=}")
+        # for i in range(1000):
+        #     # current_date = datetime.now(DB_TZ) - timedelta(i)
+        #     # current_date = current_date.replace(hour=23)
 
-            s: ModelSelect = (
-                DbTickData.select().where(
-                    (DbTickData.symbol == symbol)
-                    & (DbTickData.exchange == exchange.value)
-                    & (DbTickData.datetime.hour == dateHour.hour)
-                ).order_by(DbTickData.datetime.desc()).limit(10)
-            )
-            if s:
-                break
-
+        # return only one hour data --> 3600
+        print(f"load_tick_data_byHours... dateHour: {dateHour}")
+        if not (tick_nums and 0 < tick_nums <=3600):
+            print("load_tick_data_byHours...1")
+            tick_nums = 3600
+        print(f"load_tick_data_byHours... 2 tick_nums {tick_nums}")
+        s: ModelSelect = (
+            DbTickData.select().where(
+                (DbTickData.symbol == symbol)
+                & (DbTickData.exchange == exchange.value)
+                & (DbTickData.datetime.hour == dateHour.hour)
+            ).order_by(DbTickData.datetime.desc()).limit(tick_nums)
+        )
+        print(f"load_tick_data_byHours... 3 ")
         ticks: List[TickData] = []
         for db_tick in s:
             tick: TickData = TickData(
@@ -456,42 +465,43 @@ class SqliteDatabase(BaseDatabase):
                 datetime=datetime.fromtimestamp(db_tick.datetime.timestamp(), DB_TZ),
                 name=db_tick.name,
                 volume=db_tick.volume,
-                turnover=db_tick.turnover,
-                open_interest=db_tick.open_interest,
+                # turnover=db_tick.turnover,
+                # open_interest=db_tick.open_interest,
                 last_price=db_tick.last_price,
-                last_volume=db_tick.last_volume,
-                limit_up=db_tick.limit_up,
-                limit_down=db_tick.limit_down,
+                # last_volume=db_tick.last_volume,
+                # limit_up=db_tick.limit_up,
+                # limit_down=db_tick.limit_down,
                 open_price=db_tick.open_price,
                 high_price=db_tick.high_price,
                 low_price=db_tick.low_price,
                 pre_close=db_tick.pre_close,
-                bid_price_1=db_tick.bid_price_1,
-                bid_price_2=db_tick.bid_price_2,
-                bid_price_3=db_tick.bid_price_3,
-                bid_price_4=db_tick.bid_price_4,
-                bid_price_5=db_tick.bid_price_5,
-                ask_price_1=db_tick.ask_price_1,
-                ask_price_2=db_tick.ask_price_2,
-                ask_price_3=db_tick.ask_price_3,
-                ask_price_4=db_tick.ask_price_4,
-                ask_price_5=db_tick.ask_price_5,
-                bid_volume_1=db_tick.bid_volume_1,
-                bid_volume_2=db_tick.bid_volume_2,
-                bid_volume_3=db_tick.bid_volume_3,
-                bid_volume_4=db_tick.bid_volume_4,
-                bid_volume_5=db_tick.bid_volume_5,
-                ask_volume_1=db_tick.ask_volume_1,
-                ask_volume_2=db_tick.ask_volume_2,
-                ask_volume_3=db_tick.ask_volume_3,
-                ask_volume_4=db_tick.ask_volume_4,
-                ask_volume_5=db_tick.ask_volume_5,
-                localtime=db_tick.localtime,
+                # bid_price_1=db_tick.bid_price_1,
+                # bid_price_2=db_tick.bid_price_2,
+                # bid_price_3=db_tick.bid_price_3,
+                # bid_price_4=db_tick.bid_price_4,
+                # bid_price_5=db_tick.bid_price_5,
+                # ask_price_1=db_tick.ask_price_1,
+                # ask_price_2=db_tick.ask_price_2,
+                # ask_price_3=db_tick.ask_price_3,
+                # ask_price_4=db_tick.ask_price_4,
+                # ask_price_5=db_tick.ask_price_5,
+                # bid_volume_1=db_tick.bid_volume_1,
+                # bid_volume_2=db_tick.bid_volume_2,
+                # bid_volume_3=db_tick.bid_volume_3,
+                # bid_volume_4=db_tick.bid_volume_4,
+                # bid_volume_5=db_tick.bid_volume_5,
+                # ask_volume_1=db_tick.ask_volume_1,
+                # ask_volume_2=db_tick.ask_volume_2,
+                # ask_volume_3=db_tick.ask_volume_3,
+                # ask_volume_4=db_tick.ask_volume_4,
+                # ask_volume_5=db_tick.ask_volume_5,
+                # localtime=db_tick.localtime,
                 gateway_name="DB"
             )
             ticks.append(tick)
-            print(tick.datetime)
-
+            # print(tick.datetime)
+        
+        print(len(ticks))
         return ticks
 
     def delete_bar_data(

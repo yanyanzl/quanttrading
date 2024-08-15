@@ -321,18 +321,25 @@ def readCSV():
 # print(f"{Direction.values()[0] == Direction.LONG.value}")
 import tracemalloc, os
 from profiletools import displayTopMemory, cProfile, displayTopProfile
+from data.db.postgres_db import PostgreDatabase
 
 def tickManage():
-    from database import get_database
-    db = get_database()
+    # from database import get_database
+    # db = get_database()
     # print(f"db is {db}")
-    tickmanager = TickManager(3600)
-
-    today = datetime.now(LOCAL_TZ)
-    today = today.replace(hour=15)
-    tickDatas:list = db.load_tick_data_lastDays("AAPL",Exchange.SMART, today)
-    # print(f"i is {i} days.")
-    if len(tickDatas) > 0:
+    # tickmanager = TickManager(3600)
+    # atr_summary = tickmanager.ATR_tick_summary_from_db("NVDA", 14, 5)
+    postgre = PostgreDatabase()
+    print(f"{postgre.db}")
+    # today = datetime.now(LOCAL_TZ)
+    # today = today.replace(hour=15)
+    # tickDatas:list = db.load_tick_data_byHours("NVDA",Exchange.SMART, today, 5)
+    
+    # print(f" {atr_summary=} .")
+    # ticks_num = len(tickDatas)
+    """ 
+    if ticks_num > 0:
+        
         print(f"tickDatas is {len(tickDatas)=}")
 
         for tick in tickDatas:
@@ -345,7 +352,7 @@ def tickManage():
         #     tickmanager.on_tick(tick)
 
         rsi_result = tickmanager.rsi(10)
-        atr = tickmanager.ATR_tick(14,200)
+        atr = tickmanager.ATR_tick(14,5)
 
         # realrange20 = tickmanager.realRange(100, 1)
         # realrange10 = tickmanager.realRange(150, 1)
@@ -354,7 +361,7 @@ def tickManage():
 
         # print(f"{realrange10=} and {realrange20=}")
         print(f"{atr=}")
-    
+    """
 # =================Testing block for optimization======================
 with cProfile.Profile() as pr:
     tracemalloc.start()
@@ -371,9 +378,6 @@ with cProfile.Profile() as pr:
     # =================Testing block for optimization======================
 
 
-# print(f"{a=}")
-# dt = datetime.now(LOCAL_TZ).second
-# print(f"{dt=} ")
 
 def yfTest():
     df = YfDatafeed()

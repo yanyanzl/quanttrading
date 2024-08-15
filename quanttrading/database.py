@@ -95,13 +95,20 @@ class BaseDatabase(ABC):
         """
         pass
 
-    def load_tick_data_lastDays(
+    def load_tick_data_byHours(
         self,
         symbol: str,
         exchange: Exchange,
-        days:int = 1
+        dateHour:datetime = datetime.now(DB_TZ),
+        tick_nums:int = 3600
     ) -> List[TickData]:
-        """get tick data for the latest available x days."""
+        """
+        get tick data for the latest available x days.
+        tick data is one per second. has OHLCV, time, symbol
+        :dateHour : the hour which we would like to get ticks from
+        :tick_nums: number of tickdata need to be returned.
+        # return only one hour's data --> default 3600 ticks
+        """
         pass
     
     @abstractmethod

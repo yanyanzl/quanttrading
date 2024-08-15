@@ -11,7 +11,10 @@ import requests_cache
 from typing import get_args
 
 from .base import TickerData, TICKER_DATA_KEYS
+from database import BaseDatabase, get_database
 from datatypes import Minutes_DAYS, TickData
+from utility import LOCAL_TZ
+from constant import Exchange
 
 # __all__ = ["TechAnalysis, TickManager, "]
 
@@ -117,6 +120,10 @@ class TechAnalysis(object):
             logger.info(f"invalid symbol.{self._symbol} can't get info")
             self.isValid = False
             return None
+    
+    @staticmethod
+    def isSymbolValid(symbol:str) -> bool:
+        return True
     
     def setSymbol(self, symbol:str) -> bool:
         """
@@ -238,6 +245,20 @@ class TickManager(object):
 
         self.atr_hisdata:list = []
         self.atr_inited:bool = False
+        self._db:BaseDatabase = None
+        self._symbol:str = ""
+
+    def setSymbol(self, symbol:str) -> bool:
+        """
+        change the symbol of the TechAnalysis
+        return True if the symbol exist and setted.
+        otherwise return False
+        """
+        if symbol:
+            self._symbol = symbol
+        else:
+            logger.info(f"invalid symbol.{symbol}")
+            return False
 
     def on_tick(self, tick: TickData) -> None:
         """
@@ -327,7 +348,6 @@ class TickManager(object):
                         f"changed it to {max_ticks}")
             ticks_num = max_ticks
             
-        
         close:list = []
         high:list = []
         low:list = []
@@ -354,6 +374,57 @@ class TickManager(object):
         if len(close) >= period:
             result = ATR_by_datas(pd.Series(high), pd.Series(low), pd.Series(close), period)
         
+        return result
+    
+    def ATR_tick_summary_from_db(self, symbol:str = None, period:int = 14, ATR_num:int=1) -> dict[datetime,list[float]]:
+        """
+        calculate the ATR by tick datas from local database. the tick
+        data should be saved previously.
+        average True range. tick wise. around 20 ticks/second
+
+        :period number of OHLC to get and average for the ATR
+        :ATR_num number of ATRs for each hour.
+
+        return ATRs by hours
+        """
+        if not self._db:
+            self._db = get_database()
+        print(f"db is {self._db}")
+
+        if not symbol and not self._symbol:
+            logger.info(f"invalid request. no symbol:{symbol}, {self._symbol=}")
+            return
+        
+        if not symbol:
+            symbol = self._symbol
+        print(f"{symbol=}")
+
+        result:dict[datetime, list[float]] = {}
+        for i in range(24):
+            today = datetime.now(LOCAL_TZ).replace(hour=i)
+            print(f"hour {i}, period: {period}, ATR_num: {ATR_num}")
+            tickDatas:list[TickData] = self._db.load_tick_data_byHours(symbol, Exchange.SMART, today, period + ATR_num)
+
+            ticks_available = len(tickDatas)
+            print(f"ticks_available: {ticks_available}")
+            if ticks_available > period:
+                close:list = []
+                high:list = []
+                low:list = []
+                count = min(ticks_available, period+ATR_num)
+                for j in range(count):
+                    tickData =  tickDatas[j]
+                    close.append(tickData.pre_close)
+                    high.append(tickData.high_price)
+                    low.append(tickData.low_price)
+                print(f"period {period}, Atr_num{ATR_num}, count{count}")
+                print(f"close {close}")
+                print(f"close {high}")
+                if len(close) >= period:
+                    atr = ATR_by_datas(pd.Series(high), pd.Series(low), pd.Series(close), period)
+                    result.update({tickDatas[0].datetime:atr})
+        
+        print(f"result is {result}")
         return result
 
 

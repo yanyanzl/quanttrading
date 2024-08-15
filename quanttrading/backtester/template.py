@@ -1,13 +1,16 @@
 from abc import ABC, abstractmethod
 from copy import copy
 from typing import Any, Callable, List
+import logging
 
 # from constant import Interval, Direction, Offset
 from datatypes import BarData, TickData, OrderData, TradeData, Offset, Direction
 from utility import virtual
+from datetime import datetime
 
 from .base import StopOrder, EngineType
 
+logger = logging.getLogger(__name__)
 
 class Testable(ABC):
     """ 
@@ -83,8 +86,13 @@ class Testable(ABC):
         self.direction:Direction = None
         self.price = 0
 
-        self._slippage: float = 0.05
-
+        # slippage for different hour of the day.
+        # example: 9am is 0.06 UK time, 
+        # 
+        self._slippage:dict[int,float] = {
+            0:0, 8:0.05, 9:0.06, 10:0.03, 11:0.01, 12:0.01, 13:0.05,
+              14:0.06, 15:0.03, 16:0.01, 17:0.01, 18:0.01, 19:0.02, 20:0.05
+              }
         # Copy a new variables list here to avoid duplicate insert when multiple
         # strategy instances are created with the same strategy class.
         self.variables = copy(self.variables)
@@ -242,7 +250,28 @@ class Testable(ABC):
         Callback when signal generated. It needs to be implemented
         in backtestengine for nessissary signals.
         """
-        pass    
+        pass
+
+    def _get_slippage(self) -> float:
+        """
+        get the current slippage for trading.
+        based on the current hour of day.
+        """
+        hour:int = datetime.now().hour
+        return self._slippage.get(hour, 0.0)
+    
+    def _set_slippage(self, hour:int, slippage:float) -> bool:
+        """
+        change the value for specific hour
+        return True if change successfully.
+        otherwise False
+        """
+        if hour and isinstance(hour, int) and 0 <= hour <=23:
+            if slippage and isinstance(slippage,(float, int)):
+                self._slippage.update({hour:slippage})
+                return True
+        logger.info(f"invalid params hour:{hour}, slippage:{slippage}")
+        return False
 
 class BackTestExampleStrategy(Testable):
     """"""
