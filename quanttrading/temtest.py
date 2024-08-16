@@ -65,6 +65,11 @@ from data.techanalysis import TechAnalysis, TickManager
 # ticker = TickerData({"symbol":symbol})
 # tsla = yf.Ticker(symbol)
 
+# from ibapi.ticktype import TickTypeEnum
+
+# print(f"{TickTypeEnum.idx2name}")
+# print(f"{TickTypeEnum.LAST_TIMESTAMP=}")
+
 def getBasicInfo():
     basic_info:dict = tsla.basic_info
     for info in basic_info.keys():
@@ -322,19 +327,41 @@ def readCSV():
 import tracemalloc, os
 from profiletools import displayTopMemory, cProfile, displayTopProfile
 from data.db.postgres_db import PostgreDatabase
+from vnpy_sqlite.sqlite_database import SqliteDatabase
+
+def migrateData():
+    from constant import Interval
+    postgre = PostgreDatabase()
+    sqlite = SqliteDatabase()
+
+    # print(f"{postgre.db} and {sqlite.db}")
+    # bars = sqlite.load_bar_data("TSLA", Exchange.SMART, Interval.MINUTE, datetime.now(LOCAL_TZ) - timedelta(50), datetime.now(LOCAL_TZ))
+    # bars = sqlite.load_all_tick_data("TSLA", Exchange.SMART, datetime.now(LOCAL_TZ) - timedelta(50), datetime.now(LOCAL_TZ))
+    for symbol in ["TSLA", "NVDA", "AAPL", "JPM", "COIN"]:
+        bars = sqlite.load_all_tick_data(symbol, Exchange.SMART)
+        print(f"length of bars: {len(bars)}")
+        postgre.save_tick_data(bars)
+
 
 def tickManage():
-    # from database import get_database
-    # db = get_database()
-    # print(f"db is {db}")
-    # tickmanager = TickManager(3600)
+    from database import get_database
+    db = get_database()
+    print(f"db is {db}")
+    tickmanager = TickManager(3600)
+    dt = datetime.now(LOCAL_TZ)
+    print(dt)
+    dt = datetime.now()
+    print(dt)
+    print(dt.microsecond)
     # atr_summary = tickmanager.ATR_tick_summary_from_db("NVDA", 14, 5)
-    postgre = PostgreDatabase()
-    print(f"{postgre.db}")
+
     # today = datetime.now(LOCAL_TZ)
     # today = today.replace(hour=15)
-    # tickDatas:list = db.load_tick_data_byHours("NVDA",Exchange.SMART, today, 5)
-    
+    tickDatas:list[TickData] = db.load_tick_data_byHours("NVDA",Exchange.SMART)
+    if tickDatas:
+        for tick in tickDatas:
+            # print(f"{tick.datetime}")
+            pass
     # print(f" {atr_summary=} .")
     # ticks_num = len(tickDatas)
     """ 
@@ -362,20 +389,21 @@ def tickManage():
         # print(f"{realrange10=} and {realrange20=}")
         print(f"{atr=}")
     """
-# =================Testing block for optimization======================
-with cProfile.Profile() as pr:
-    tracemalloc.start()
-# =================Testing block for optimization======================
-    tickManage()
-    # ================Testing block for optimization=======================
-    fp = os.path.dirname(os.path.abspath(__file__)) + "/log/restats"
-    pr.dump_stats(fp)
-    snapshot: tracemalloc.Snapshot = tracemalloc.take_snapshot()
-    displayTopMemory(snapshot,limit=10)
+# # =================Testing block for optimization======================
+# with cProfile.Profile() as pr:
+#     tracemalloc.start()
+# # =================Testing block for optimization======================
+#     # tickManage()
+#     # migrateData()
+#     # ================Testing block for optimization=======================
+#     fp = os.path.dirname(os.path.abspath(__file__)) + "/log/restats"
+#     pr.dump_stats(fp)
+#     snapshot: tracemalloc.Snapshot = tracemalloc.take_snapshot()
+#     displayTopMemory(snapshot,limit=10)
     
-    displayTopProfile(fp)
-    tracemalloc.stop()
-    # =================Testing block for optimization======================
+#     displayTopProfile(fp)
+#     tracemalloc.stop()
+#     # =================Testing block for optimization======================
 
 
 

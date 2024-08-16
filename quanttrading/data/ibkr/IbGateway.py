@@ -410,8 +410,24 @@ class IbApi(EWrapper):
             for req in reqs:
                 self.subscribe(req)
 
+    """
+    Real time data is accessed in the API using a subscribe-and-publish
+      model that is also used with other functionality such as retrieving
+        position or account values. After a streaming market data 
+        subscription request for a particular contract in IB's database
+          is made, a continuous stream of market data is returned by TWS 
+          and separated to different functions in EWrapper depending on 
+          the data type (integer vs decimal vs string). Since the 
+          subscribe-and-publish model is inherently asynchronous, 
+          the returned data is linked to the initial request using a 
+          numerical label specified in the request called the request ID
+    """
     def tickPrice(self, reqId: TickerId, tickType: TickType, price: float, attrib: TickAttrib) -> None:
-        """tick价格更新回报"""
+        """
+        tick price data, including last_price, bid_price, 
+        ask_price
+        only this part is price related. the others.
+        """
         # super().tickPrice(reqId, tickType, price, attrib)
 
         if tickType not in TICKFIELD_IB2VT:
@@ -424,6 +440,9 @@ class IbApi(EWrapper):
 
         name: str = TICKFIELD_IB2VT[tickType]
         setattr(tick, name, price)
+        # print(f"{name=}, {price=} {tick.datetime=}")
+        # add a time for the price received. check if needed.
+        tick.datetime = datetime.now(LOCAL_TZ)
 
         # 更新tick数据name字段
         contract: ContractData = self.contracts.get(tick.vt_symbol, None)
@@ -440,7 +459,9 @@ class IbApi(EWrapper):
         self.gateway.on_tick(copy(tick))
 
     def tickSize(self, reqId: TickerId, tickType: TickType, size: Decimal) -> None:
-        """tick数量更新回报"""
+        """
+        tick volume update, including last volume, bid volume, ask)
+        """
         # super().tickSize(reqId, tickType, size)
 
         if tickType not in TICKFIELD_IB2VT:
@@ -453,13 +474,21 @@ class IbApi(EWrapper):
 
         name: str = TICKFIELD_IB2VT[tickType]
         setattr(tick, name, float(size))
+        # print(f"{name=}: {tick.datetime=}")
 
         self.gateway.on_tick(copy(tick))
 
     def tickString(self, reqId: TickerId, tickType: TickType, value: str) -> None:
-        """tick字符串更新回报"""
+        """
+        tick string update:
+        32: 'BID_EXCH',   The exchange where the Bid Price is provided from.
+        33: 'ASK_EXCH'      The exchange where the Ask Price is provided from.
+        44: 'CLOSE_EFP_COMPUTATION'
+        45: 'LAST_TIMESTAMP'    Time of the last trade (in UNIX time).
+        84: 'LAST_EXCH'  The exchange where the Last Price is provided from.
+        """
         # super().tickString(reqId, tickType, value)
-
+        print(f"{TickTypeEnum(tickType)=}")
         if tickType != TickTypeEnum.LAST_TIMESTAMP:
             return
 

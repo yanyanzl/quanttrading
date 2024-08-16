@@ -51,7 +51,7 @@ UP_COLOR: g
 __version__: '1.0'
 database.database: database.db
 database.host: ''
-database.name: sqlite
+database.name: data.db
 database.password: ''
 database.port: 0
 database.timezone: Europe/London
@@ -65,6 +65,7 @@ email.receiver: ''
 email.sender: ''
 email.server: smtp.eagloo.co.uk
 email.username: ''
+exchange_fee: 0.5
 font.family: Arial
 font.size: 12
 log.active: true

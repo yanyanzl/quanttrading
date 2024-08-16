@@ -51,6 +51,7 @@ class Aiconfig():
             return Aiconfig.config[name]
         else:
             raise ValueError(f"Name invalid: {name}")
+            return None
 
     @staticmethod
     def set(name:str, args):
@@ -168,12 +169,14 @@ def initialize_settings_data():
             "datafeed.password": "",
             
             "database.timezone": get_localzone_name(),
-            "database.name": "sqlite",
+            "database.name": "data.db",
             "database.database": "database.db",
             "database.host": "",
             "database.port": 0,
             "database.user": "",
             "database.password": "",
+
+            "exchange_fee": 0.5,
 
             "__version__": "1.0",
             "palette": "dark",

@@ -389,7 +389,7 @@ class TickManager(object):
         """
         if not self._db:
             self._db = get_database()
-        print(f"db is {self._db}")
+        # print(f"db is {self._db}")
 
         if not symbol and not self._symbol:
             logger.info(f"invalid request. no symbol:{symbol}, {self._symbol=}")
@@ -397,16 +397,16 @@ class TickManager(object):
         
         if not symbol:
             symbol = self._symbol
-        print(f"{symbol=}")
+        # print(f"{symbol=}")
 
         result:dict[datetime, list[float]] = {}
         for i in range(24):
             today = datetime.now(LOCAL_TZ).replace(hour=i)
-            print(f"hour {i}, period: {period}, ATR_num: {ATR_num}")
+            # print(f"hour {i}, period: {period}, ATR_num: {ATR_num}")
             tickDatas:list[TickData] = self._db.load_tick_data_byHours(symbol, Exchange.SMART, today, period + ATR_num)
 
             ticks_available = len(tickDatas)
-            print(f"ticks_available: {ticks_available}")
+            # print(f"tickDatas: {tickDatas}")
             if ticks_available > period:
                 close:list = []
                 high:list = []
@@ -417,14 +417,16 @@ class TickManager(object):
                     close.append(tickData.pre_close)
                     high.append(tickData.high_price)
                     low.append(tickData.low_price)
-                print(f"period {period}, Atr_num{ATR_num}, count{count}")
-                print(f"close {close}")
-                print(f"close {high}")
+                    print(f"time is {tickData.datetime}")
+                # print(f"period {period}, Atr_num{ATR_num}, count{count}")
+                # print(f"close {close}")
+                # print(f"close {high}")
                 if len(close) >= period:
                     atr = ATR_by_datas(pd.Series(high), pd.Series(low), pd.Series(close), period)
-                    result.update({tickDatas[0].datetime:atr})
+                    if any(atr):
+                        result.update({tickDatas[0].datetime:atr})
         
-        print(f"result is {result}")
+        # print(f"result is {result}")
         return result
 
 

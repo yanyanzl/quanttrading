@@ -28,7 +28,7 @@ from database import (
 
 logger = logging.getLogger(__name__)
 
-db = PostgresqlDatabase("quant", user="steven", password="080802", host="192.168.1.127", port=5432)
+db = PostgresqlDatabase("quant", user="quant88", password="080802", host="192.168.1.127", port=5432)
 
 class BaseModel(Model):
     class Meta:
@@ -44,6 +44,23 @@ class DbDailyProfit(BaseModel):
     realised_pnl: float = FloatField()
     total_pnl: float = FloatField()
 
+class DbOneTickData(BaseModel):
+    """
+    only tick data.
+    for each tick have one record.
+    """
+
+    id: AutoField = AutoField()
+
+    symbol: str = CharField()
+    exchange: str = CharField()
+    datetime: datetime = DateTimeField()
+
+    name: str = CharField()
+    volume: float = FloatField()
+    turnover: float = FloatField()
+    open_interest: float = FloatField()
+    last_price: float = FloatField()
 
 class DbBarData(Model):
     """K线数据表映射对象"""
@@ -156,7 +173,7 @@ class DbTickOverview(Model):
 
 
 class PostgreDatabase(BaseDatabase):
-    """SQLite数据库接口"""
+    """ Postgresql database """
 
     def __init__(self) -> None:
         """"""
@@ -188,7 +205,7 @@ class PostgreDatabase(BaseDatabase):
         # 使用upsert操作将数据更新到数据库中
         with self.db.atomic():
             for c in chunked(data, 50):
-                DbBarData.insert_many(c).on_conflict_replace().execute()
+                DbBarData.insert_many(c).on_conflict_ignore().execute()
 
         # 更新K线汇总数据
         overview: DbBarOverview = DbBarOverview.get_or_none(
@@ -241,14 +258,15 @@ class PostgreDatabase(BaseDatabase):
             d["exchange"] = d["exchange"].value
             d.pop("gateway_name")
             d.pop("vt_symbol")
-            d.pop("extra")
+            if d.get("extra", None) is not None:
+                d.pop("extra")
             data.append(d)
 
         # 使用upsert操作将数据更新到数据库中
         with self.db.atomic():
             for c in chunked(data, 10):
                 # print(f"{c=} ")
-                DbTickData.insert_many(c).on_conflict_replace().execute()
+                query = DbTickData.insert_many(c).on_conflict_ignore().execute()
 
         # 更新Tick汇总数据
         overview: DbTickOverview = DbTickOverview.get_or_none(
@@ -437,17 +455,11 @@ class PostgreDatabase(BaseDatabase):
         :tick_nums: number of tickdata need to be returned.
         # return only one hour's data --> default 3600 ticks
         """
-        # print(f"{dateHour.hour=}")
-        # for i in range(1000):
-        #     # current_date = datetime.now(DB_TZ) - timedelta(i)
-        #     # current_date = current_date.replace(hour=23)
-
         # return only one hour data --> 3600
-        print(f"load_tick_data_byHours... dateHour: {dateHour}")
+        # print(f"load_tick_data_byHours... dateHour: {dateHour}")
         if not (tick_nums and 0 < tick_nums <=3600):
-            print("load_tick_data_byHours...1")
             tick_nums = 3600
-        print(f"load_tick_data_byHours... 2 tick_nums {tick_nums}")
+        
         s: ModelSelect = (
             DbTickData.select().where(
                 (DbTickData.symbol == symbol)
@@ -455,7 +467,7 @@ class PostgreDatabase(BaseDatabase):
                 & (DbTickData.datetime.hour == dateHour.hour)
             ).order_by(DbTickData.datetime.desc()).limit(tick_nums)
         )
-        print(f"load_tick_data_byHours... 3 ")
+        
         ticks: List[TickData] = []
         for db_tick in s:
             tick: TickData = TickData(
@@ -500,7 +512,7 @@ class PostgreDatabase(BaseDatabase):
             ticks.append(tick)
             # print(tick.datetime)
         
-        print(len(ticks))
+        # print(len(ticks))
         return ticks
 
     def delete_bar_data(

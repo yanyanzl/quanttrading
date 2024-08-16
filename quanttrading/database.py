@@ -161,13 +161,13 @@ def get_database() -> BaseDatabase:
 
     # Read database related global setting
     database_name: str = SETTINGS["database.name"]
-    module_name: str = f"vnpy_{database_name}"
+    module_name: str = f"{database_name}"
 
     # Try to import database module
     try:
         module: ModuleType = import_module(module_name)
     except ModuleNotFoundError:
-        print(_("找不到数据库驱动{}，使用默认的SQLite数据库").format(module_name))
+        print(_("can't find database {}，使用默认的SQLite数据库").format(module_name))
         module: ModuleType = import_module("vnpy_sqlite")
 
     # Create database object from module
