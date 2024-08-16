@@ -68,6 +68,11 @@ class BaseDatabase(ABC):
         """
         pass
 
+
+    def save_one_tick_data(self, ticks: List[TickData], stream: bool = False) -> bool:
+        """save one TICK data, only last price and last volume"""
+
+        pass
     @abstractmethod
     def load_bar_data(
         self,

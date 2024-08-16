@@ -49,7 +49,6 @@ class DbOneTickData(BaseModel):
     only tick data.
     for each tick have one record.
     """
-
     id: AutoField = AutoField()
 
     symbol: str = CharField()
@@ -57,10 +56,9 @@ class DbOneTickData(BaseModel):
     datetime: datetime = DateTimeField()
 
     name: str = CharField()
-    volume: float = FloatField()
-    turnover: float = FloatField()
-    open_interest: float = FloatField()
+    last_volume: float = FloatField()
     last_price: float = FloatField()
+
 
 class DbBarData(Model):
     """K线数据表映射对象"""
@@ -179,7 +177,7 @@ class PostgreDatabase(BaseDatabase):
         """"""
         self.db: PostgresqlDatabase = db
         self.db.connect()
-        self.db.create_tables([DbBarData, DbTickData, DbBarOverview, DbTickOverview, DbDailyProfit])
+        self.db.create_tables([DbBarData, DbTickData, DbBarOverview, DbTickOverview, DbDailyProfit, DbOneTickData])
 
     def save_bar_data(self, bars: List[BarData], stream: bool = False) -> bool:
         """保存K线数据"""
@@ -241,7 +239,7 @@ class PostgreDatabase(BaseDatabase):
         return True
 
     def save_tick_data(self, ticks: List[TickData], stream: bool = False) -> bool:
-        """保存TICK数据"""
+        """save TICK related data. ask, bid, volume, last etc"""
         # 读取主键参数
         tick: TickData = ticks[0]
         symbol: str = tick.symbol
@@ -295,6 +293,38 @@ class PostgreDatabase(BaseDatabase):
             overview.count = s.count()
 
         overview.save()
+
+        return True
+
+
+    def save_one_tick_data(self, ticks: List[TickData], stream: bool = False) -> bool:
+        """save one TICK data, only last price and last volume"""
+        if not ticks or len(ticks) < 1:
+            logger.info(f"invalid ticks data: {ticks}")
+            return False    
+
+        # convert the 
+        data: list = []
+        # print(f"====================={tick=}")
+
+        for tick in ticks:
+            tick.datetime = convert_tz(tick.datetime)
+
+            d: dict = {}
+            d["exchange"] = tick.exchange.value
+            d["symbol"] = tick.symbol
+            d["name"] = tick.name
+            d["datetime"] = tick.datetime
+            d["last_price"] = tick.last_price
+            d["last_volume"] = tick.last_volume
+
+            data.append(d)
+
+        # update data to the database.
+        with self.db.atomic():
+            for c in chunked(data, 10):
+                # print(f"{c=} ")
+                query = DbOneTickData.insert_many(c).on_conflict_ignore().execute()
 
         return True
 

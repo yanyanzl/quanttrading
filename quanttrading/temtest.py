@@ -69,6 +69,8 @@ from data.techanalysis import TechAnalysis, TickManager
 
 # print(f"{TickTypeEnum.idx2name}")
 # print(f"{TickTypeEnum.LAST_TIMESTAMP=}")
+from data.db.postgres_db import PostgreDatabase
+postgre = PostgreDatabase()
 
 def getBasicInfo():
     basic_info:dict = tsla.basic_info
