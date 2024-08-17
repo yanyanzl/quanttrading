@@ -49,6 +49,149 @@ from datatypes import Minutes_DAYS
 logger = logging.getLogger(__name__)
 
 from data.techanalysis import TechAnalysis, TickManager
+import talib
+from talib import abstract
+from talib import MA_Type
+
+
+def _true_range(high:float, low:float, pervious_close:float) -> float:
+    """
+    single period true range.
+    True Range =  max[(high -low), abs(high - previous close),
+      abs (low - previous close)
+    """
+    if high and low and pervious_close and high >= low:
+        return max((high-low), abs(high-pervious_close), abs(low-pervious_close))
+    return 0
+
+def ATR_by_datas(high:pd.Series, low:pd.Series, close:pd.Series, period:int=14) -> list[float]:
+    """
+    get the day/hour/minite/second level ATR by providing the highs, lows, closes and period.
+    return all available ATR series based on these data.
+    for lasest one, get the last data from the returned list.
+    """
+    if (high is not None and low is not None and close is not None
+         and high.size >= low.size >= close.size > period+1
+         ):
+
+        true_ranges:np.ndarray = np.zeros(period)
+        datacount = close.size
+        average_TRs:list = []
+
+        current_range:int = 0
+        last_average_TR:float = 0
+
+        for i in range(1, datacount):
+
+            true_range = _true_range(high[i], low[i],close[i-1])
+
+            if current_range >= period:
+                # start to calculate the Average True Range.
+                average_TR = (last_average_TR * (period - 1) + true_range) / period
+                average_TRs.append(average_TR)
+                last_average_TR = average_TR
+                # print(f"round start {i}: {average_TR=} with true{true_range} high:{high[i]} low:{low[i]}, close: {close[i-1]}")
+
+            else:
+                true_ranges[current_range] = true_range
+                current_range += 1
+                if current_range == period:
+                    last_average_TR = true_ranges.sum()/period
+                    # print(f"{last_average_TR=}")
+        return average_TRs
+    else:
+        logger.info(f"invalid input for ATR_minite: high {high}, low: {low}, close:{close}")
+        return []
+    
+def talibTest():
+    """
+    Each function returns an output array and have default values for 
+    their parameters, unless specified as keyword arguments. Typically,
+      these functions will have an initial "lookback" period (a 
+      required number of observations before an output is generated) 
+      set to NaN.
+
+    For more advanced use cases of TA-Lib, the Abstract API also offers
+      much more flexibility. You can even subclass abstract.Function 
+      and override set_input_arrays to customize the type of input data
+        Function accepts (e.g. a pandas DataFrame).
+    
+    Inputs:
+    price: (any ndarray)
+    """
+    # Functions can either be imported directly or instantiated by name:
+    inputs = {
+    'open': np.random.random(100),
+    'high': np.random.random(100),
+    'low': np.random.random(100),
+    'close': np.random.random(100),
+    'volume': np.random.random(100)
+    }
+
+    sma = abstract.SMA
+    sma = abstract.Function('sma')
+
+    from talib.abstract import STOCH, CDLENGULFING
+    slowk, slowd = STOCH(inputs, 5, 3, 0, 3, 0, prices=['high', 'low', 'open'])
+
+    close = np.random.random(100)
+    output = talib.SMA(close)
+
+    # Calculating bollinger bands, with triple exponential moving average:
+    upper, middle, lower = talib.BBANDS(close, matype=MA_Type.T3)
+
+    # Calculating momentum of the close prices, with a time period of 5:
+    output = talib.MOM(close, timeperiod=5)
+
+    print(f"sma is : {output}")
+    # Details about every function can be accessed via the info property:
+    print(f"{abstract.Function('stoch').info}")
+    # Or in human-readable format:
+    # help(STOCH)
+    print(f"{str(sma)}")
+    print(f"{str(STOCH)}")
+    print(f"{str(CDLENGULFING)}")
+    # print(f"{CDLENGULFING(inputs)}")
+    t0 = time.time()
+    atr = talib.ATR(inputs["high"], inputs["low"], inputs['close'])
+    t1 = time.time()
+
+    atr1 = ATR_by_datas(inputs["high"], inputs["low"], inputs['close'])
+    t2 = time.time()
+
+    print(f"atr is {atr}")
+    print(f"atr1 is {atr1}")
+    print('%.6f' % (t1 - t0))
+    print('%.6f' % (t2 - t1))
+
+def talibTest1():
+    inputs = {
+    'open': np.random.random(300),
+    'high': np.random.random(300),
+    'low': np.random.random(300),
+    'close': np.random.random(300),
+    'volume': np.random.random(300)
+    }
+
+    sma = abstract.SMA
+    print(sma)
+    print(sma.info)
+    print(sma.input_names)
+    print(sma.parameters)
+    print(sma.output_names)
+    # Create technical indicator: SMA (using: timeperiod=200, price='open')
+    sma200 = sma(inputs, timeperiod=200, price='open')
+    print(MA_Type.__dict__)
+
+talibTest1()
+# help(min)
+
+# ta_dict = dir(talib)
+# print(f"{ta_dict}")
+# k, d = talib.STOCHRSI(close)
+# print(f"{k=} and {d=}")
+
+
 
 # ta: TechAnalysis = TechAnalysis("TSLA")
 # basicinfo:TickerData = ta.getBasicInfo()
@@ -69,8 +212,8 @@ from data.techanalysis import TechAnalysis, TickManager
 
 # print(f"{TickTypeEnum.idx2name}")
 # print(f"{TickTypeEnum.LAST_TIMESTAMP=}")
-from data.db.postgres_db import PostgreDatabase
-postgre = PostgreDatabase()
+# from data.db.postgres_db import PostgreDatabase
+# postgre = PostgreDatabase()
 
 def getBasicInfo():
     basic_info:dict = tsla.basic_info
@@ -80,15 +223,7 @@ def getBasicInfo():
         if info in TICKER_DATA_KEYS:
             ticker[info] = basic_info[info]
 
-def _true_range(high:float, low:float, pervious_close:float) -> float:
-    """
-    single period true range.
-    True Range =  max[(high -low), abs(high - previous close),
-      abs (low - previous close)
-    """
-    if high and low and pervious_close and high >= low:
-        return max((high-low), abs(high-pervious_close), abs(low-pervious_close))
-    return 0
+
 
 
 def ATR_minite_summary(period:int=14, days:Minutes_DAYS = "5d", hours:int = 7, count:int = 6) -> dict[datetime, list]:
@@ -132,44 +267,7 @@ def ATR_minite_summary(period:int=14, days:Minutes_DAYS = "5d", hours:int = 7, c
     print(f"{ATR_summary}")
 
 
-def ATR_by_datas(high:pd.Series, low:pd.Series, close:pd.Series, period:int=14) -> list[float]:
-    """
-    get the day/hour/minite/second level ATR by providing the highs, lows, closes and period.
-    return all available ATR series based on these data.
-    for lasest one, get the last data from the returned list.
-    """
-    if (high is not None and low is not None and close is not None
-         and high.count() >= low.count() >= close.count() > period+1
-         ):
 
-        true_ranges:np.ndarray = np.zeros(period)
-        datacount = close.count()
-        average_TRs:list = []
-
-        current_range:int = 0
-        last_average_TR:float = 0
-
-        for i in range(1, datacount):
-
-            true_range = _true_range(high[i], low[i],close[i-1])
-
-            if current_range >= period:
-                # start to calculate the Average True Range.
-                average_TR = (last_average_TR * (period - 1) + true_range) / period
-                average_TRs.append(average_TR)
-                last_average_TR = average_TR
-                # print(f"round start {i}: {average_TR=} with true{true_range} high:{high[i]} low:{low[i]}, close: {close[i-1]}")
-
-            else:
-                true_ranges[current_range] = true_range
-                current_range += 1
-                if current_range == period:
-                    last_average_TR = true_ranges.sum()/period
-                    # print(f"{last_average_TR=}")
-        return average_TRs
-    else:
-        logger.info(f"invalid input for ATR_minite: high {high}, low: {low}, close:{close}")
-        return []
 
 
 # ATR_minite_summary(14)
