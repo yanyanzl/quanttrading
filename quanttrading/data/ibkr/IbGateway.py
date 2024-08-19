@@ -437,6 +437,7 @@ class IbApi(EWrapper):
         if not tick:
             self.gateway.write_log(f"tickPrice函数收到未订阅的推送，reqId：{reqId}")
             return
+        previous_last_price = tick.last_price
 
         name: str = TICKFIELD_IB2VT[tickType]
         setattr(tick, name, price)
@@ -455,8 +456,10 @@ class IbApi(EWrapper):
                 return
             tick.last_price = (tick.bid_price_1 + tick.ask_price_1) / 2
             tick.datetime = datetime.now(LOCAL_TZ)
-
-        self.gateway.on_tick(copy(tick))
+        # only last_price trigger the on_tick event now. Could be changed 
+        # according to defiffrrent requirements.
+        if previous_last_price and previous_last_price != tick.last_price:
+            self.gateway.on_tick(copy(tick))
 
     def tickSize(self, reqId: TickerId, tickType: TickType, size: Decimal) -> None:
         """
@@ -475,8 +478,10 @@ class IbApi(EWrapper):
         name: str = TICKFIELD_IB2VT[tickType]
         setattr(tick, name, float(size))
         # print(f"{name=}: {tick.datetime=}")
-
-        self.gateway.on_tick(copy(tick))
+        
+        # never use this realtime size information. 
+        # it will be included in the other event anyway.
+        # self.gateway.on_tick(copy(tick))
 
     def tickString(self, reqId: TickerId, tickType: TickType, value: str) -> None:
         """
@@ -488,7 +493,7 @@ class IbApi(EWrapper):
         84: 'LAST_EXCH'  The exchange where the Last Price is provided from.
         """
         # super().tickString(reqId, tickType, value)
-        print(f"{TickTypeEnum(tickType)=}")
+        # print(f"{TickTypeEnum(tickType)=}")
         if tickType != TickTypeEnum.LAST_TIMESTAMP:
             return
 
@@ -500,7 +505,9 @@ class IbApi(EWrapper):
         dt: datetime = datetime.fromtimestamp(int(value))
         tick.datetime = dt.replace(tzinfo=LOCAL_TZ)
 
-        self.gateway.on_tick(copy(tick))
+        # never use this realtime datetime update. 
+        # it will be included in the other event anyway.
+        # self.gateway.on_tick(copy(tick))
 
     def tickOptionComputation(
         self,

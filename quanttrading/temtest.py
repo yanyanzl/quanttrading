@@ -165,6 +165,7 @@ def talibTest():
     print('%.6f' % (t2 - t1))
 
 def talibTest1():
+
     inputs = {
     'open': np.random.random(300),
     'high': np.random.random(300),
@@ -174,7 +175,8 @@ def talibTest1():
     }
 
     sma = abstract.SMA
-    print(sma)
+    RSI = abstract.RSI
+    print(RSI)
     print(sma.info)
     print(sma.input_names)
     print(sma.parameters)
@@ -183,7 +185,7 @@ def talibTest1():
     sma200 = sma(inputs, timeperiod=200, price='open')
     print(MA_Type.__dict__)
 
-talibTest1()
+# talibTest1()
 # help(min)
 
 # ta_dict = dir(talib)
@@ -446,24 +448,27 @@ def migrateData():
 def tickManage():
     from database import get_database
     db = get_database()
-    print(f"db is {db}")
-    tickmanager = TickManager(3600)
-    dt = datetime.now(LOCAL_TZ)
-    print(dt)
-    dt = datetime.now()
-    print(dt)
-    print(dt.microsecond)
+    # print(f"db is {db}")
+    tickmanager = TickManager(300)
+
     # atr_summary = tickmanager.ATR_tick_summary_from_db("NVDA", 14, 5)
 
     # today = datetime.now(LOCAL_TZ)
-    # today = today.replace(hour=15)
-    tickDatas:list[TickData] = db.load_tick_data_byHours("NVDA",Exchange.SMART)
+    # today = today.replace(hour=15) 
+    tickDatas:list[TickData] = db.load_one_tick_data_byHours("TSLA",Exchange.SMART, datetime.now(LOCAL_TZ).replace(hour=17))
     if tickDatas:
         for tick in tickDatas:
-            # print(f"{tick.datetime}")
+            tickmanager.on_tick(tick)
+            # print(f"{tick.last_price}")
             pass
     # print(f" {atr_summary=} .")
     # ticks_num = len(tickDatas)
+    rsi_result = tickmanager.rsi(10)
+    atr = tickmanager.ATR_tick(4,50)
+    print(f"array {tickmanager.ticks_array[150:]}")
+    print(f"rsi = {rsi_result}")
+    print(f"{atr=}")
+
     """ 
     if ticks_num > 0:
         
@@ -489,6 +494,8 @@ def tickManage():
         # print(f"{realrange10=} and {realrange20=}")
         print(f"{atr=}")
     """
+
+tickManage()
 # # =================Testing block for optimization======================
 # with cProfile.Profile() as pr:
 #     tracemalloc.start()

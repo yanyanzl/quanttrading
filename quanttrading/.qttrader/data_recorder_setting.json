@@ -24,6 +24,11 @@
             "symbol": "COIN",
             "exchange": "SMART",
             "gateway_name": "IB"
+        },
+        "AMD": {
+            "symbol": "AMD",
+            "exchange": "SMART",
+            "gateway_name": "IB"
         }
     },
     "bar": {
@@ -49,6 +54,11 @@
         },
         "COIN": {
             "symbol": "COIN",
+            "exchange": "SMART",
+            "gateway_name": "IB"
+        },
+        "AMD": {
+            "symbol": "AMD",
             "exchange": "SMART",
             "gateway_name": "IB"
         }

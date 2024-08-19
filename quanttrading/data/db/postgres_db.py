@@ -299,6 +299,7 @@ class PostgreDatabase(BaseDatabase):
 
     def save_one_tick_data(self, ticks: List[TickData], stream: bool = False) -> bool:
         """save one TICK data, only last price and last volume"""
+        
         if not ticks or len(ticks) < 1:
             logger.info(f"invalid ticks data: {ticks}")
             return False    
@@ -327,6 +328,52 @@ class PostgreDatabase(BaseDatabase):
                 query = DbOneTickData.insert_many(c).on_conflict_ignore().execute()
 
         return True
+
+
+    def load_one_tick_data_byHours(
+        self,
+        symbol: str,
+        exchange: Exchange,
+        dateHour:datetime = datetime.now(DB_TZ),
+        tick_nums:int = 3600
+    ) -> List[TickData]:
+        """
+        get tick data for the latest available data by hour.
+        tick data is 1-2 per second. only has last_price, datetime, symbol
+            and last_volume
+        :dateHour : the hour which we would like to get ticks from
+        :tick_nums: number of tickdata need to be returned.
+        # return only one hour's data --> default 3600 ticks
+        """
+        # return only one hour data --> 3600
+        # print(f"load_tick_data_byHours... dateHour: {dateHour}")
+        if not (tick_nums and 0 < tick_nums <=3600):
+            tick_nums = 3600
+        
+        s: ModelSelect = (
+            DbOneTickData.select().where(
+                (DbOneTickData.symbol == symbol)
+                & (DbOneTickData.exchange == exchange.value)
+                & (DbOneTickData.datetime.hour == dateHour.hour)
+            ).order_by(DbOneTickData.datetime.desc()).limit(tick_nums)
+        )
+        
+        ticks: List[TickData] = []
+        for db_tick in s:
+            tick: TickData = TickData(
+                symbol=db_tick.symbol,
+                exchange=Exchange(db_tick.exchange),
+                datetime=datetime.fromtimestamp(db_tick.datetime.timestamp(), DB_TZ),
+                name=db_tick.name,
+                volume=db_tick.last_volume,
+                last_price=db_tick.last_price,
+                gateway_name="DB"
+            )
+            ticks.append(tick)
+            # print(tick.datetime)
+        
+        # print(len(ticks))
+        return ticks
 
     def save_daily_pnl(self,
                        date:datetime,

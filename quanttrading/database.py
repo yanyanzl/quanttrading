@@ -71,8 +71,25 @@ class BaseDatabase(ABC):
 
     def save_one_tick_data(self, ticks: List[TickData], stream: bool = False) -> bool:
         """save one TICK data, only last price and last volume"""
-
         pass
+
+    def load_one_tick_data_byHours(
+        self,
+        symbol: str,
+        exchange: Exchange,
+        dateHour:datetime = datetime.now(DB_TZ),
+        tick_nums:int = 3600
+    ) -> List[TickData]:
+        """
+        get tick data for the latest available data by hour.
+        tick data is 1-2 per second. only has last_price, datetime, symbol
+            and last_volume
+        :dateHour : the hour which we would like to get ticks from
+        :tick_nums: number of tickdata need to be returned.
+        # return only one hour's data --> default 3600 ticks
+        """
+        pass
+
     @abstractmethod
     def load_bar_data(
         self,
