@@ -359,7 +359,7 @@ def testDataPlot():
     eventengine.stop()
     dataplot_thread.join()
 
-# testDataPlot()
+testDataPlot()
 
 def arrayTest():
     newarray = np.zeros(10)

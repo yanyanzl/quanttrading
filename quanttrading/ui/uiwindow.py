@@ -9,7 +9,7 @@ from functools import partial
 from importlib import import_module
 from typing import Callable, Dict, List, Tuple
 import sys
-
+import logging
 
 from pathlib import Path  # if you haven't already done so
 file = Path(__file__).resolve()
@@ -19,6 +19,7 @@ from vnpy_algotrading.ui.widget import AlgoManager, APP_NAME
 # from .chart import Chart
 # from .chartwizard import ChartWizardWidget
 from .uiapp import QtCore, QtGui, QtWidgets
+from .dataplot import DataPlot
 from .widget import (
     BaseMonitor,
     TickMonitor,
@@ -40,7 +41,10 @@ from event.engine import EventEngine
 from utility import get_icon_path, TRADER_DIR
 from constant import _
 
+logger = logging.getLogger(__name__)
+
 TAB_NAME = "central_tab"
+DATA_PLOT_NAME = "data_plot"
 
 class MainWindow(QtWidgets.QMainWindow):
     """
@@ -138,20 +142,25 @@ class MainWindow(QtWidgets.QMainWindow):
         add a tab to the tabwidget which is the central widget.
         """
         tab: QtWidgets.QTabWidget = self.widgets[TAB_NAME]
-        if self.widgets.get(name,None) is None:
+        if tab.indexOf(widget) == -1:
             tab.addTab(widget, name)
             self.widgets.update({name:widget})
+
+        tab.setCurrentWidget(widget)
     
     def remove_tab(self, index:int) -> None:
         """
         remove a tab from the tabwidget which is the central widget.
         """
-        tab: QtWidgets.QTabWidget = self.widgets[TAB_NAME]
-        widget = tab.widget(index)
-        widget.close()
-        tab.removeTab(index)
-        
-        pass
+        try:
+            tab: QtWidgets.QTabWidget = self.widgets[TAB_NAME]
+            widget = tab.widget(index)
+            name = tab.tabText(index)
+            # widget.close()
+            tab.removeTab(index)
+            # self.widgets.pop(name)
+        except Exception as e:
+            logger.info(f"can't close the tab {name}, reason: {e.args}")
 
     def init_menu(self) -> None:
         """"""
@@ -182,6 +191,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.close
         )
 
+
         # App menu
         app_menu: QtWidgets.QMenu = bar.addMenu(_("Function"))
 
@@ -194,12 +204,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.add_action(app_menu, app.display_name, app.icon_name, func, True)
 
+
         # Global setting editor
         action: QtGui.QAction = QtWidgets.QAction(_("配置"), self)
         action.triggered.connect(self.edit_global_setting)
         bar.addAction(action)
-
-
 
         # Help menu
         help_menu: QtWidgets.QMenu = bar.addMenu(_("帮助"))
@@ -360,7 +369,10 @@ class MainWindow(QtWidgets.QMainWindow):
         if isinstance(widget, QtWidgets.QDialog):
             widget.exec()
         else:
-            widget.show()
+            # tab:QtWidgets.QTabWidget = self.widgets[TAB_NAME]
+            # tab.addTab(widget, name)
+            self.add_tab(widget, name)
+            # widget.show()
 
     def save_window_setting(self, name: str) -> None:
         """
@@ -415,7 +427,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def data_plot(self) -> None:
         """
         """
-        from .dataplot import DataPlot
-        self.dataPlot = DataPlot(self.event_engine, 50)
-        self.add_tab(self.dataPlot, "data_plot")
+        if self.widgets.get(DATA_PLOT_NAME, None) is None:
+            self.dataPlot = DataPlot(self.event_engine, 50)
+        self.add_tab(self.dataPlot, DATA_PLOT_NAME)
         

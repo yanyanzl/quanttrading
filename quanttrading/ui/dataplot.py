@@ -21,7 +21,7 @@ from datetime import datetime
 from PySide6 import QtCore, QtWidgets
 
 # class DataPlot(QtCore.QObject):
-class DataPlot(QtWidgets.QWidget):
+class DataPlot(pg.PlotWidget):
     """
     main chart window.
     Chart(PlotWidget) --> central Item is layout (GraphicsLayout) --> PlotItem (added by Layout.additem())
@@ -29,8 +29,8 @@ class DataPlot(QtWidgets.QWidget):
     
     signal_tick: QtCore.Signal = QtCore.Signal(Event, name="signaltick")
 
-    def __init__(self, eventEngine:EventEngine, dataSize:int = 500):
-        super().__init__()
+    def __init__(self, eventEngine:EventEngine, dataSize:int = 500, parent:QtWidgets.QWidget = None, **kwargs):
+        super().__init__(parent, **kwargs)
 
         self.eventEngine = eventEngine
         self.dataSize = dataSize
@@ -45,7 +45,7 @@ class DataPlot(QtWidgets.QWidget):
         self.is_plot:bool = True
         
         self._init_ui()
-        self.plot:dict[str, pg.PlotItem] = {}
+        self._plots:dict[str, pg.PlotItem] = {}
         self.lines: dict[str, pg.PlotDataItem] = {}
 
         self.register_event()
@@ -54,15 +54,16 @@ class DataPlot(QtWidgets.QWidget):
         """
         Init the UI framework  of the chart
         """
-        self.view = pg.GraphicsView()
+        # self.view = pg.GraphicsView()
         self._layout: pg.GraphicsLayout = pg.GraphicsLayout()
         self._layout.setContentsMargins(10, 10, 10, 10)
         self._layout.setSpacing(0)
         self._layout.setBorder(color='g', width=1)
         self._layout.setZValue(0)
-        self.view.setCentralItem(self._layout)
+        self.setCentralItem(self._layout)
+        # self.view.setCentralItem(self._layout)
         # self.view.show()
-        self.view.setWindowTitle("data plot")
+        self.setWindowTitle("data plot")
 
     def add_plot(self, name:str="plot") -> pg.PlotItem:
         plot: pg.PlotItem = self._layout.addPlot(title=name)
@@ -82,7 +83,7 @@ class DataPlot(QtWidgets.QWidget):
 
     def add_line(self, name:str="first_line", plotName:str=None) -> pg.PlotDataItem:
         # pass
-        plot = self.plot.get(plotName, None)
+        plot = self._plots.get(plotName, None)
         if plot:
             return plot.plot([],[],name=name, symbol="o", symbolSize=15,symbolBrush='b')
         return None
@@ -105,7 +106,7 @@ class DataPlot(QtWidgets.QWidget):
         if event:
             data:PlotData = event.data
             if data["desc"] not in self.lines:
-                plot = self.plot[data["desc"]] = self.add_plot(data["desc"])
+                plot = self._plots[data["desc"]] = self.add_plot(data["desc"])
                 if type(data["x_data"]) is datetime:
                     axis = DateAxisItem()
                     plot.setAxisItems({'bottom':axis})
