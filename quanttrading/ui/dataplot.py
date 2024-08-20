@@ -18,9 +18,10 @@ from datatypes import PlotData
 import pyqtgraph as pg
 from pyqtgraph import DateAxisItem
 from datetime import datetime
-from PySide6 import QtCore
+from PySide6 import QtCore, QtWidgets
 
-class DataPlot(QtCore.QObject):
+# class DataPlot(QtCore.QObject):
+class DataPlot(QtWidgets.QWidget):
     """
     main chart window.
     Chart(PlotWidget) --> central Item is layout (GraphicsLayout) --> PlotItem (added by Layout.additem())
@@ -60,7 +61,7 @@ class DataPlot(QtCore.QObject):
         self._layout.setBorder(color='g', width=1)
         self._layout.setZValue(0)
         self.view.setCentralItem(self._layout)
-        self.view.show()
+        # self.view.show()
         self.view.setWindowTitle("data plot")
 
     def add_plot(self, name:str="plot") -> pg.PlotItem:

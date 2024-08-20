@@ -40,6 +40,7 @@ from event.engine import EventEngine
 from utility import get_icon_path, TRADER_DIR
 from constant import _
 
+TAB_NAME = "central_tab"
 
 class MainWindow(QtWidgets.QMainWindow):
     """
@@ -116,13 +117,41 @@ class MainWindow(QtWidgets.QMainWindow):
         # to be changed: ***************
         # self.chartWidget = Chart("Real Time Chart", "TSLA")
         # self.chartWidget = ChartWizardWidget(self.main_engine,self.event_engine)
+        
+        tab = QtWidgets.QTabWidget(self,tabsClosable=True)
+        self.widgets[TAB_NAME] = tab
+        tab.setMovable(True)
+        tab.tabCloseRequested.connect(self.remove_tab)
 
         _central = AlgoManager(self.main_engine, self.event_engine)
         self.widgets[APP_NAME] = _central
 
+        tab.addTab(_central, APP_NAME)
+
         # central_layout.addWidget(_central)
 
-        self.setCentralWidget(_central)
+        self.setCentralWidget(tab)
+
+    
+    def add_tab(self, widget:QtWidgets.QWidget, name:str) -> None:
+        """
+        add a tab to the tabwidget which is the central widget.
+        """
+        tab: QtWidgets.QTabWidget = self.widgets[TAB_NAME]
+        if self.widgets.get(name,None) is None:
+            tab.addTab(widget, name)
+            self.widgets.update({name:widget})
+    
+    def remove_tab(self, index:int) -> None:
+        """
+        remove a tab from the tabwidget which is the central widget.
+        """
+        tab: QtWidgets.QTabWidget = self.widgets[TAB_NAME]
+        widget = tab.widget(index)
+        widget.close()
+        tab.removeTab(index)
+        
+        pass
 
     def init_menu(self) -> None:
         """"""
@@ -388,3 +417,5 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         from .dataplot import DataPlot
         self.dataPlot = DataPlot(self.event_engine, 50)
+        self.add_tab(self.dataPlot, "data_plot")
+        

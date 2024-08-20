@@ -359,6 +359,7 @@ def testDataPlot():
     eventengine.stop()
     dataplot_thread.join()
 
+# testDataPlot()
 
 def arrayTest():
     newarray = np.zeros(10)
@@ -495,7 +496,7 @@ def tickManage():
         print(f"{atr=}")
     """
 
-tickManage()
+# tickManage()
 # # =================Testing block for optimization======================
 # with cProfile.Profile() as pr:
 #     tracemalloc.start()
