@@ -32,6 +32,7 @@ from .widget import (
     ConnectDialog,
     ContractManager,
     TradingWidget,
+    WatchlistWidget,
     AboutDialog,
     GlobalDialog,
     ReloadDialog,
@@ -45,6 +46,7 @@ logger = logging.getLogger(__name__)
 
 TAB_NAME = "central_tab"
 DATA_PLOT_NAME = "data_plot"
+TRADING_WIDGET_NAME = "trading_widget"
 
 class MainWindow(QtWidgets.QMainWindow):
     """
@@ -78,46 +80,41 @@ class MainWindow(QtWidgets.QMainWindow):
     def init_dock(self) -> None:
         """"""
         self.trading_widget, trading_dock = self.create_dock(
-            TradingWidget, _("Trading"), QtCore.Qt.LeftDockWidgetArea
+            WatchlistWidget, _("Watchlist"), QtCore.Qt.DockWidgetArea.LeftDockWidgetArea
         )
         tick_widget, tick_dock = self.create_dock(
             TickMonitor, _("MarketData"), QtCore.Qt.DockWidgetArea.RightDockWidgetArea
         )
         order_widget, order_dock = self.create_dock(
-            OrderMonitor, _("Order"), QtCore.Qt.RightDockWidgetArea
+            OrderMonitor, _("Order"), QtCore.Qt.DockWidgetArea.RightDockWidgetArea
         )
         active_widget, active_dock = self.create_dock(
-            ActiveOrderMonitor, _("ActiveOrder"), QtCore.Qt.RightDockWidgetArea
+            ActiveOrderMonitor, _("ActiveOrder"), QtCore.Qt.DockWidgetArea.RightDockWidgetArea
         )
         trade_widget, trade_dock = self.create_dock(
-            TradeMonitor, _("Trade"), QtCore.Qt.RightDockWidgetArea
+            TradeMonitor, _("Trade"), QtCore.Qt.DockWidgetArea.RightDockWidgetArea
         )
         log_widget, log_dock = self.create_dock(
-            LogMonitor, _("Log"), QtCore.Qt.BottomDockWidgetArea
+            LogMonitor, _("Log"), QtCore.Qt.DockWidgetArea.BottomDockWidgetArea
         )
         account_widget, account_dock = self.create_dock(
-            AccountMonitor, _("Account"), QtCore.Qt.BottomDockWidgetArea
+            AccountMonitor, _("Account"), QtCore.Qt.DockWidgetArea.BottomDockWidgetArea
         )
         position_widget, position_dock = self.create_dock(
-            PositionMonitor, _("Position"), QtCore.Qt.BottomDockWidgetArea
+            PositionMonitor, _("Position"), QtCore.Qt.DockWidgetArea.BottomDockWidgetArea
         )
 
         self.tabifyDockWidget(active_dock, order_dock)
 
         self.save_window_setting("default")
 
-        tick_widget.itemDoubleClicked.connect(self.trading_widget.update_with_cell)
-        position_widget.itemDoubleClicked.connect(self.trading_widget.update_with_cell)
+        # tick_widget.itemDoubleClicked.connect(self.trading_widget.update_with_cell)
+        # position_widget.itemDoubleClicked.connect(self.trading_widget.update_with_cell)
 
     def init_central(self) -> None:
         """
         initiate the chart graph
         """
-        # central_widget:QtWidgets.QFrame = QtWidgets.QFrame()
-        # central_layout:QtWidgets.QVBoxLayout = QtWidgets.QVBoxLayout()
-        # central_widget.setLayout(central_layout)
-        # self.widgets["central_widget"] = central_widget
-
         # to be changed: ***************
         # self.chartWidget = Chart("Real Time Chart", "TSLA")
         # self.chartWidget = ChartWizardWidget(self.main_engine,self.event_engine)
@@ -125,16 +122,16 @@ class MainWindow(QtWidgets.QMainWindow):
         tab = QtWidgets.QTabWidget(self,tabsClosable=True)
         self.widgets[TAB_NAME] = tab
         tab.setMovable(True)
+        tab.setTabPosition(QtWidgets.QTabWidget.TabPosition.North)
         tab.tabCloseRequested.connect(self.remove_tab)
 
-        _central = AlgoManager(self.main_engine, self.event_engine)
-        self.widgets[APP_NAME] = _central
-
-        tab.addTab(_central, APP_NAME)
-
-        # central_layout.addWidget(_central)
-
         self.setCentralWidget(tab)
+
+        algo = AlgoManager(self.main_engine, self.event_engine)
+        self.add_tab(algo, APP_NAME)
+
+        trading = TradingWidget(self.main_engine, self.event_engine)
+        self.add_tab(trading, TRADING_WIDGET_NAME)
 
     
     def add_tab(self, widget:QtWidgets.QWidget, name:str) -> None:
@@ -182,10 +179,10 @@ class MainWindow(QtWidgets.QMainWindow):
             )
 
         sys_menu.addSeparator()
-
+        
         self.add_action(
             sys_menu,
-            _("退出"),
+            _("Exit"),
             # get_icon_path(__file__, "exit.ico"),
             "connect.ico",
             self.close
@@ -206,12 +203,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
         # Global setting editor
-        action: QtGui.QAction = QtWidgets.QAction(_("配置"), self)
+        action: QtGui.QAction = QtWidgets.QAction(_("Settings"), self)
         action.triggered.connect(self.edit_global_setting)
         bar.addAction(action)
 
         # Help menu
-        help_menu: QtWidgets.QMenu = bar.addMenu(_("帮助"))
+        help_menu: QtWidgets.QMenu = bar.addMenu(_("Help"))
 
         self.add_action(
             help_menu,

@@ -303,8 +303,10 @@ class RiskEngine(BaseEngine):
 
             #synchronise daily pnl with server
             if not self._daily_syn_sent_to_server or self.server_daily_pnl["total_pnl"] == 0:
-                self._daily_syn_sent_to_server = True
-                self.main_engine.query_daily_pnl()
+                if (len(self.main_engine.get_all_gateway_names()) > 0 and 
+                    self.main_engine.get_gateway(self.main_engine.get_all_gateway_names()[0]).alive):
+                    self._daily_syn_sent_to_server = True
+                    self.main_engine.query_daily_pnl()
 
             self.update_pnl_risk()
             riskLevel = self.check_pnl_risk()

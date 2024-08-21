@@ -29,6 +29,21 @@
             "symbol": "AMD",
             "exchange": "SMART",
             "gateway_name": "IB"
+        },
+        "GOOG": {
+            "symbol": "GOOG",
+            "exchange": "SMART",
+            "gateway_name": "IB"
+        },
+        "AMZN": {
+            "symbol": "AMZN",
+            "exchange": "SMART",
+            "gateway_name": "IB"
+        },
+        "PANW": {
+            "symbol": "PANW",
+            "exchange": "SMART",
+            "gateway_name": "IB"
         }
     },
     "bar": {
@@ -59,6 +74,21 @@
         },
         "AMD": {
             "symbol": "AMD",
+            "exchange": "SMART",
+            "gateway_name": "IB"
+        },
+        "GOOG": {
+            "symbol": "GOOG",
+            "exchange": "SMART",
+            "gateway_name": "IB"
+        },
+        "AMZN": {
+            "symbol": "AMZN",
+            "exchange": "SMART",
+            "gateway_name": "IB"
+        },
+        "PANW": {
+            "symbol": "PANW",
             "exchange": "SMART",
             "gateway_name": "IB"
         }

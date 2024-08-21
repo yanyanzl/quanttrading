@@ -763,11 +763,6 @@ class TradingWidget(QtWidgets.QWidget):
         cancel_button: QtWidgets.QPushButton = QtWidgets.QPushButton(_("全撤"))
         cancel_button.clicked.connect(self.cancel_all)
 
-        add_contract_button: QtWidgets.QPushButton = QtWidgets.QPushButton(_("Add Contract"))
-        add_contract_button.clicked.connect(self.add_contract)
-
-        remove_contract_button: QtWidgets.QPushButton = QtWidgets.QPushButton(_("Remove Contract"))
-        remove_contract_button.clicked.connect(self.remove_contract)
 
         grid: QtWidgets.QGridLayout = QtWidgets.QGridLayout()
         grid.addWidget(QtWidgets.QLabel(_("交易所")), 0, 0)
@@ -791,8 +786,8 @@ class TradingWidget(QtWidgets.QWidget):
         grid.addWidget(self.gateway_combo, 8, 1, 1, 2)
         grid.addWidget(send_button, 9, 0, 1, 3)
         grid.addWidget(cancel_button, 10, 0, 1, 3)
-        grid.addWidget(add_contract_button, 11, 0, 1, 3)
-        grid.addWidget(remove_contract_button, 12, 0, 1, 3)
+        # grid.addWidget(add_contract_button, 11, 0, 1, 3)
+        # grid.addWidget(remove_contract_button, 12, 0, 1, 3)
 
         # Market depth display area
         bid_color: str = "rgb(255,174,201)"
@@ -857,7 +852,7 @@ class TradingWidget(QtWidgets.QWidget):
     def create_label(
         self,
         color: str = "",
-        alignment: int = QtCore.Qt.AlignLeft
+        alignment: int = QtCore.Qt.AlignmentFlag.AlignLeft
     ) -> QtWidgets.QLabel:
         """
         Create label with certain font color.
@@ -1025,31 +1020,6 @@ class TradingWidget(QtWidgets.QWidget):
 
         self.main_engine.send_order(req, gateway_name)
 
-    def add_contract(self) -> None:
-        """
-        add contract to the system first.
-        """
-        symbol: str = str(self.symbol_line.text())
-        if not symbol:
-            QtWidgets.QMessageBox.critical(self, _("Failed to add contract"), _("Please input the symbol firstly!"))
-            return
-        exchange=Exchange(str(self.exchange_combo.currentText()))
-        gateway_name: str = str(self.gateway_combo.currentText())
-        self.main_engine.add_contract(symbol, exchange, gateway_name)
-
-    def remove_contract(self) -> None:
-        """
-        remove contract to the system first.
-        """
-        symbol: str = str(self.symbol_line.text())
-        if not symbol:
-            QtWidgets.QMessageBox.critical(self, _("Failed to remove contract"), _("Please input the symbol firstly!"))
-            return
-        exchange=Exchange(str(self.exchange_combo.currentText()))
-        gateway_name: str = str(self.gateway_combo.currentText())
-        req = SubscribeRequest(symbol, exchange)
-        self.main_engine.unsubscribe(req, gateway_name)
-
     def cancel_all(self) -> None:
         """
         Cancel all active orders.
@@ -1142,7 +1112,7 @@ class ContractManager(QtWidgets.QWidget):
 
     def init_ui(self) -> None:
         """"""
-        self.setWindowTitle(_("合约查询"))
+        self.setWindowTitle(_("Contracts"))
         self.resize(1000, 600)
 
         self.filter_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit()
@@ -1207,6 +1177,146 @@ class ContractManager(QtWidgets.QWidget):
 
         self.contract_table.resizeColumnsToContents()
 
+
+class WatchlistWidget(QtWidgets.QWidget):
+    """
+    watchlist to be for trading.
+    """
+
+    headers: Dict[str, str] = {
+        "symbolName": _("Symbol"),
+        "exchange": _("exchange"),
+    }
+
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
+        super().__init__()
+
+        self.main_engine: MainEngine = main_engine
+        self.event_engine: EventEngine = event_engine
+
+        self.init_ui()
+
+    def init_ui(self) -> None:
+        """"""
+        self.setWindowTitle(_("Watchlist"))
+        # self.resize(1000, 600)
+
+        # Trading function area
+        exchanges: List[Exchange] = self.main_engine.get_all_exchanges()
+        self.exchange_combo: QtWidgets.QComboBox = QtWidgets.QComboBox()
+        self.exchange_combo.setMinimumWidth(80)
+        self.exchange_combo.addItems([exchange.value for exchange in exchanges])
+
+        self.gateway_combo: QtWidgets.QComboBox = QtWidgets.QComboBox()
+        self.gateway_combo.setMinimumWidth(60)
+        self.gateway_combo.addItems(self.main_engine.get_all_gateway_names())
+
+        self.symbol_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit()
+        self.symbol_line.returnPressed.connect(self.add_symbol)
+        self.symbol_line.setValidator((Validator(self.symbol_line)))
+        self.symbol_line.setCompleter(SymbolCompleter())
+        self._button_add: QtWidgets.QPushButton = QtWidgets.QPushButton(_("Add"))
+        self._button_add.clicked.connect(self.add_symbol)
+
+        self._button_remove: QtWidgets.QPushButton = QtWidgets.QPushButton(_("Remove"))
+        self._button_remove.clicked.connect(self.remove_symbol)
+
+        self._button_update: QtWidgets.QPushButton = QtWidgets.QPushButton(_("Show list"))
+        self._button_update.clicked.connect(self.update_list)        
+
+        labels: list = []
+        for name, display in self.headers.items():
+            label: str = f"{display}"
+            labels.append(label)
+
+        self.contract_table: QtWidgets.QTableWidget = QtWidgets.QTableWidget()
+        self.contract_table.setColumnCount(len(self.headers))
+        self.contract_table.setHorizontalHeaderLabels(labels)
+        self.contract_table.verticalHeader().setVisible(False)
+        self.contract_table.setEditTriggers(self.contract_table.EditTrigger.NoEditTriggers)
+        self.contract_table.setAlternatingRowColors(True)
+
+        # hbox: QtWidgets.QHBoxLayout = QtWidgets.QHBoxLayout()
+        grid: QtWidgets.QGridLayout = QtWidgets.QGridLayout()
+        grid.addWidget(QtWidgets.QLabel("Exchange:"),0,0)
+        grid.addWidget(self.exchange_combo, 0,1)
+        grid.addWidget(QtWidgets.QLabel("GW:"),0,2)
+        grid.addWidget(self.gateway_combo, 0, 3)
+
+        grid.addWidget(QtWidgets.QLabel("symbol:"),1,0)
+        grid.addWidget(self.symbol_line,1,1)
+        grid.addWidget(self._button_add,1,2)
+        grid.addWidget(self._button_remove,1,3)
+        grid.addWidget(self._button_update, 2,0,1, 4, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        vbox: QtWidgets.QVBoxLayout = QtWidgets.QVBoxLayout()
+        vbox.addLayout(grid)
+        vbox.addWidget(self.contract_table)
+
+        self.setLayout(vbox)
+        self.update_list()
+
+    def update_list(self) -> None:
+        """
+        update the watchlist
+        """
+        # flt: str = str(self.filter_line.text())
+
+        contracts: List[ContractData] = self.main_engine.get_all_contracts()
+        # if flt:
+        #     contracts: List[ContractData] = [
+        #         contract for contract in all_contracts if flt in contract.vt_symbol
+        #     ]
+        # else:
+        #     contracts: List[ContractData] = all_contracts
+
+        self.contract_table.clearContents()
+        self.contract_table.setRowCount(len(contracts))
+
+        for row, contract in enumerate(contracts):
+            for column, name in enumerate(self.headers.keys()):
+                value: object = getattr(contract, name)
+
+                if value in {None, 0, 0.0}:
+                    value = ""
+
+                if isinstance(value, Enum):
+                    cell: EnumCell = EnumCell(value, contract)
+                elif isinstance(value, datetime):
+                    cell: DateCell = DateCell(value, contract)
+                else:
+                    cell: BaseCell = BaseCell(value, contract)
+                self.contract_table.setItem(row, column, cell)
+
+        self.contract_table.resizeColumnsToContents()
+
+    def add_symbol(self) -> None:
+        """
+        add contract to the system first.
+        """
+        symbol: str = str(self.symbol_line.text())
+        if not symbol:
+            QtWidgets.QMessageBox.critical(self, _("Failed to add symbol"), _("Please input the symbol firstly!"))
+            return
+        exchange=Exchange(str(self.exchange_combo.currentText()))
+        gateway_name: str = str(self.gateway_combo.currentText())
+        self.main_engine.add_contract(symbol, exchange, gateway_name)
+        self.update_list()
+
+    def remove_symbol(self) -> None:
+        """
+        remove contract to the system first.
+        to be modified.
+        """
+        symbol: str = str(self.symbol_line.text())
+        if not symbol:
+            QtWidgets.QMessageBox.critical(self, _("Failed to remove symbol"), _("Please input the symbol firstly!"))
+            return
+        exchange=Exchange(str(self.exchange_combo.currentText()))
+        gateway_name: str = str(self.gateway_combo.currentText())
+        req = SubscribeRequest(symbol, exchange)
+        self.main_engine.unsubscribe(req, gateway_name)
+        self.update_list()
 
 class AboutDialog(QtWidgets.QDialog):
     """
