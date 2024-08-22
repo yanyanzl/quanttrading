@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 TAB_NAME = "central_tab"
 DATA_PLOT_NAME = "data_plot"
-TRADING_WIDGET_NAME = "trading_widget"
+TRADING_WIDGET_NAME = "Manual Trading"
 
 class MainWindow(QtWidgets.QMainWindow):
     """
@@ -141,6 +141,7 @@ class MainWindow(QtWidgets.QMainWindow):
         tab: QtWidgets.QTabWidget = self.widgets[TAB_NAME]
         if tab.indexOf(widget) == -1:
             tab.addTab(widget, name)
+            widget.show()
             self.widgets.update({name:widget})
 
         tab.setCurrentWidget(widget)
@@ -333,8 +334,8 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         reply = QtWidgets.QMessageBox.question(
             self,
-            _("退出"),
-            _("确认退出？"),
+            _("Exit"),
+            _("Exit?"),
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
             QtWidgets.QMessageBox.No,
         )
@@ -366,8 +367,6 @@ class MainWindow(QtWidgets.QMainWindow):
         if isinstance(widget, QtWidgets.QDialog):
             widget.exec()
         else:
-            # tab:QtWidgets.QTabWidget = self.widgets[TAB_NAME]
-            # tab.addTab(widget, name)
             self.add_tab(widget, name)
             # widget.show()
 

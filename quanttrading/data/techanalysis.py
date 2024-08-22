@@ -295,7 +295,7 @@ class TickManager(object):
             up, down = up[up!=0], down[down!=0]
             ta_result:list = ta.RSI(self.ticks_array[start-2:],rsi_window)
             
-            print(f"upsum:{up.sum()}, downsum:{down.sum()}, moverange:{move_range}, -1: {ta_result[-1]}")
+            # print(f"upsum:{up.sum()}, downsum:{down.sum()}, moverange:{move_range}, -1: {ta_result[-1]}")
             result = ta_result[-1]
             if np.isnan(result):
                 result = None

@@ -1303,7 +1303,10 @@ class IbApi(EWrapper):
         return df
     
     def load_contract_data(self) -> None:
-        """加载本地合约数据"""
+        """
+        after connect to server successfully.
+        load contracts saved locally if any.. 
+        """
         f = shelve.open(self.data_filepath)
         contracts = f.get("contracts", {})
         ib_contracts = f.get("ib_contracts", {})
@@ -1317,9 +1320,10 @@ class IbApi(EWrapper):
         f.close()
 
         for contract in self.contracts.values():
+            self.add_contract(contract.symbolName, contract.exchange)
             self.gateway.on_contract(contract)
 
-        self.gateway.write_log("本地缓存合约信息加载成功")
+        self.gateway.write_log("load locally saved contracts successfully!")
         pass
 
     def save_contract_data(self) -> None:
@@ -1392,8 +1396,9 @@ class IbApi(EWrapper):
         self.ticks[self.reqid] = tick
 
     def unsubscribe(self, req: SubscribeRequest) -> None:
-        """退订tick数据更新"""
+        """cancel the subscribed tick data"""
         # 移除订阅记录
+        print(f"unsubscribe {req=}")
         if req.vt_symbol not in self.subscribed:
             return
         self.subscribed.pop(req.vt_symbol)
@@ -1404,7 +1409,8 @@ class IbApi(EWrapper):
             if tick.vt_symbol == req.vt_symbol:
                 cancel_id = reqid
                 break
-
+        
+        print(f"unsubscribe {cancel_id=}")
         # 发送退订请求
         self.client.cancelMktData(cancel_id)
 

@@ -708,7 +708,7 @@ class TradingWidget(QtWidgets.QWidget):
         self.event_engine: EventEngine = event_engine
 
         self.vt_symbol: str = ""
-        self.price_digits: int = 0
+        self.price_digits: int = 2
 
         self.init_ui()
         self.register_event()
@@ -765,25 +765,29 @@ class TradingWidget(QtWidgets.QWidget):
 
 
         grid: QtWidgets.QGridLayout = QtWidgets.QGridLayout()
-        grid.addWidget(QtWidgets.QLabel(_("交易所")), 0, 0)
-        grid.addWidget(QtWidgets.QLabel(_("代码")), 1, 0)
-        grid.addWidget(QtWidgets.QLabel(_("名称")), 2, 0)
-        grid.addWidget(QtWidgets.QLabel(_("方向")), 3, 0)
-        grid.addWidget(QtWidgets.QLabel(_("开平")), 4, 0)
-        grid.addWidget(QtWidgets.QLabel(_("类型")), 5, 0)
-        grid.addWidget(QtWidgets.QLabel(_("价格")), 6, 0)
-        grid.addWidget(QtWidgets.QLabel(_("数量")), 7, 0)
-        grid.addWidget(QtWidgets.QLabel(_("接口")), 8, 0)
+        grid.addWidget(QtWidgets.QLabel(_("Exchange")), 0, 0)
+        grid.addWidget(QtWidgets.QLabel(_("open/close")), 1, 0)
+        grid.addWidget(QtWidgets.QLabel(_("name")), 2, 0)
+        grid.addWidget(QtWidgets.QLabel(_("GW")), 3, 0)
+
+        grid.addWidget(QtWidgets.QLabel(_("Symbol")), 4, 0)
+        grid.addWidget(QtWidgets.QLabel(_("Direction")), 5, 0)
+        grid.addWidget(QtWidgets.QLabel(_("order Type")), 6, 0)
+        grid.addWidget(QtWidgets.QLabel(_("Price")), 7, 0)
+        grid.addWidget(QtWidgets.QLabel(_("Volume")), 8, 0)
+
         grid.addWidget(self.exchange_combo, 0, 1, 1, 2)
-        grid.addWidget(self.symbol_line, 1, 1, 1, 2)
+        grid.addWidget(self.offset_combo, 1, 1, 1, 2)
         grid.addWidget(self.name_line, 2, 1, 1, 2)
-        grid.addWidget(self.direction_combo, 3, 1, 1, 2)
-        grid.addWidget(self.offset_combo, 4, 1, 1, 2)
-        grid.addWidget(self.order_type_combo, 5, 1, 1, 2)
-        grid.addWidget(self.price_line, 6, 1, 1, 1)
-        grid.addWidget(self.price_check, 6, 2, 1, 1)
-        grid.addWidget(self.volume_line, 7, 1, 1, 2)
-        grid.addWidget(self.gateway_combo, 8, 1, 1, 2)
+        grid.addWidget(self.gateway_combo, 3, 1, 1, 2)
+
+        grid.addWidget(self.symbol_line, 4, 1, 1, 2)        
+        grid.addWidget(self.direction_combo, 5, 1, 1, 2)
+        grid.addWidget(self.order_type_combo, 6, 1, 1, 2)
+        grid.addWidget(self.price_line, 7, 1, 1, 1)
+        grid.addWidget(self.price_check, 7, 2, 1, 1)
+        grid.addWidget(self.volume_line, 8, 1, 1, 2)
+
         grid.addWidget(send_button, 9, 0, 1, 3)
         grid.addWidget(cancel_button, 10, 0, 1, 3)
         # grid.addWidget(add_contract_button, 11, 0, 1, 3)
@@ -1182,7 +1186,7 @@ class WatchlistWidget(QtWidgets.QWidget):
     """
     watchlist to be for trading.
     """
-
+    signal_tick: QtCore.Signal = QtCore.Signal(Event)
     headers: Dict[str, str] = {
         "symbolName": _("Symbol"),
         "exchange": _("exchange"),
@@ -1193,7 +1197,7 @@ class WatchlistWidget(QtWidgets.QWidget):
 
         self.main_engine: MainEngine = main_engine
         self.event_engine: EventEngine = event_engine
-
+        self._watchlist: List[ContractData]
         self.init_ui()
 
     def init_ui(self) -> None:
@@ -1222,7 +1226,7 @@ class WatchlistWidget(QtWidgets.QWidget):
         self._button_remove.clicked.connect(self.remove_symbol)
 
         self._button_update: QtWidgets.QPushButton = QtWidgets.QPushButton(_("Show list"))
-        self._button_update.clicked.connect(self.update_list)        
+        self._button_update.clicked.connect(self.update_list)
 
         labels: list = []
         for name, display in self.headers.items():
@@ -1256,19 +1260,24 @@ class WatchlistWidget(QtWidgets.QWidget):
         self.setLayout(vbox)
         self.update_list()
 
+    def register_event(self) -> None:
+        """
+        register to listen events.
+        """
+        self.signal_tick.connect(self.process_tick_event)
+        self.event_engine.register(EVENT_TICK, self.signal_tick.emit)
+
+    def process_tick_event(self, event: Event) -> None:
+        """"""
+        tick: TickData = event.data
+
+
     def update_list(self) -> None:
         """
         update the watchlist
         """
-        # flt: str = str(self.filter_line.text())
 
         contracts: List[ContractData] = self.main_engine.get_all_contracts()
-        # if flt:
-        #     contracts: List[ContractData] = [
-        #         contract for contract in all_contracts if flt in contract.vt_symbol
-        #     ]
-        # else:
-        #     contracts: List[ContractData] = all_contracts
 
         self.contract_table.clearContents()
         self.contract_table.setRowCount(len(contracts))
@@ -1287,7 +1296,7 @@ class WatchlistWidget(QtWidgets.QWidget):
                 else:
                     cell: BaseCell = BaseCell(value, contract)
                 self.contract_table.setItem(row, column, cell)
-
+            
         self.contract_table.resizeColumnsToContents()
 
     def add_symbol(self) -> None:
