@@ -7,7 +7,7 @@
     "trade_limit": 2000,
     "active_order_limit": 50,
     "order_cancel_limit": 1000,
-    "total_profit_limit": 10,
+    "total_profit_limit": 1000,
     "realised_profit_limit": 500,
     "total_loss_limit": -560,
     "realised_loss_limit": -560

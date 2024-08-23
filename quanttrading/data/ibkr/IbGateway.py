@@ -1129,10 +1129,17 @@ class IbApi(EWrapper):
 
 
         # patch for Europe market delayed data. to be removed
-        if req.exchange in [Exchange.LSE, Exchange.IBIS]:
-            self.client.reqMarketDataType(3)
-        else:
-            self.client.reqMarketDataType(1)
+        # if req.exchange in [Exchange.LSE, Exchange.IBIS]:
+        #     self.client.reqMarketDataType(3)
+        # else:
+        #     self.client.reqMarketDataType(1)
+
+        # cancel the current tick request for the same symbol if any.
+        for key, _ in self.ticks.items():
+            if _.symbol == req.symbol:
+                self.client.cancelMktData(key)
+                self.ticks.pop(key, None)
+                break
 
         #  订阅tick数据并创建tick对象缓冲区
         self.reqid += 1
@@ -1148,6 +1155,27 @@ class IbApi(EWrapper):
         tick.extra = {}
 
         self.ticks[self.reqid] = tick
+
+    def unsubscribe(self, req: SubscribeRequest) -> None:
+        """cancel the subscribed tick data"""
+        # 移除订阅记录
+        print(f"unsubscribe {req=}")
+        if req.vt_symbol not in self.subscribed:
+            return
+        self.subscribed.pop(req.vt_symbol)
+
+        # 获取订阅号
+        cancel_id: int = 0
+        for reqid, tick in self.ticks.items():
+            if tick.vt_symbol == req.vt_symbol:
+                cancel_id = reqid
+                break
+        
+        print(f"unsubscribe {cancel_id=}")
+        # 发送退订请求
+        self.client.cancelMktData(cancel_id)
+
+        self.ticks.pop(cancel_id)
 
     def send_order(self, req: OrderRequest) -> str:
         """委托下单"""
@@ -1320,7 +1348,7 @@ class IbApi(EWrapper):
         f.close()
 
         for contract in self.contracts.values():
-            self.add_contract(contract.symbolName, contract.exchange)
+            # self.add_contract(contract.symbolName, contract.exchange)
             self.gateway.on_contract(contract)
 
         self.gateway.write_log("load locally saved contracts successfully!")
@@ -1394,26 +1422,6 @@ class IbApi(EWrapper):
         tick.extra = {}
 
         self.ticks[self.reqid] = tick
-
-    def unsubscribe(self, req: SubscribeRequest) -> None:
-        """cancel the subscribed tick data"""
-        # 移除订阅记录
-        print(f"unsubscribe {req=}")
-        if req.vt_symbol not in self.subscribed:
-            return
-        self.subscribed.pop(req.vt_symbol)
-
-        # 获取订阅号
-        cancel_id: int = 0
-        for reqid, tick in self.ticks.items():
-            if tick.vt_symbol == req.vt_symbol:
-                cancel_id = reqid
-                break
-        
-        print(f"unsubscribe {cancel_id=}")
-        # 发送退订请求
-        self.client.cancelMktData(cancel_id)
-
 
 
 def generate_ib_contract(symbol: str, exchange: Exchange) -> Optional[Contract]:
